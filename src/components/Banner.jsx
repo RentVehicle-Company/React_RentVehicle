@@ -3,23 +3,25 @@ import { Link } from "react-router-dom";
 
 const Banner = () => {
   return (
-    <div className="mx-4 p-8 pt-10 bg-[#0F172A] max-w-6xl md:mx-auto rounded-2xl overflow-hidden">
+    <div className="mx-4 max-w-5xl rounded-xl bg-[#0F172A] p-5 pt-6 sm:p-6 sm:pt-7 md:mx-auto overflow-hidden">
       <div className="text-white">
-        <h2 className="text-4xl font-semibold text-center">Ready to drive?</h2>
-        <p className="text-slate-300 text-center mt-5 text-sm sm:text-base max-w-2xl mx-auto">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-center">
+          Ready to drive?
+        </h2>
+        <p className="text-slate-300 text-center mt-3 text-xs sm:text-sm max-w-xl mx-auto">
           Experience the freedom of the road with our meticulously maintained
           fleet and seamless booking process.
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Link
             to="/cars"
-            className="py-3 px-5 bg-white text-black rounded-md cursor-pointer hover:bg-slate-200 duration-200 transition-colors"
+            className="py-2 px-4 bg-white text-black rounded-md text-xs cursor-pointer hover:bg-slate-200 duration-200 transition-colors"
           >
             Browse Fleet
           </Link>
           <a
             href="mailto:corporate@rentalcompany.com"
-            className="py-3 px-8 border border-white text-white rounded-md cursor-pointer hover:bg-white hover:text-black duration-200 transition-colors"
+            className="py-2 px-5 border border-white text-white rounded-md text-xs cursor-pointer hover:bg-white hover:text-black duration-200 transition-colors"
           >
             Contact Corporate
           </a>

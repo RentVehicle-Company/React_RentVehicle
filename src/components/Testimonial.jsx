@@ -28,10 +28,10 @@ const testimonials = [
 
 const Testimonial = () => {
   return (
-    <section className="px-4 sm:px-6 lg:px-16 xl:px-24 py-20">
-      <div className="mx-auto max-w-6xl">
+    <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-16">
+      <div className="mx-auto max-w-5xl">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-slate-900">
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
             What Our Customers Say
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500">
@@ -40,7 +40,7 @@ const Testimonial = () => {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
           {testimonials.map((testimonial) => (
             <article
               key={testimonial.name}

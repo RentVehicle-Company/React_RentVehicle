@@ -1,25 +1,25 @@
-import React from 'react'
-import Title from './Title'
+import React from "react";
+import Title from "./Title";
 import CarCard from "./vehicles/CarCard";
-
+import { dummyCarData } from "../assets/assets";
 
 const FeaturedSection = () => {
   return (
-    <div className='flex flex-col items-center py-24 px-6 md:px-16 lg:px-24 xl:px-32'>
+    <section className="flex flex-col items-center px-4 py-12 sm:px-6 sm:py-16 lg:px-16">
       <div>
         <Title
-            title="Featured Vehicles"
-            subTitle="Explore our selection o premium vehicles available for your next adventure."
+          title="Featured Vehicles"
+          subTitle="Explore our selection o premium vehicles available for your next adventure."
         />
       </div>
 
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-18'>
-        <div>
-            <CarCard/>
-        </div>
+      <div className="mt-10 grid w-full max-w-5xl grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {dummyCarData.slice(0, 3).map((car) => (
+          <CarCard key={car.id} car={car} />
+        ))}
       </div>
-    </div>
-  )
-}
+    </section>
+  );
+};
 
-export default FeaturedSection
+export default FeaturedSection;
