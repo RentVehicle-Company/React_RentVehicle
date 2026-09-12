@@ -1,6 +1,6 @@
 import React from "react";
 import Navbar from "./components/common/Navbar";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/customer/Home";
 import Cars from "./pages/vehicles/Cars";
 import MotorBikes from "./pages/vehicles/MotorBikes";
@@ -13,9 +13,13 @@ import BookingDetails from "./pages/customer/BookingDetails";
 import Payments from "./pages/customer/Payments";
 
 const App = () => {
+  const location = useLocation();
+  const isAuthRoute =
+    location.pathname === "/login" || location.pathname === "/register";
+
   return (
     <>
-      <Navbar />
+      {!isAuthRoute && <Navbar />}
       <main>
         <Routes>
           <Route path="/" element={<Home />} />

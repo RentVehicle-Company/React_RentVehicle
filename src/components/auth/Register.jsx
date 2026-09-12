@@ -1,11 +1,6 @@
-import React from 'react'
+import React from "react";
+import Login from "./Login";
 
-const Register = () => {
-  return (
-    <div className=''> 
-      <h1 className="text-black">Register Page</h1>
-    </div>
-  )
-}
+const Register = () => <Login initialMode="register" />;
 
-export default Register
+export default Register;

@@ -37,6 +37,7 @@ const ProfileForm = ({ user, onSave }) => {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     setValues({
@@ -60,6 +61,7 @@ const ProfileForm = ({ user, onSave }) => {
     });
     setErrors({});
     setSuccess(false);
+    setEditing(false);
   };
 
   const handleSubmit = async (e) => {
@@ -73,6 +75,7 @@ const ProfileForm = ({ user, onSave }) => {
     try {
       await onSave(values);
       setSuccess(true);
+      setEditing(false);
       setTimeout(() => setSuccess(false), 3000);
     } finally {
       setSaving(false);
@@ -84,13 +87,30 @@ const ProfileForm = ({ user, onSave }) => {
       onSubmit={handleSubmit}
       className="bg-white border border-borderColor rounded-2xl p-6"
     >
-      <h3 className="text-base font-semibold text-slate-900">
-        Profile Information
-      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-base font-semibold text-slate-900">
+          Profile Information
+        </h3>
+        {!editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setSuccess(false);
+              setEditing(true);
+            }}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dull"
+          >
+            Edit Profile
+          </button>
+        )}
+      </div>
 
       <div className="mt-5 grid md:grid-cols-2 gap-5">
         <div>
-          <label htmlFor="profile-name" className="block text-sm font-medium text-slate-700 mb-1.5">
+          <label
+            htmlFor="profile-name"
+            className="block text-sm font-medium text-slate-700 mb-1.5"
+          >
             Full Name
           </label>
           <input
@@ -99,14 +119,18 @@ const ProfileForm = ({ user, onSave }) => {
             type="text"
             value={values.name}
             onChange={handleChange}
+            disabled={!editing}
             placeholder="Your full name"
-            className={inputClass}
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
           />
           {errors.name && <p className={errorTextClass}>{errors.name}</p>}
         </div>
 
         <div>
-          <label htmlFor="profile-email" className="block text-sm font-medium text-slate-700 mb-1.5">
+          <label
+            htmlFor="profile-email"
+            className="block text-sm font-medium text-slate-700 mb-1.5"
+          >
             Email Address
           </label>
           <input
@@ -115,14 +139,18 @@ const ProfileForm = ({ user, onSave }) => {
             type="email"
             value={values.email}
             onChange={handleChange}
+            disabled={!editing}
             placeholder="you@example.com"
-            className={inputClass}
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
           />
           {errors.email && <p className={errorTextClass}>{errors.email}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label htmlFor="profile-phone" className="block text-sm font-medium text-slate-700 mb-1.5">
+          <label
+            htmlFor="profile-phone"
+            className="block text-sm font-medium text-slate-700 mb-1.5"
+          >
             Phone Number
           </label>
           <input
@@ -131,8 +159,9 @@ const ProfileForm = ({ user, onSave }) => {
             type="tel"
             value={values.phone}
             onChange={handleChange}
+            disabled={!editing}
             placeholder="+855 12 345 678"
-            className={inputClass}
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
           />
           {errors.phone && <p className={errorTextClass}>{errors.phone}</p>}
         </div>
@@ -145,22 +174,24 @@ const ProfileForm = ({ user, onSave }) => {
         </div>
       )}
 
-      <div className="mt-6 flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-700 bg-white border border-borderColor hover:bg-slate-50 transition-colors cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-black hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
+      {editing && (
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="cursor-pointer rounded-xl border border-borderColor bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="cursor-pointer rounded-xl bg-black px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      )}
     </form>
   );
 };

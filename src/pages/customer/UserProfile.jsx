@@ -29,6 +29,11 @@ const UserProfile = () => {
     setUser((prev) => ({ ...prev, ...updated }));
   };
 
+  const handlePhotoChange = async (image) => {
+    const updated = await updateCurrentUser({ image });
+    setUser((prev) => ({ ...prev, ...updated }));
+  };
+
   const handleLogout = () => {
     // connect to the auth service once authentication
   };
@@ -52,7 +57,7 @@ const UserProfile = () => {
 
           <div className="grid lg:grid-cols-3 gap-5 sm:gap-6 mt-6">
             <div className="lg:col-span-2 space-y-6">
-              <ProfileInfo user={user} />
+              <ProfileInfo user={user} onPhotoChange={handlePhotoChange} />
               <ProfileForm user={user} onSave={handleSave} />
             </div>
             <LoginMethodCard />
