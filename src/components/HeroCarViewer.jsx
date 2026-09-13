@@ -3,14 +3,14 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
-const LOOK_AT = new THREE.Vector3(0, 0, 0);
+const LOOK_AT = new THREE.Vector3(0, -0.4, 0);
 const DESIRED_POS = new THREE.Vector3();
 const DESIRED_TARGET = new THREE.Vector3();
 
 const VIEW_CONFIG = {
-  front: { position: [0, 0.8, 6.5], target: [0, 0, 0] },
-  side: { position: [6.5, 0.8, 0], target: [0, 0, 0] },
-  "three-quarter": { position: [5.0, 1.8, 5.0], target: [0, 0, 0] },
+  front: { position: [0, 0.9, 7.5], target: [0, -0.4, 0] },
+  side: { position: [7.5, 0.9, 0], target: [0, -0.4, 0] },
+  "three-quarter": { position: [5.8, 2, 5.8], target: [0, -0.4, 0] },
 };
 
 const VEHICLE_CONFIG = {
@@ -18,27 +18,27 @@ const VEHICLE_CONFIG = {
     model: "/bmw_m4csl.glb",
     name: "BMW M4 CSL",
     type: "Sportscar",
-    scale: [0.85, 0.85, 0.85],
-    offset: [0, -0.4, 0],
+    scale: [1.19, 1.19, 1.19],
+    offset: [0, -0.5, 0],
   },
   urus: {
     model: "/urus_absoluttm.glb",
     name: "Lamborghini Urus",
     type: "Super SUV",
-    scale: [0.8, 0.8, 0.8],
-    offset: [0, -0.4, 0],
+    scale: [1.12, 1.12, 1.12],
+    offset: [0, -0.5, 0],
   },
   raptor: {
     model: "/ford_f150_raptor.glb",
     name: "Ford F-150 Raptor",
     type: "Truck/Offroad",
-    scale: [0.75, 0.75, 0.75],
-    offset: [0, -0.4, 0],
+    scale: [1.05, 1.05, 1.05],
+    offset: [0, -0.5, 0],
   },
 };
 
-const ORBIT_RADIUS = 6;
-const ORBIT_HEIGHT = 1.4;
+const ORBIT_RADIUS = 7;
+const ORBIT_HEIGHT = 1.25;
 const ORBIT_SPEED = 0.35;
 
 // Non-paint parts that must NEVER be repainted — wheels, windows, lighting,
@@ -385,38 +385,71 @@ const HeroCarViewer = ({
   const activeRef = useRef(false);
 
   return (
-    <div className="w-full h-[500px] md:h-[600px] relative flex items-center justify-center -mt-8 md:-mt-12">
+    <div className="w-full h-[440px] sm:h-[520px] md:h-[540px] relative flex items-center justify-center -mt-10 sm:-mt-12 md:-mt-16">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[560px] animate-ambient rounded-full bg-gradient-to-tr from-blue-600/30 via-indigo-500/20 to-cyan-400/30 blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[460px] w-[720px] animate-ambient rounded-full bg-gradient-to-tr from-blue-600/30 via-indigo-500/20 to-cyan-400/30 blur-3xl"
       />
       <div
         aria-hidden="true"
-        className="animate-ambient absolute left-1/2 top-1/2 h-[320px] w-[320px] rounded-full bg-primary/20 blur-2xl"
+        className="animate-ambient absolute left-1/2 top-1/2 h-[340px] w-[340px] rounded-full bg-primary/20 blur-2xl"
         style={{ animationDelay: "-5.5s" }}
       />
       <div
         aria-hidden="true"
-        className="animate-ambient absolute left-1/2 top-1/2 h-[260px] w-[260px] rounded-full bg-violet-500/25 blur-2xl"
+        className="animate-ambient absolute left-1/2 top-1/2 h-[280px] w-[280px] rounded-full bg-violet-500/25 blur-2xl"
         style={{ animationDelay: "-11s" }}
       />
-      {Array.from({ length: 6 }).map((_, index) => (
-        <span
-          key={index}
-          aria-hidden="true"
-          className="animate-pulse-dot pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-primary/60"
-          style={{
-            left: `${12 + index * 15}%`,
-            top: `${22 + (index % 3) * 34}%`,
-            animationDelay: `${index * 0.45}s`,
-          }}
-        />
-      ))}
+      {Array.from({ length: 8 }).map((_, index) => {
+        const larger = index >= 4 ? 1 : 0;
+        const gradientPoints = [
+          ["9%", "16%"],
+          ["88%", "15%"],
+          ["6%", "60%"],
+          ["92%", "64%"],
+          ["15%", "82%"],
+          ["78%", "86%"],
+          ["45%", "92%"],
+          ["52%", "10%"],
+        ];
+        const [left, top] = gradientPoints[index];
+        const palette = [
+          "#2563eb",
+          "#8b5cf6",
+          "#2563eb",
+          "#a855f7",
+          "#3b82f6",
+          "#8b5cf6",
+          "#2563eb",
+          "#a855f7",
+        ];
+        return (
+          <span
+            key={index}
+            aria-hidden="true"
+            className="animate-dot-float pointer-events-none absolute rounded-full"
+            style={{
+              left,
+              top,
+              width: `${larger ? 8 : 6}px`,
+              height: `${larger ? 8 : 6}px`,
+              backgroundColor: palette[index],
+              animationDuration: `${(5 + ((index * 1.7) % 4)).toFixed(1)}s`,
+              animationDelay: `${(index * 0.8 - 4).toFixed(1)}s`,
+            }}
+          />
+        );
+      })}
       <Canvas
         shadows
-        dpr={[1, 2]}
+        dpr={Math.min(window.devicePixelRatio, 2)}
+        onCreated={({ gl }) => {
+          gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.2;
+        }}
         style={{ width: "100%", height: "100%", background: "transparent" }}
-        camera={{ position: [6.5, 1.4, 6.5], fov: 45, near: 0.1, far: 1000 }}
+        camera={{ position: [7.5, 1.35, 7.5], fov: 45, near: 0.1, far: 1000 }}
         gl={{ antialias: true, alpha: true }}
       >
         <ambientLight intensity={0.8} />
@@ -444,8 +477,8 @@ const HeroCarViewer = ({
           makeDefault
           enableZoom
           enablePan={false}
-          minDistance={3}
-          maxDistance={10}
+          minDistance={3.5}
+          maxDistance={12.5}
           enableDamping
           dampingFactor={0.08}
           onStart={() => {

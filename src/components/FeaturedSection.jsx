@@ -56,7 +56,7 @@ const FeaturedSection = ({
         })}
       </motion.div>
 
-      <div className="mt-10 grid w-full max-w-5xl grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid w-full max-w-5xl grid-cols-1 justify-items-center gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {vehicles.map((car, index) => (
           <motion.div
             key={car.id}

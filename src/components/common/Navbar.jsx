@@ -5,12 +5,9 @@ import { Link, useLocation } from "react-router-dom";
 import Logo from "./Logo";
 import { usePreferences } from "../../context/PreferencesContext";
 
-const selectClass =
-  "cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 outline-none transition-colors focus:border-slate-400";
-
 const Navbar = () => {
   const location = useLocation();
-  const { currency, setCurrency, language, setLanguage, t } = usePreferences();
+  const { t } = usePreferences();
   const [activeTab, setActiveTab] = useState(location.pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   const navLinks = [
@@ -70,26 +67,6 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center space-x-3 sm:space-x-4">
-            <div className="hidden items-center gap-2 md:flex">
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                aria-label="Select currency"
-                className={selectClass}
-              >
-                <option value="USD">$ USD</option>
-                <option value="KHR">៛ KHR</option>
-              </select>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                aria-label="Select language"
-                className={selectClass}
-              >
-                <option value="en">EN</option>
-                <option value="km">ខ្មែរ</option>
-              </select>
-            </div>
             <Link
               to="/login"
               onClick={() => closeMenu("/login")}
@@ -149,26 +126,6 @@ const Navbar = () => {
               >
                 {t("register")}
               </Link>
-              <div className="col-span-2 mt-1 flex items-center gap-2 border-t border-slate-200 pt-3">
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  aria-label="Select currency"
-                  className={selectClass}
-                >
-                  <option value="USD">$ USD</option>
-                  <option value="KHR">៛ KHR</option>
-                </select>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  aria-label="Select language"
-                  className={selectClass}
-                >
-                  <option value="en">English</option>
-                  <option value="km">ខ្មែរ</option>
-                </select>
-              </div>
             </div>
           </div>
         )}

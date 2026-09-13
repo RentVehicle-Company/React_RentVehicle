@@ -128,10 +128,11 @@ const MAP_LOCATIONS = [
 const RECENT_STORAGE_KEY = "rental_recent_searches";
 const AVG_DAILY_RATE = 90;
 
-const ENGINE_SOUNDS = {
-  bmw: { src: "/engine-bmw-inline6.mp3", label: "Inline-6" },
-  urus: { src: "/engine-urus-v8.mp3", label: "V8 Twin-Turbo" },
-  raptor: { src: "/engine-raptor-ecoboost-v6.mp3", label: "EcoBoost V6" },
+const ENGINE_SOUND_SRC = "/sounds/engine-sound.mp3";
+const ENGINE_SOUND_LABELS = {
+  bmw: "Inline-6",
+  urus: "V8 Twin-Turbo",
+  raptor: "EcoBoost V6",
 };
 
 const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
@@ -163,7 +164,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
       audio = new Audio();
       audioRef.current = audio;
     }
-    audio.src = ENGINE_SOUNDS[selectedVehicle].src;
+    audio.src = ENGINE_SOUND_SRC;
     audio.volume = 0.5;
     audio.preservesPitch = false;
     audio.onended = () => {
@@ -250,8 +251,8 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   };
 
   return (
-    <section className="relative w-full flex flex-col items-center justify-center px-4 py-12 sm:px-6 sm:py-16 lg:px-16 lg:py-20">
-      <div className="mx-auto flex w-full flex-col items-center justify-center gap-8 text-center sm:gap-10">
+    <section className="relative w-full flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-16 lg:py-10">
+      <div className="mx-auto flex w-full flex-col items-center justify-center gap-6 text-center sm:gap-8">
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -462,151 +463,10 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           </div>
         )}
 
-        <motion.div
-          className="mt-2 flex flex-wrap items-center justify-center gap-3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Car Color
-          </span>
-          {CAR_SWATCH_COLORS.map(({ hex, name }) => {
-            const isActive = carColor === hex;
-            return (
-              <button
-                key={hex}
-                type="button"
-                aria-label={`Set car color to ${name}`}
-                title={name}
-                aria-pressed={isActive}
-                onClick={() => setCarColor(hex)}
-                style={{ backgroundColor: hex }}
-                className={`h-8 w-8 cursor-pointer rounded-full border-2 shadow-sm transition-all duration-200 ease-out hover:scale-110 active:scale-95 ${
-                  isActive
-                    ? "scale-110 border-slate-900 ring-2 ring-slate-900/20"
-                    : "border-slate-300"
-                }`}
-              />
-            );
-          })}
-        </motion.div>
-
-        <motion.div
-          className="flex flex-wrap items-center justify-center gap-2"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.28 }}
-        >
-          <div className="flex flex-wrap items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
-            <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Model
-            </span>
-            {VEHICLE_OPTIONS.map((vehicle) => {
-              const isActive = selectedVehicle === vehicle.key;
-              return (
-                <button
-                  key={vehicle.key}
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => onSelectVehicle?.(vehicle.key)}
-                  className={`relative cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out active:scale-95 ${
-                    isActive
-                      ? "text-white"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="veh-active-pill"
-                      className="absolute inset-0 rounded-full bg-primary shadow-sm"
-                      transition={{
-                        type: "spring",
-                        stiffness: 380,
-                        damping: 32,
-                      }}
-                    />
-                  )}
-                  <span className="relative z-10">{vehicle.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="-mt-2 flex flex-wrap items-center justify-center gap-2"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.36 }}
-        >
-          <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
-            <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              View
-            </span>
-            {CAMERA_VIEWS.map((view) => {
-              const isActive = cameraView === view.key;
-              return (
-                <button
-                  key={view.key}
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => setCameraView(view.key)}
-                  className={`relative cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out active:scale-95 ${
-                    isActive
-                      ? "text-white"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="cam-active-pill"
-                      className="absolute inset-0 rounded-full bg-slate-900 shadow-sm"
-                      transition={{
-                        type: "spring",
-                        stiffness: 380,
-                        damping: 32,
-                      }}
-                    />
-                  )}
-                  <span className="relative z-10">{view.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            aria-pressed={headlightsOn}
-            onClick={() => setHeadlightsOn((on) => !on)}
-            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-sm transition-all duration-200 ease-out active:scale-95 ${
-              headlightsOn
-                ? "animate-pulse-glow-amber border-amber-400 bg-amber-50 text-amber-600"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900"
-            }`}
-          >
-            <LuLightbulb size={14} />
-            {headlightsOn ? "Headlights On" : "Headlights"}
-          </button>
-
-          <button
-            type="button"
-            aria-pressed={enginePlaying}
-            onClick={toggleEngineSound}
-            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-sm transition-all duration-200 ease-out active:scale-95 ${
-              enginePlaying
-                ? "animate-pulse-glow border-primary bg-primary/10 text-primary"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900"
-            }`}
-          >
-            {enginePlaying ? "🔊 Stop Sound" : "🔊 Engine Sound"}
-          </button>
-        </motion.div>
-
         <div className="relative w-full">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[540px] w-[780px] max-w-[120vw] -translate-x-1/2 -translate-y-1/2 transition-colors duration-700"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[820px] max-w-[120vw] -translate-x-1/2 -translate-y-1/2 transition-colors duration-700"
           style={{
             color: carColor,
             backgroundImage:
@@ -650,26 +510,6 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           className="bottom-6 right-2 sm:right-4"
         />
 
-        <div className="pointer-events-none absolute left-1/2 top-2 z-20 -translate-x-1/2">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedVehicle}
-              initial={{ opacity: 0, y: -14, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.9 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="rounded-2xl border border-white/70 bg-white/80 px-5 py-2.5 text-center shadow-lg shadow-slate-900/5 backdrop-blur-md"
-            >
-              <p className="text-sm font-bold text-slate-900">
-                {VEHICLE_OPTIONS.find((v) => v.key === selectedVehicle)?.name}
-              </p>
-              <p className="text-[10px] uppercase tracking-widest text-primary">
-                {VEHICLE_OPTIONS.find((v) => v.key === selectedVehicle)?.type}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
         <AnimatePresence>
           {enginePlaying && (
             <motion.div
@@ -682,7 +522,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
               <span className="relative flex h-2 w-2">
                 <span className="animate-pulse-dot inline-flex h-full w-full rounded-full bg-emerald-400" />
               </span>
-              🔊 {ENGINE_SOUNDS[selectedVehicle].label} Engine Active
+              🔊 {ENGINE_SOUND_LABELS[selectedVehicle]} Engine Active
             </motion.div>
           )}
         </AnimatePresence>
@@ -695,7 +535,148 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           onInteract={() => setCameraView("custom")}
         />
       </div>
-    </div>
+
+      <motion.div
+        className="-mt-2 flex flex-wrap items-center justify-center gap-2"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.28 }}
+      >
+        <div className="flex flex-wrap items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+          <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Model
+          </span>
+          {VEHICLE_OPTIONS.map((vehicle) => {
+            const isActive = selectedVehicle === vehicle.key;
+            return (
+              <button
+                key={vehicle.key}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => onSelectVehicle?.(vehicle.key)}
+                className={`relative cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out active:scale-95 ${
+                  isActive
+                    ? "text-white"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="veh-active-pill"
+                    className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                    transition={{
+                      type: "spring",
+                      stiffness: 380,
+                      damping: 32,
+                    }}
+                  />
+                )}
+                <span className="relative z-10">{vehicle.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      <motion.div
+        className="-mt-2 flex flex-wrap items-center justify-center gap-2"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.36 }}
+      >
+        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+          <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            View
+          </span>
+          {CAMERA_VIEWS.map((view) => {
+            const isActive = cameraView === view.key;
+            return (
+              <button
+                key={view.key}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setCameraView(view.key)}
+                className={`relative cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out active:scale-95 ${
+                  isActive
+                    ? "text-white"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="cam-active-pill"
+                    className="absolute inset-0 rounded-full bg-slate-900 shadow-sm"
+                    transition={{
+                      type: "spring",
+                      stiffness: 380,
+                      damping: 32,
+                    }}
+                  />
+                )}
+                <span className="relative z-10">{view.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          aria-pressed={headlightsOn}
+          onClick={() => setHeadlightsOn((on) => !on)}
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-sm transition-all duration-200 ease-out active:scale-95 ${
+            headlightsOn
+              ? "animate-pulse-glow-amber border-amber-400 bg-amber-50 text-amber-600"
+              : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900"
+          }`}
+        >
+          <LuLightbulb size={14} />
+          {headlightsOn ? "Headlights On" : "Headlights"}
+        </button>
+
+        <button
+          type="button"
+          aria-pressed={enginePlaying}
+          onClick={toggleEngineSound}
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-sm transition-all duration-200 ease-out active:scale-95 ${
+            enginePlaying
+              ? "animate-pulse-glow border-primary bg-primary/10 text-primary"
+              : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900"
+          }`}
+        >
+          {enginePlaying ? "🔊 Stop Sound" : "🔊 Engine Sound"}
+        </button>
+      </motion.div>
+
+      <motion.div
+        className="mt-2 flex flex-wrap items-center justify-center gap-3"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+      >
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          Car Color
+        </span>
+        {CAR_SWATCH_COLORS.map(({ hex, name }) => {
+          const isActive = carColor === hex;
+          return (
+            <button
+              key={hex}
+              type="button"
+              aria-label={`Set car color to ${name}`}
+              title={name}
+              aria-pressed={isActive}
+              onClick={() => setCarColor(hex)}
+              style={{ backgroundColor: hex }}
+              className={`h-8 w-8 cursor-pointer rounded-full border-2 shadow-sm transition-all duration-200 ease-out hover:scale-110 active:scale-95 ${
+                isActive
+                  ? "scale-110 border-slate-900 ring-2 ring-slate-900/20"
+                  : "border-slate-300"
+              }`}
+            />
+          );
+        })}
+      </motion.div>
+      </div>
     </section>
   );
 };
