@@ -1,10 +1,4 @@
-// Base HTTP client for the Rental Company frontend.
-// All services talk to the Spring Boot backend through this module.
-//
-// Set VITE_API_URL to the Spring Boot base URL (e.g. http://localhost:8080).
-// Falls back to "/api" so the frontend works when served behind the backend.
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export const API_ENDPOINTS = {
   vehicles: `${API_BASE_URL}/vehicles`,
@@ -16,22 +10,36 @@ export const API_ENDPOINTS = {
 };
 
 export const request = async (path, options = {}) => {
+  const token = localStorage.getItem("rental-access-token");
+  const headers = new Headers(options.headers || {});
+
+  headers.set("Content-Type", "application/json");
+  headers.set("Accept", "application/json");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   const response = await fetch(path, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(options.headers || {}),
-    },
+    headers,
   });
 
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
   if (!response.ok) {
-    const detail = await response.text().catch(() => null);
-    const error = new Error(detail || `Request failed (${response.status})`);
+    const errorMessage =
+      typeof data === "object" && data !== null
+        ? data.message || data.error || "Request failed."
+        : data || "Request failed.";
+    const error = new Error(errorMessage);
     error.status = response.status;
     throw error;
   }
 
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  return data;
 };
+
+export const apiRequest = request;
