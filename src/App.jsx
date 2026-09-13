@@ -16,16 +16,11 @@ import BookingDetails from "./pages/customer/BookingDetails";
 import Payments from "./pages/customer/Payments";
 import Footer from "./components/common/Footer";
 import LiveChatButton from "./components/LiveChatButton";
-import GoogleButton from "react-google-button";
 
 const App = () => {
   const location = useLocation();
   const isAuthRoute =
     location.pathname === "/login" || location.pathname === "/register";
-
-  const handleGoogleLogin = () => {
-    // Handle Google login logic
-  };
 
   return (
     <>
@@ -51,7 +46,6 @@ const App = () => {
       </main>
       <Footer />
       <LiveChatButton />
-      <GoogleButton onClick={handleGoogleLogin} disabled={submitting} />
     </>
   );
 };
