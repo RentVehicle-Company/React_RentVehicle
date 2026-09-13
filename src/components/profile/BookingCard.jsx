@@ -27,7 +27,7 @@ const BookingCard = ({ booking, onCancelRequest }) => {
   const actions = getActions(booking);
 
   return (
-    <div className="bg-white border border-borderColor rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white shadow-lg rounded-2xl overflow-hidden shadow-sm">
       <div className="relative h-28 bg-slate-100">
         <img
           src={booking.image}

@@ -10,7 +10,7 @@ const sidebarItems = [
 
 const ProfileSidebar = ({ onLogout }) => {
   return (
-    <div className="bg-white border border-borderColor rounded-2xl p-2 sm:p-4">
+    <div className="bg-white shadow-lg rounded-2xl p-2 sm:p-4">
       <nav className="grid grid-cols-3 gap-1 lg:block lg:space-y-1">
         {sidebarItems.map(({ to, end, label, icon: Icon }) => (
           <NavLink
