@@ -3,6 +3,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 export const API_ENDPOINTS = {
   vehicles: `${API_BASE_URL}/vehicles`,
   vehicleById: (id) => `${API_BASE_URL}/vehicles/${id}`,
+  motorbikes: `${API_BASE_URL}/motorbikes`,
+  bicycles: `${API_BASE_URL}/bicycles`,
   visaPayment: `${API_BASE_URL}/payments/visa`,
   khqrPayment: `${API_BASE_URL}/payments/khqr`,
   khqrPaymentStatus: (transactionId) =>

@@ -82,13 +82,14 @@ const PriceEstimator = ({ vehicle = null }) => {
     setAddOns((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
-    <section className="bg-slate-50 px-4 py-12 sm:px-6 sm:py-16 lg:px-16">
+    <section className="bg-slate-50 py-12 sm:py-16">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
       <Title
         title="Rental Price Estimator"
         subTitle="Get an instant estimate for your perfect ride — adjust and watch the price update live."
       />
 
-      <div className="mx-auto mt-10 grid max-w-5xl gap-6 md:grid-cols-[1fr_320px]">
+      <div className="mx-auto mt-10 grid w-full max-w-5xl gap-6 md:grid-cols-[1fr_320px]">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -299,6 +300,7 @@ const PriceEstimator = ({ vehicle = null }) => {
             Proceed with Reservation
           </Link>
         </motion.div>
+      </div>
       </div>
     </section>
   );

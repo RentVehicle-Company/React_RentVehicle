@@ -1,17 +1,28 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
-  LuCalendar,
+  LuBike,
+  LuCalendarHeart,
+  LuCheck,
+  LuChevronRight,
+  LuCircleDot,
+  LuCog,
+  LuCompass,
   LuFuel,
+  LuGauge,
+  LuLayers,
   LuMapPin,
   LuPause,
   LuPlay,
   LuRotateCcw,
   LuSettings2,
-  LuUsers,
+  LuTimer,
   LuX,
+  LuZap,
 } from "react-icons/lu";
 import { assets } from "../assets/assets";
+import { isAutomobile, isBicycle, isMotorbike } from "../services/vehicleServices";
 import { usePreferences } from "../context/PreferencesContext";
 
 const GALLERY_IMAGES = [
@@ -23,16 +34,172 @@ const GALLERY_IMAGES = [
   assets.banner_car_image,
 ];
 
+const CATEGORY_ACCELERATION = {
+  "Sports Car": 4.4,
+  Supercar: 3.3,
+  "Luxury SUV": 5.8,
+  SUV: 7.2,
+  Sedan: 9.4,
+  Hatchback: 10.8,
+  Electric: 5.6,
+  Truck: 8.4,
+};
+
+const estimateAcceleration = (vehicle) => {
+  const base = CATEGORY_ACCELERATION[vehicle.category] ?? 8.6;
+  const variation = (((vehicle.id % 5) - 2) * 0.3).toFixed(1);
+  return Math.max(2.5, Math.round((base + Number(variation)) * 10) / 10);
+};
+
+const FEATURE_BADGES = [
+  "GPS Navigation",
+  "Bluetooth Audio",
+  "Leather Seats",
+  "Cruise Control",
+  "Apple CarPlay",
+  "360° Camera",
+];
+
+const deriveBadges = (vehicle, count = 4) => {
+  const start = ((vehicle.id % FEATURE_BADGES.length) + FEATURE_BADGES.length) % FEATURE_BADGES.length;
+  return [
+    ...FEATURE_BADGES.slice(start),
+    ...FEATURE_BADGES.slice(0, start),
+  ].slice(0, count);
+};
+
 const VehicleQuickViewModal = ({ vehicle, onClose }) => {
   const { formatPrice, t } = usePreferences();
   const [viewMode, setViewMode] = useState("photo");
+  const [activeImg, setActiveImg] = useState(0);
   const [frameIndex, setFrameIndex] = useState(0);
   const [spinning, setSpinning] = useState(true);
 
-  const frames = [
-    vehicle.image,
-    ...GALLERY_IMAGES.filter((image) => image !== vehicle.image),
-  ];
+  const frames = vehicle.images?.length
+    ? vehicle.images
+    : [vehicle.image, ...GALLERY_IMAGES.filter((image) => image !== vehicle.image)];
+  const badges = deriveBadges(vehicle);
+
+  const deriveTiles = () => {
+    const s = vehicle.specs ?? {};
+
+    if (isBicycle(vehicle)) {
+      return [
+        {
+          icon: LuLayers,
+          label: "Frame",
+          value: s.frame ?? vehicle.frame_material ?? "Aluminum",
+          iconBox: "bg-emerald-100 text-emerald-600",
+          hover: "hover:shadow-emerald-500/20",
+        },
+        {
+          icon: LuSettings2,
+          label: "Gears",
+          value: s.gears ?? vehicle.gears ?? "Single-Speed",
+          iconBox: "bg-teal-100 text-teal-600",
+          hover: "hover:shadow-teal-500/20",
+        },
+        {
+          icon: LuBike,
+          label: "Type",
+          value: s.driveType ?? vehicle.fuel_type ?? vehicle.category,
+          iconBox: "bg-lime-100 text-lime-600",
+          hover: "hover:shadow-lime-500/20",
+        },
+        {
+          icon: LuCircleDot,
+          label: "Wheel",
+          value: s.wheelSize ?? vehicle.wheel_size ?? "26 inch",
+          iconBox: "bg-green-100 text-green-600",
+          hover: "hover:shadow-green-500/20",
+        },
+      ];
+    }
+
+    if (isMotorbike(vehicle)) {
+      return [
+        {
+          icon: LuCog,
+          label: "Engine",
+          value: `${s.displacementCc ?? vehicle.engine_cc ?? 125} cc`,
+          iconBox: "bg-orange-100 text-orange-600",
+          hover: "hover:shadow-orange-500/20",
+        },
+        {
+          icon: LuSettings2,
+          label: "Transmission",
+          value: s.transmission ?? vehicle.transmission ?? "Automatic",
+          iconBox: "bg-yellow-100 text-yellow-600",
+          hover: "hover:shadow-yellow-500/20",
+        },
+        {
+          icon: LuFuel,
+          label: "Efficiency",
+          value: `${s.fuelEfficiency ?? vehicle.fuel_efficiency ?? 45} km/l`,
+          iconBox: "bg-blue-100 text-blue-600",
+          hover: "hover:shadow-blue-500/20",
+        },
+        {
+          icon: LuGauge,
+          label: "Top Speed",
+          value: `${s.topSpeed ?? vehicle.top_speed ?? 110} km/h`,
+          iconBox: "bg-cyan-100 text-cyan-600",
+          hover: "hover:shadow-cyan-500/20",
+        },
+      ];
+    }
+
+    if (isAutomobile(vehicle)) {
+      const liveSpecs = {
+        topSpeed: s.topSpeed ?? vehicle.specs?.topSpeed ?? 200,
+        acceleration:
+          s.acceleration ??
+          vehicle.specs?.acceleration ??
+          estimateAcceleration(vehicle),
+        horsepower: s.horsepower ?? vehicle.specs?.horsepower ?? 180,
+        drive:
+          s.drive ??
+          (vehicle.transmission?.includes("All") ||
+          vehicle.transmission?.includes("Auto")
+            ? "AWD"
+            : "FWD"),
+      };
+      return [
+        {
+          icon: LuTimer,
+          label: "0-100 km/h",
+          value: `${liveSpecs.acceleration} s`,
+          iconBox: "bg-blue-100 text-blue-600",
+          hover: "hover:shadow-blue-500/20",
+        },
+        {
+          icon: LuGauge,
+          label: "Top Speed",
+          value: `${liveSpecs.topSpeed} km/h`,
+          iconBox: "bg-cyan-100 text-cyan-600",
+          hover: "hover:shadow-cyan-500/20",
+        },
+        {
+          icon: LuZap,
+          label: "Horsepower",
+          value: `${liveSpecs.horsepower} HP`,
+          iconBox: "bg-indigo-100 text-indigo-600",
+          hover: "hover:shadow-indigo-500/20",
+        },
+        {
+          icon: LuCompass,
+          label: "Drivetrain",
+          value: liveSpecs.drive,
+          iconBox: "bg-sky-100 text-sky-600",
+          hover: "hover:shadow-sky-500/20",
+        },
+      ];
+    }
+
+    return [];
+  };
+
+  const specs = deriveTiles();
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -56,14 +223,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
 
   if (!vehicle) return null;
 
-  const specs = [
-    { icon: LuUsers, label: t("seats"), value: `${vehicle.seating_capacity} ${t("seats").toLowerCase()}` },
-    { icon: LuFuel, label: t("fuel"), value: vehicle.fuel_type },
-    { icon: LuSettings2, label: t("transmission"), value: vehicle.transmission },
-    { icon: LuCalendar, label: t("year"), value: vehicle.year },
-  ];
-
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4"
       role="dialog"
@@ -79,11 +239,21 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
       <div className="relative w-full max-w-lg animate-fade-in overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
         <div className="relative">
           {viewMode === "photo" ? (
-            <img
-              src={vehicle.image}
-              alt={`${vehicle.brand} ${vehicle.model}`}
-              className="h-52 w-full object-cover"
-            />
+            <div className="relative h-52 w-full overflow-hidden">
+              <img
+                src={frames[activeImg]}
+                alt={`${vehicle.brand} ${vehicle.model}`}
+                className="h-full w-full object-cover"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 via-black/10 to-transparent"
+              />
+              <div className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-md">
+                <LuRotateCcw size={11} className="animate-spin-slow" />
+                Interactive 360° available
+              </div>
+            </div>
           ) : (
             <div className="relative h-52 w-full overflow-hidden bg-slate-900">
               <img
@@ -131,8 +301,11 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
           )}
 
           {vehicle.is_available && (
-            <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-600/90 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm">
-              <span className="animate-pulse-dot h-1.5 w-1.5 rounded-full bg-white" />
+            <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg shadow-emerald-500/40 backdrop-blur-sm">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+              </span>
               {t("available_now")}
             </span>
           )}
@@ -171,6 +344,31 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
           </button>
         </div>
 
+        <div className="flex gap-2 overflow-x-auto border-b border-slate-100 bg-slate-50 p-2">
+          {frames.map((src, index) => (
+            <button
+              key={src + index}
+              type="button"
+              aria-label={`Photo ${index + 1}`}
+              onClick={() => {
+                setActiveImg(index);
+                setViewMode("photo");
+              }}
+              className={`h-12 w-16 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-colors ${
+                viewMode === "photo" && activeImg === index
+                  ? "border-primary"
+                  : "border-transparent hover:border-slate-300"
+              }`}
+            >
+              <img
+                src={src}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+
         <div className="p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -194,12 +392,16 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
           </div>
 
           <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {specs.map(({ icon: Icon, label, value }) => (
+            {specs.map(({ icon: Icon, label, value, iconBox, hover }) => (
               <div
                 key={label}
-                className="flex flex-col items-center gap-1.5 rounded-xl bg-slate-50 px-2 py-3 text-center"
+                className={`group flex flex-col items-center gap-1.5 rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${hover}`}
               >
-                <Icon size={16} className="text-slate-500" />
+                <span
+                  className={`grid h-8 w-8 place-items-center rounded-lg ${iconBox} transition-transform duration-200 group-hover:scale-110`}
+                >
+                  <Icon size={16} />
+                </span>
                 <dt className="text-[10px] uppercase tracking-wide text-slate-400">
                   {label}
                 </dt>
@@ -210,29 +412,64 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
             ))}
           </dl>
 
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {badges.map((badge) => (
+              <span
+                key={badge}
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700"
+              >
+                <LuCheck size={12} className="text-primary" strokeWidth={3} />
+                {badge}
+              </span>
+            ))}
+          </div>
+
           <p className="mt-4 text-sm leading-6 text-slate-600">
             {vehicle.description}
           </p>
 
           <div className="mt-6 flex flex-col gap-2">
+            <div className="relative">
+              <span
+                aria-hidden="true"
+                className="animate-pulse-glow pointer-events-none absolute -inset-1 rounded-xl"
+              />
+              <Link
+                to={`/vehicles/${vehicle.id}`}
+                onClick={onClose}
+                className="group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary-dull px-5 py-3 text-base font-bold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-primary/40 active:scale-95"
+              >
+                <LuCalendarHeart size={18} />
+                {t("book_now")}
+                <LuChevronRight
+                  size={16}
+                  className="transition-transform duration-200 group-hover:translate-x-1"
+                />
+              </Link>
+            </div>
             <Link
               to={`/vehicles/${vehicle.id}`}
               onClick={onClose}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-base font-bold text-white transition-colors hover:bg-primary-dull"
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary transition-all duration-200 hover:border-primary hover:bg-primary hover:text-white active:scale-95"
             >
-              Proceed to Booking
+              View Full Specs &amp; Book
+              <LuChevronRight
+                size={16}
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
             </Link>
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center justify-center rounded-xl border border-borderColor px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
+              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-borderColor px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
               {t("close")}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

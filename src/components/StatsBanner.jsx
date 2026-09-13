@@ -59,7 +59,7 @@ const StatItem = ({ icon: Icon, value, suffix, label, inView, index }) => {
   );
 };
 
-const StatsBanner = () => {
+const StatsBanner = ({ flush = false }) => {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
 
@@ -79,25 +79,56 @@ const StatsBanner = () => {
     return () => observer.disconnect();
   }, []);
 
+  const grid = (
+    <div className="grid grid-cols-2 sm:grid-cols-4">
+      {STATS.map((stat, index) => (
+        <div key={stat.label} className="relative">
+          {index % 2 === 0 && index < 3 && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-0 top-1/2 h-12 w-px -translate-y-1/2 bg-slate-700/50 sm:hidden"
+            />
+          )}
+          {index < 3 && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-0 top-1/2 hidden h-12 w-px -translate-y-1/2 bg-slate-700/50 sm:block"
+            />
+          )}
+          {index >= 2 && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-slate-700/50 sm:hidden"
+            />
+          )}
+          <StatItem
+            icon={stat.icon}
+            value={stat.value}
+            suffix={stat.suffix}
+            label={stat.label}
+            inView={inView}
+            index={index}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
+  if (flush) {
+    return (
+      <div ref={ref} className="py-10 sm:py-12">
+        {grid}
+      </div>
+    );
+  }
+
   return (
     <section className="px-4 sm:px-6 lg:px-16">
       <div
         ref={ref}
-        className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-[#0F172A] py-6 shadow-sm sm:py-8"
+        className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-[#0F172A] py-10 shadow-sm sm:py-12"
       >
-        <div className="grid grid-cols-2 divide-x divide-slate-800 sm:grid-cols-4 sm:divide-y-0">
-          {STATS.map((stat, index) => (
-            <StatItem
-              key={stat.label}
-              icon={stat.icon}
-              value={stat.value}
-              suffix={stat.suffix}
-              label={stat.label}
-              inView={inView}
-              index={index}
-            />
-          ))}
-        </div>
+        {grid}
       </div>
     </section>
   );

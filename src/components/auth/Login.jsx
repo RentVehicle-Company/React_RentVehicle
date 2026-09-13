@@ -160,7 +160,7 @@ const Login = ({ initialMode = "login" }) => {
           <button
             type="button"
             onClick={() => changeMode("login")}
-            className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+            className={`border-b-2 px-4 py-3 text-sm font-semibold cursor-pointer transition-colors ${
               mode === "login"
                 ? "border-slate-700 text-slate-800"
                 : "border-transparent text-slate-400 hover:text-slate-600"
@@ -171,7 +171,7 @@ const Login = ({ initialMode = "login" }) => {
           <button
             type="button"
             onClick={() => changeMode("register")}
-            className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+            className={`border-b-2 px-4 py-3 text-sm font-semibold cursor-pointer transition-colors ${
               mode === "register"
                 ? "border-slate-700 text-slate-800"
                 : "border-transparent text-slate-400 hover:text-slate-600"
@@ -257,7 +257,7 @@ const Login = ({ initialMode = "login" }) => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                className="w-full rounded-lg cursor-pointer bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
               >
                 {submitting ? "Signing In..." : "Sign In"}
               </button>
