@@ -1,6 +1,7 @@
 import React from "react";
 import { LuStar } from "react-icons/lu";
 import { assets } from "../assets/assets";
+import Reveal from "./Reveal";
 
 const testimonials = [
   {
@@ -40,39 +41,52 @@ const Testimonial = () => {
           </p>
         </div>
 
+        <div className="mt-6 flex justify-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 shadow-sm sm:text-sm">
+            <span className="flex items-center gap-0.5 text-amber-400">
+              {Array.from({ length: 1 }).map((_, index) => (
+                <LuStar key={index} size={16} fill="currentColor" />
+              ))}
+            </span>
+            <span className="font-semibold text-slate-900">
+              4.9 out of 5 stars
+            </span>
+            based on 1,200+ verified customer reviews
+          </span>
+        </div>
+
         <div className="mt-8 grid gap-5 md:grid-cols-3">
-          {testimonials.map((testimonial) => (
-            <article
-              key={testimonial.name}
-              className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src={testimonial.image}
-                  alt={testimonial.name}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    {testimonial.name}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    {testimonial.location}
-                  </p>
+          {testimonials.map((testimonial, index) => (
+            <Reveal key={testimonial.name} delay={index * 100}>
+              <article className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={testimonial.image}
+                    alt={testimonial.name}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      {testimonial.name}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      {testimonial.location}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div
-                className="mt-3 flex gap-0.5 text-blue-600"
-                aria-label="5 out of 5 stars"
-              >
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <LuStar key={index} size={14} fill="currentColor" />
-                ))}
-              </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">
-                “{testimonial.quote}”
-              </p>
-            </article>
+                <div
+                  className="mt-3 flex gap-0.5 text-blue-600"
+                  aria-label="5 out of 5 stars"
+                >
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <LuStar key={index} size={14} fill="currentColor" />
+                  ))}
+                </div>
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  “{testimonial.quote}”
+                </p>
+              </article>
+            </Reveal>
           ))}
         </div>
       </div>

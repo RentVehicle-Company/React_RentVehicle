@@ -2,16 +2,22 @@ import React, { useEffect } from "react";
 import { useState } from "react";
 import { LuMenu, LuX } from "react-icons/lu";
 import { Link, useLocation } from "react-router-dom";
+import Logo from "./Logo";
+import { usePreferences } from "../../context/PreferencesContext";
+
+const selectClass =
+  "cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 outline-none transition-colors focus:border-slate-400";
 
 const Navbar = () => {
   const location = useLocation();
+  const { currency, setCurrency, language, setLanguage, t } = usePreferences();
   const [activeTab, setActiveTab] = useState(location.pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   const navLinks = [
-    { name: "Home", path: "/" },
-    { name: "Cars", path: "/cars" },
-    { name: "Motorbikes", path: "/motorbikes" },
-    { name: "Bicycles", path: "/bicycles" },
+    { name: t("nav_home"), path: "/" },
+    { name: t("nav_cars"), path: "/cars" },
+    { name: t("nav_motorbikes"), path: "/motorbikes" },
+    { name: t("nav_bicycles"), path: "/bicycles" },
   ];
 
   useEffect(() => {
@@ -32,10 +38,13 @@ const Navbar = () => {
             <Link
               to="/"
               onClick={() => closeMenu("/")}
-              className="text-lg sm:text-xl font-bold tracking-tight text-slate-950"
+              className="flex items-center cursor-pointer"
             >
-              <span className="sm:hidden">Rental</span>
-              <span className="hidden sm:inline">Rental Company</span>
+              <Logo
+                text="Rental Company"
+                shortText="Rental"
+                wordClassName="text-lg sm:text-xl font-bold tracking-tight text-slate-950"
+              />
             </Link>
           </div>
 
@@ -60,20 +69,40 @@ const Navbar = () => {
             ))}
           </div>
 
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="hidden items-center gap-2 md:flex">
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                aria-label="Select currency"
+                className={selectClass}
+              >
+                <option value="USD">$ USD</option>
+                <option value="KHR">៛ KHR</option>
+              </select>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                aria-label="Select language"
+                className={selectClass}
+              >
+                <option value="en">EN</option>
+                <option value="km">ខ្មែរ</option>
+              </select>
+            </div>
             <Link
               to="/login"
               onClick={() => closeMenu("/login")}
               className="hidden sm:block cursor-pointer text-sm font-medium text-slate-900 hover:text-slate-600 transition-colors"
             >
-              Log In
+              {t("login")}
             </Link>
             <Link
               to="/register"
               onClick={() => closeMenu("/register")}
               className="hidden sm:block cursor-pointer bg-black text-white text-sm font-medium px-4 sm:px-5 py-2 rounded-lg hover:bg-slate-800 transition-colors"
             >
-              Register
+              {t("register")}
             </Link>
             <button
               type="button"
@@ -111,15 +140,35 @@ const Navbar = () => {
                 onClick={() => closeMenu("/login")}
                 className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
               >
-                Log In
+                {t("login")}
               </Link>
               <Link
                 to="/register"
                 onClick={() => closeMenu("/register")}
                 className="rounded-lg bg-black px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-slate-800"
               >
-                Register
+                {t("register")}
               </Link>
+              <div className="col-span-2 mt-1 flex items-center gap-2 border-t border-slate-200 pt-3">
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  aria-label="Select currency"
+                  className={selectClass}
+                >
+                  <option value="USD">$ USD</option>
+                  <option value="KHR">៛ KHR</option>
+                </select>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  aria-label="Select language"
+                  className={selectClass}
+                >
+                  <option value="en">English</option>
+                  <option value="km">ខ្មែរ</option>
+                </select>
+              </div>
             </div>
           </div>
         )}

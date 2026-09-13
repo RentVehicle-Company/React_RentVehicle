@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { LuAtSign, LuGlobe, LuShieldCheck } from "react-icons/lu";
+import Logo from "./Logo";
 
 const Footer = () => {
   return (
@@ -10,9 +11,9 @@ const Footer = () => {
           <div>
             <Link
               to="/"
-              className="text-xl font-bold tracking-tight text-slate-950"
+              className="inline-flex items-center"
             >
-              Rental Company
+              <Logo />
             </Link>
             <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
               Delivering premium mobility solutions for corporate and personal
@@ -108,7 +109,7 @@ const Footer = () => {
         </div>
 
         <div className="flex flex-col gap-4 border-t border-slate-200 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2024 Rental Company. All rights reserved.</p>
+          <p>© 2026 Rental Company. All rights reserved.</p>
           <div className="flex items-center gap-4" aria-label="Company links">
             <span title="Global service">
               <LuGlobe size={16} />

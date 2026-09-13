@@ -1,17 +1,95 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { LuFuel, LuMapPin, LuSettings2, LuUsers } from "react-icons/lu";
+import React, { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  LuCheck,
+  LuFuel,
+  LuHeart,
+  LuMapPin,
+  LuPlus,
+  LuSettings2,
+  LuUsers,
+} from "react-icons/lu";
 import { assets, dummyCarData } from "../../assets/assets";
+import VehicleQuickViewModal from "../VehicleQuickViewModal";
+import VehiclePricingModal from "./VehiclePricingModal";
+import { useCompare } from "../../context/CompareContext";
+import { usePreferences } from "../../context/PreferencesContext";
+import { useWishlist } from "../../hooks/useWishlist";
 
 const CarCard = ({ car = dummyCarData[0] }) => {
+  const [showQuickView, setShowQuickView] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
+  const { isCompared, toggleCompare } = useCompare();
+  const { formatPrice, t } = usePreferences();
+  const { isWishlisted, toggleWishlist } = useWishlist();
+
+  const compared = isCompared(car.id);
+  const wishlisted = isWishlisted(car.id);
+
   return (
-    <article className="w-full max-w-[280px] overflow-hidden rounded-xl border border-borderColor bg-white shadow-sm">
-      <div className="flex  items-center justify-center bg-slate-100">
+    <article
+      className={`group w-full max-w-[280px] overflow-hidden rounded-xl border bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/15 ${
+        compared ? "border-primary ring-2 ring-primary/20" : "border-borderColor"
+      }`}
+    >
+      <div className="relative flex items-center justify-center overflow-hidden bg-slate-100">
         <img
           src={car.image || assets.car_image1}
           alt={`${car.brand} ${car.model}`}
-          className="h-[150px] w-full"
+          className="h-[150px] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
         />
+        {car.is_available && (
+          <span className="absolute left-3 top-3 z-10 inline-flex max-w-[70%] items-center gap-1.5 rounded-full bg-emerald-600/90 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-sm">
+            <span className="animate-pulse-dot h-1.5 w-1.5 shrink-0 rounded-full bg-white" />
+            <span className="truncate">
+              {t("available_in", { location: car.location })}
+            </span>
+          </span>
+        )}
+        {car.stock_left === 1 && (
+          <span className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500/95 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm">
+            ⚡ {t("only_one_left")}
+          </span>
+        )}
+
+        {/* Animated shine sweep across the image on hover */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[5] -translate-x-full skew-x-12 bg-gradient-to-r from-transparent via-white/45 to-transparent opacity-0 transition-all duration-700 ease-out group-hover:translate-x-full group-hover:opacity-100"
+        />
+
+        {/* Wishlist heart toggle with pop animation */}
+        <motion.button
+          type="button"
+          aria-pressed={wishlisted}
+          aria-label={
+            wishlisted
+              ? `${t("remove")} ${car.brand} ${car.model}`
+              : `Save ${car.brand} ${car.model}`
+          }
+          onClick={() => toggleWishlist(car.id)}
+          whileTap={{ scale: 0.8 }}
+          className="absolute right-3 top-3 z-20 grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition-colors hover:bg-white"
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={wishlisted ? "on" : "off"}
+              initial={{ scale: 0.3, rotate: -35, opacity: 0 }}
+              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+              exit={{ scale: 0.3, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 20 }}
+            >
+              <LuHeart
+                size={18}
+                className={
+                  wishlisted
+                    ? "fill-red-500 text-red-500"
+                    : "text-slate-500"
+                }
+              />
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
@@ -22,16 +100,16 @@ const CarCard = ({ car = dummyCarData[0] }) => {
             <p className="mt-0.5 text-xs text-slate-500">{car.category}</p>
           </div>
           <p className="text-right text-xs font-semibold text-slate-900">
-            ${car.price_per_day}
+            {formatPrice(car.price_per_day)}
             <span className="block text-xs font-normal text-slate-500">
-              /day
+              {t("per_day")}
             </span>
           </p>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-x-2 gap-y-2 border-t border-slate-100 pt-3 text-[11px] text-slate-600">
           <span className="inline-flex min-w-0 items-center gap-2">
             <LuUsers size={13} className="shrink-0 text-slate-500" />
-            <span className="truncate">{car.seating_capacity} Seats</span>
+            <span className="truncate">{car.seating_capacity} {t("seats").toLowerCase()}</span>
           </span>
           <span className="inline-flex min-w-0 items-center gap-2">
             <LuFuel size={13} className="shrink-0 text-slate-500" />
@@ -46,13 +124,60 @@ const CarCard = ({ car = dummyCarData[0] }) => {
             <span className="truncate">{car.location}</span>
           </span>
         </div>
-        <Link
-          to="/cars"
-          className="mt-4 block rounded-lg bg-black px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-slate-800"
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowQuickView(true)}
+            className="flex-1 rounded-lg border border-borderColor px-3 py-2 text-center text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
+          >
+            {t("quick_view")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPricing(true)}
+            className="flex-1 rounded-lg bg-black px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-slate-800 cursor-pointer"
+          >
+            {t("view_vehicle")}
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-pressed={compared}
+          onClick={() => toggleCompare(car.id)}
+          className={`mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-center text-xs font-medium transition-all duration-200 ease-out active:scale-95 ${
+            compared
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-dashed border-borderColor text-slate-600 hover:border-slate-400 hover:text-slate-900"
+          }`}
         >
-          View Vehicle
-        </Link>
+          {compared ? (
+            <>
+              <LuCheck size={14} />
+              {t("in_compare")}
+            </>
+          ) : (
+            <>
+              <LuPlus size={14} />
+              {t("compare")}
+            </>
+          )}
+        </button>
+        <p className="mt-1.5 text-center text-[10px] text-slate-400">
+          {t("add_to_compare_hint")}
+        </p>
       </div>
+      {showQuickView && (
+        <VehicleQuickViewModal
+          vehicle={car}
+          onClose={() => setShowQuickView(false)}
+        />
+      )}
+      {showPricing && (
+        <VehiclePricingModal
+          vehicle={car}
+          onClose={() => setShowPricing(false)}
+        />
+      )}
     </article>
   );
 };
