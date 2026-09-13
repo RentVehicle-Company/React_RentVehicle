@@ -1,6 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LuArrowLeft, LuEye, LuEyeOff, LuMail } from "react-icons/lu";
+import {
+  login,
+  loginWithGoogle,
+  register,
+  resendOtp,
+  storeAuthSession,
+  verifyEmail,
+} from "../../services/authServices";
 
 const fieldClass =
   "w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200";
@@ -21,6 +29,7 @@ const Login = ({ initialMode = "login" }) => {
     password: "",
   });
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setMode(initialMode);
@@ -33,21 +42,34 @@ const Login = ({ initialMode = "login" }) => {
     setError("");
   };
 
-  const handleLoginSubmit = (event) => {
+  const handleLoginSubmit = async (event) => {
     event.preventDefault();
     setError("");
-    localStorage.setItem(
-      "rental-auth-user",
-      JSON.stringify({ name: "John Doe" }),
-    );
-    navigate("/");
+    setSubmitting(true);
+    try {
+      const response = await login(loginValues);
+      storeAuthSession(response, loginValues.email.split("@")[0]);
+      navigate("/");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleRegisterSubmit = (event) => {
+  const handleRegisterSubmit = async (event) => {
     event.preventDefault();
     setError("");
-    setRegisterStep("otp");
-    setMessage(`We sent a verification code to ${registerValues.email}.`);
+    setSubmitting(true);
+    try {
+      await register(registerValues);
+      setRegisterStep("otp");
+      setMessage(`We sent a verification code to ${registerValues.email}.`);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleOtpChange = (index, value) => {
@@ -67,20 +89,52 @@ const Login = ({ initialMode = "login" }) => {
     }
   };
 
-  const verifyOtp = (event) => {
+  const verifyOtp = async (event) => {
     event.preventDefault();
     if (otp.join("").length !== 6) {
       setError("Enter the 6-digit verification code.");
       return;
     }
-    setMessage("Email verified successfully. Your account is ready.");
-    localStorage.setItem(
-      "rental-auth-user",
-      JSON.stringify({ name: registerValues.name || "John Doe" }),
-    );
-    setRegisterStep("details");
-    setMode("login");
-    navigate("/");
+    setSubmitting(true);
+    try {
+      const response = await verifyEmail(registerValues.email, otp.join(""));
+      storeAuthSession(response, registerValues.name || "John Doe");
+      setMessage("Email verified successfully. Your account is ready.");
+      setRegisterStep("details");
+      setMode("login");
+      navigate("/");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      await resendOtp(registerValues.email);
+      setMessage(`A new code was sent to ${registerValues.email}.`);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      const response = await loginWithGoogle();
+      storeAuthSession(response);
+      navigate("/");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleBack = () => {
@@ -202,13 +256,14 @@ const Login = ({ initialMode = "login" }) => {
 
               <button
                 type="submit"
+                disabled={submitting}
                 className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
               >
-                Sign In
+                {submitting ? "Signing In..." : "Sign In"}
               </button>
 
               <AuthDivider />
-              <GoogleButton />
+              <GoogleButton onClick={handleGoogleLogin} disabled={submitting} />
             </form>
           ) : registerStep === "details" ? (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
@@ -298,9 +353,10 @@ const Login = ({ initialMode = "login" }) => {
               </div>
               <button
                 type="submit"
+                disabled={submitting}
                 className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
               >
-                Create Account
+                {submitting ? "Creating Account..." : "Create Account"}
               </button>
             </form>
           ) : (
@@ -348,15 +404,15 @@ const Login = ({ initialMode = "login" }) => {
               </div>
               <button
                 type="submit"
+                disabled={submitting}
                 className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
               >
-                Verify Email
+                {submitting ? "Verifying..." : "Verify Email"}
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  setMessage(`A new code was sent to ${registerValues.email}.`)
-                }
+                onClick={handleResendOtp}
+                disabled={submitting}
                 className="block w-full text-center text-xs font-medium text-slate-500 hover:text-slate-800"
               >
                 Resend code
@@ -391,12 +447,15 @@ const AuthDivider = () => (
   </div>
 );
 
-const GoogleButton = () => (
+const GoogleButton = ({ onClick, disabled }) => (
   <button
     type="button"
+    onClick={onClick}
+    disabled={disabled}
     className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-slate-50 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-100"
   >
-    <span className="font-bold text-blue-500">G</span> Continue with Google
+    <span className="font-bold text-blue-500">G</span>{" "}
+    {disabled ? "Connecting..." : "Continue with Google"}
   </button>
 );
 
