@@ -40,6 +40,12 @@ const Cars = () => {
   const [location, setLocation] = useState(
     searchParams.get("location") || ""
   );
+  const [pickupDate, setPickupDate] = useState(
+    searchParams.get("pickup") || ""
+  );
+  const [returnDate, setReturnDate] = useState(
+    searchParams.get("return") || ""
+  );
   const [categories, setCategories] = useState(() => {
     const cat = searchParams.get("category");
     return cat ? [cat] : [];
@@ -67,6 +73,26 @@ const Cars = () => {
     let list = vehicles;
     if (location) {
       list = list.filter((vehicle) => vehicle.location === location);
+    }
+    if (pickupDate || returnDate) {
+      const start = pickupDate
+        ? new Date(`${pickupDate}T00:00:00`).getTime()
+        : 0;
+      const end = returnDate
+        ? new Date(`${returnDate}T23:59:59`).getTime()
+        : Number.POSITIVE_INFINITY;
+      list = list.filter((vehicle) => {
+        if (
+          !Array.isArray(vehicle.bookedDates) ||
+          vehicle.bookedDates.length === 0
+        ) {
+          return true;
+        }
+        return !vehicle.bookedDates.some((date) => {
+          const t = new Date(`${date}T00:00:00`).getTime();
+          return t >= start && t <= end;
+        });
+      });
     }
     if (categories.length > 0) {
       const allowed = categories.flatMap((c) => CATEGORY_FILTERS[c] || []);
@@ -96,7 +122,17 @@ const Cars = () => {
       );
     }
     return list;
-  }, [vehicles, location, categories, maxPrice, transmission, query, sort]);
+  }, [
+    vehicles,
+    location,
+    pickupDate,
+    returnDate,
+    categories,
+    maxPrice,
+    transmission,
+    query,
+    sort,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -148,6 +184,26 @@ const Cars = () => {
       },
     });
   }
+  if (pickupDate) {
+    badges.push({
+      key: "pickup",
+      label: `Pickup: ${pickupDate}`,
+      clear: () => {
+        setPickupDate("");
+        setPage(1);
+      },
+    });
+  }
+  if (returnDate) {
+    badges.push({
+      key: "return",
+      label: `Return: ${returnDate}`,
+      clear: () => {
+        setReturnDate("");
+        setPage(1);
+      },
+    });
+  }
   categories.forEach((cat) =>
     badges.push({
       key: `category-${cat}`,
@@ -180,6 +236,8 @@ const Cars = () => {
     setSearchParams({}, { replace: true });
     setQuery("");
     setLocation("");
+    setPickupDate("");
+    setReturnDate("");
     setCategories([]);
     setMaxPrice(PRICE_MAX);
     setTransmission("all");

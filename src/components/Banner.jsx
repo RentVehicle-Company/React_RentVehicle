@@ -2,14 +2,18 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
-const Banner = () => {
+const Banner = ({ flush = false }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 32, scale: 0.98 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "0px 0px -60px 0px" }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="mx-4 max-w-5xl rounded-xl bg-[#0F172A] p-5 pt-6 sm:p-6 sm:pt-7 md:mx-auto overflow-hidden relative"
+      className={`relative overflow-hidden ${
+        flush
+          ? "px-5 pb-10 sm:px-6 sm:pb-12"
+          : "mx-4 max-w-5xl rounded-xl bg-[#0F172A] p-5 pt-6 sm:p-6 sm:pt-7 md:mx-auto"
+      }`}
     >
       <div
         aria-hidden="true"

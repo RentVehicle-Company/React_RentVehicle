@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
   LuBadgePercent,
@@ -52,7 +53,7 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
     };
   }, [pickupDate, returnDate, vehicle.price_per_day]);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[65] flex items-center justify-center p-4"
       role="dialog"
@@ -189,7 +190,8 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

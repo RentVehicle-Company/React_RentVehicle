@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { IoSearch } from "react-icons/io5";
 import {
   LuCalendarDays,
+  LuCheck,
+  LuChevronDown,
   LuHistory,
   LuLightbulb,
   LuMapPin,
@@ -115,14 +117,12 @@ function HudStat({
   );
 }
 
-const MAP_LOCATIONS = [
-  {
-    name: "Phnom Penh Airport",
-    query: "Phnom Penh International Airport, Cambodia",
-  },
-  { name: "Siem Reap Center", query: "Siem Reap, Cambodia" },
-  { name: "Kampot", query: "Kampot, Cambodia" },
-  { name: "Sihanoukville", query: "Sihanoukville, Cambodia" },
+const CITY_OPTIONS = [
+  "Phnom Penh",
+  "Siem Reap",
+  "Sihanoukville",
+  "Battambang",
+  "Kampot",
 ];
 
 const RECENT_STORAGE_KEY = "rental_recent_searches";
@@ -139,14 +139,13 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   const navigate = useNavigate();
   const { formatPrice, t } = usePreferences();
   const today = new Date().toISOString().split("T")[0];
-  const [pickupLocation, setPickupLocation] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [carColor, setCarColor] = useState("#FFD700");
   const [cameraView, setCameraView] = useState("auto");
   const [headlightsOn, setHeadlightsOn] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
-  const [mapPreview, setMapPreview] = useState(MAP_LOCATIONS[0]);
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY)) || [];
@@ -216,7 +215,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
       : 0;
 
   const persistRecentSearch = () => {
-    const item = { location: pickupLocation, pickup: pickupDate, return: returnDate };
+    const item = { location: selectedLocation, pickup: pickupDate, return: returnDate };
     if (!item.location && !item.pickup) return;
     setRecentSearches((prev) => {
       const next = [
@@ -239,9 +238,9 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
     e.preventDefault();
     persistRecentSearch();
     const params = new URLSearchParams();
-    if (pickupLocation) params.set("location", pickupLocation);
-    if (pickupDate) params.set("pickupDate", pickupDate);
-    if (returnDate) params.set("returnDate", returnDate);
+    if (selectedLocation) params.set("location", selectedLocation);
+    if (pickupDate) params.set("pickup", pickupDate);
+    if (returnDate) params.set("return", returnDate);
     navigate(`/cars?${params.toString()}`);
   };
 
@@ -251,7 +250,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   };
 
   return (
-    <section className="relative w-full flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-16 lg:py-10">
+    <section className="relative w-full flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <div className="mx-auto flex w-full flex-col items-center justify-center gap-6 text-center sm:gap-8">
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
@@ -262,15 +261,19 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           Find & Rent Your Next Ride in Minutes
         </motion.h1>
 
-        <div className="animate-pulse-glow relative w-full max-w-4xl overflow-hidden rounded-2xl p-[2px] md:rounded-full">
-          <div
+        <div className="animate-pulse-glow relative w-full max-w-4xl rounded-2xl p-[2px] md:rounded-full">
+          <span
             aria-hidden="true"
-            className="animate-spin-slow absolute -inset-[100%] aspect-square"
-            style={{
-              background:
-                "conic-gradient(from 0deg, rgba(37,99,235,0.15), #2563eb, #38bdf8, #2563eb, rgba(37,99,235,0.15))",
-            }}
-          />
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl md:rounded-full"
+          >
+            <span
+              className="animate-spin-slow absolute -inset-[100%] aspect-square"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, rgba(37,99,235,0.15), #2563eb, #38bdf8, #2563eb, rgba(37,99,235,0.15))",
+              }}
+            />
+          </span>
           <motion.form
             onSubmit={handleSearch}
             initial={{ opacity: 0, y: 30, scale: 0.98 }}
@@ -283,88 +286,100 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
             <div className="relative flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => setMapOpen((open) => !open)}
+                onClick={() => setIsLocationOpen((open) => !open)}
+                aria-haspopup="listbox"
+                aria-expanded={isLocationOpen}
                 className="flex w-full cursor-pointer items-center justify-between gap-2 text-sm"
               >
                 <span
                   className={
-                    pickupLocation
+                    selectedLocation
                       ? "font-medium text-slate-900"
                       : "text-slate-400"
                   }
                 >
-                  {pickupLocation || t("pickup_location")}
+                  {selectedLocation || t("pickup_location")}
                 </span>
-                <LuMapPin
-                  size={16}
-                  className="shrink-0 text-slate-400"
-                />
+                <span className="flex items-center gap-1.5">
+                  <LuMapPin
+                    size={16}
+                    className={selectedLocation ? "text-primary" : "text-slate-400"}
+                  />
+                  <LuChevronDown
+                    size={14}
+                    className={`text-slate-400 transition-transform duration-200 ${
+                      isLocationOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </span>
               </button>
               <p className="px-1 text-xs text-gray-500">
-                {pickupLocation
-                  ? pickupLocation
-                  : "Tap to open the location map"}
+                {selectedLocation
+                  ? `Pickup: ${selectedLocation}`
+                  : "Select your pickup city"}
               </p>
 
-              {mapOpen && (
+              {isLocationOpen && (
                 <>
                   <div
                     className="fixed inset-0 z-40"
-                    onClick={() => setMapOpen(false)}
+                    onClick={() => setIsLocationOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute left-0 right-0 top-full z-50 mt-2 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-2xl sm:right-auto">
-                    <iframe
-                      title="Location map preview"
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(
-                        mapPreview.query
-                      )}&z=11&output=embed`}
-                      className="h-40 w-full rounded-xl border border-slate-200"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                    <div className="mt-2 space-y-1">
-                      {MAP_LOCATIONS.map((location) => {
-                        const isSelected = pickupLocation === location.name;
+                  <div
+                    role="listbox"
+                    aria-label="Pickup location"
+                    className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-2xl"
+                  >
+                    <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      Choose pickup city
+                    </p>
+                    <ul className="max-h-64 overflow-y-auto p-1.5">
+                      {CITY_OPTIONS.map((city) => {
+                        const isSelected = selectedLocation === city;
                         return (
-                          <button
-                            key={location.name}
-                            type="button"
-                            onClick={() => {
-                              setPickupLocation(location.name);
-                              setMapPreview(location);
-                            }}
-                            onMouseEnter={() => setMapPreview(location)}
-                            onFocus={() => setMapPreview(location)}
-                            className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
-                              isSelected
-                                ? "bg-primary/10 font-medium text-primary"
-                                : "text-slate-700 hover:bg-slate-100"
-                            }`}
-                          >
-                            <span className="flex items-center gap-2">
+                          <li key={city}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                setSelectedLocation(city);
+                                setIsLocationOpen(false);
+                              }}
+                              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                                isSelected
+                                  ? "bg-primary/10 font-medium text-primary"
+                                  : "text-slate-700 hover:bg-slate-100"
+                              }`}
+                            >
                               <LuMapPin
-                                size={14}
+                                size={15}
                                 className={
                                   isSelected ? "text-primary" : "text-slate-400"
                                 }
                               />
-                              {location.name}
-                            </span>
-                            <span className="text-xs text-slate-400">
-                              {isSelected ? "Selected" : "Select"}
-                            </span>
-                          </button>
+                              <span className="flex-1">{city}</span>
+                              {isSelected && (
+                                <LuCheck size={15} className="text-primary" />
+                              )}
+                            </button>
+                          </li>
                         );
                       })}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setMapOpen(false)}
-                      className="mt-2 w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                    >
-                      Done
-                    </button>
+                    </ul>
+                    {selectedLocation && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedLocation("");
+                          setIsLocationOpen(false);
+                        }}
+                        className="w-full cursor-pointer border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                      >
+                        Clear location
+                      </button>
+                    )}
                   </div>
                 </>
               )}
@@ -410,7 +425,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
               Search
             </button>
 
-            {totalDays > 0 && pickupLocation && (
+            {totalDays > 0 && selectedLocation && (
               <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary md:hidden">
                 <LuCalendarDays size={14} />
                 {totalDays} {totalDays === 1 ? "day" : "days"} ·{" "}
@@ -419,7 +434,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
             )}
           </div>
 
-          {totalDays > 0 && pickupLocation && (
+          {totalDays > 0 && selectedLocation && (
             <div className="hidden items-center gap-2 border-t border-slate-100 pt-3 md:flex md:border-0 md:pt-0 md:pl-2">
               <div className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
                 <LuCalendarDays size={14} />
@@ -442,7 +457,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 key={`${search.location}-${search.pickup}-${index}`}
                 type="button"
                 onClick={() => {
-                  setPickupLocation(search.location);
+                  setSelectedLocation(search.location);
                   setPickupDate(search.pickup);
                   setReturnDate(search.return);
                 }}
@@ -542,7 +557,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.28 }}
       >
-        <div className="flex flex-wrap items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
           <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Model
           </span>
@@ -584,7 +599,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.36 }}
       >
-        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
           <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             View
           </span>

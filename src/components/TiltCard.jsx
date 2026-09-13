@@ -42,20 +42,10 @@ const TiltCard = ({ children, className = "", maxTilt = 12 }) => {
         transformStyle: "preserve-3d",
         perspective: 900,
       }}
-      whileHover={{ scale: 1.04 }}
+      whileHover={{ scale: 1.03 }}
       transition={{ type: "spring", stiffness: 260, damping: 18 }}
       className={`group relative ${className}`}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          background:
-            "radial-gradient(560px circle at 50% 0%, rgba(37,99,235,0.14), transparent 65%)",
-          boxShadow:
-            "0 0 0 1px rgba(37,99,235,0.35), 0 24px 48px -12px rgba(37,99,235,0.35)",
-        }}
-      />
       <div style={{ transform: "translateZ(24px)" }}>{children}</div>
     </motion.div>
   );
