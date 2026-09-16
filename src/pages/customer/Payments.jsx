@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   LuCalendarDays,
   LuChevronLeft,
@@ -7,21 +7,30 @@ import {
   LuCreditCard,
 } from "react-icons/lu";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
-import { getMyBookings } from "../../services/bookingService";
+import { getMyPayments } from "../../services/paymentService";
+import { signOut } from "../../services/authServices";
 
 const Payments = () => {
-  const [bookings, setBookings] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    getMyBookings().then((data) => {
-      setBookings(data);
-      setLoading(false);
-    });
+    getMyPayments()
+      .then((data) => {
+        setPayments(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("We couldn't load your payment history right now. Please try again.");
+        setLoading(false);
+      });
   }, []);
 
-  const handleLogout = () => {
-    // connect to the auth service once authentication is implemented
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
   };
 
   return (
@@ -68,7 +77,16 @@ const Payments = () => {
                         Loading payment history...
                       </td>
                     </tr>
-                  ) : bookings.length === 0 ? (
+                  ) : error ? (
+                    <tr>
+                      <td
+                        colSpan="8"
+                        className="px-4 py-10 text-center text-sm text-red-600"
+                      >
+                        {error}
+                      </td>
+                    </tr>
+                  ) : payments.length === 0 ? (
                     <tr>
                       <td
                         colSpan="8"
@@ -78,8 +96,8 @@ const Payments = () => {
                       </td>
                     </tr>
                   ) : (
-                    bookings.map((booking, index) => {
-                      const isPaid = booking.paymentStatus === "paid";
+                    payments.map((booking, index) => {
+                      const isPaid = booking.paymentStatus === "PAID";
                       return (
                         <tr
                           key={booking.id}
@@ -117,7 +135,7 @@ const Payments = () => {
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-slate-500">
-                            {isPaid ? `TXN-${55921 + index * 189}` : "N/A"}
+                            {isPaid ? booking.transactionId || `TXN-${55921 + index * 189}` : "N/A"}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-right">
                             {isPaid ? (
@@ -146,7 +164,7 @@ const Payments = () => {
 
             <div className="flex flex-col gap-3 border-t border-borderColor px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
               <span>
-                Showing {bookings.length} of {bookings.length} entries
+                Showing {payments.length} of {payments.length} entries
               </span>
               <div className="flex items-center gap-1">
                 <button

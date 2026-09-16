@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { LuArrowLeft, LuEye, LuEyeOff, LuMail } from "react-icons/lu";
+import { useLocation, useNavigate } from "react-router-dom";
+import { LuArrowLeft, LuEye, LuEyeOff, LuLock, LuMail } from "react-icons/lu";
 import {
   login,
   loginWithGoogle,
@@ -13,8 +13,83 @@ import {
 const fieldClass =
   "w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200";
 
+// Feature flag: Google login shows only when BOTH the flag and the client ID
+// are present, so missing `.env` config never throws or shows a broken button.
+const googleLoginEnabled =
+  import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === "true" &&
+  Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+
+const GOOGLE_LOGIN_TIMEOUT_MS = 90000;
+
+const loadGsiScript = () =>
+  new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) {
+      resolve(window.google.accounts);
+      return;
+    }
+    const existing = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
+    if (existing) {
+      existing.addEventListener(
+        "load",
+        () => resolve(window.google.accounts),
+        { once: true }
+      );
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google?.accounts) {
+        resolve(window.google.accounts);
+      } else {
+        reject(new Error("Google Sign-In failed to initialize."));
+      }
+    };
+    script.onerror = () => reject(new Error("Could not load Google Sign-In."));
+    document.head.appendChild(script);
+  });
+
+// Opens the Google Identity Services popup and resolves with the ID token
+// (the JWT credential) that POST /api/auth/google expects as { idToken }.
+const getGoogleCredential = async (clientId) => {
+  const accounts = await loadGsiScript();
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      accounts.id.cancel();
+      reject(new Error("Google sign-in timed out. Please try again."));
+    }, GOOGLE_LOGIN_TIMEOUT_MS);
+
+    accounts.id.initialize({
+      client_id: clientId,
+      ux_mode: "popup",
+      callback: (response) => {
+        clearTimeout(timer);
+        if (response?.credential) {
+          resolve(response.credential);
+        } else {
+          reject(new Error("Google sign-in was cancelled."));
+        }
+      },
+    });
+
+    try {
+      accounts.id.prompt();
+    } catch {
+      clearTimeout(timer);
+      reject(new Error("Google sign-in could not be opened."));
+    }
+  });
+};
+
 const Login = ({ initialMode = "login" }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.from || "/profile";
   const otpRefs = useRef([]);
   const [mode, setMode] = useState(initialMode);
   const [registerStep, setRegisterStep] = useState("details");
@@ -49,7 +124,7 @@ const Login = ({ initialMode = "login" }) => {
     try {
       const response = await login(loginValues);
       storeAuthSession(response, loginValues.email.split("@")[0]);
-      navigate("/profile");
+      navigate(redirectTo);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -97,8 +172,14 @@ const Login = ({ initialMode = "login" }) => {
     }
     setSubmitting(true);
     try {
-      const response = await verifyEmail(registerValues.email, otp.join(""));
-      storeAuthSession(response, registerValues.name || "John Doe");
+      // verify-email only confirms the account; log the new user in to
+      // provision a session/token and land on the authenticated dashboard.
+      await verifyEmail(registerValues.email, otp.join(""));
+      const response = await login({
+        email: registerValues.email,
+        password: registerValues.password,
+      });
+      storeAuthSession(response, registerValues.name || "New User");
       setMessage("Email verified successfully. Your account is ready.");
       setRegisterStep("details");
       setMode("login");
@@ -124,12 +205,18 @@ const Login = ({ initialMode = "login" }) => {
   };
 
   const handleGoogleLogin = async () => {
+    if (!googleLoginEnabled) return;
     setError("");
     setSubmitting(true);
     try {
-      const response = await loginWithGoogle();
+      // Acquire a valid ID token from the Google popup first, then hand it
+      // to the backend (POST /api/auth/google -> { idToken }).
+      const idToken = await getGoogleCredential(
+        import.meta.env.VITE_GOOGLE_CLIENT_ID
+      );
+      const response = await loginWithGoogle(idToken);
       storeAuthSession(response);
-      navigate("/");
+      navigate(redirectTo);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -150,7 +237,7 @@ const Login = ({ initialMode = "login" }) => {
       <button
         type="button"
         onClick={handleBack}
-        className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-900"
+        className="absolute left-4 top-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-900"
       >
         <LuArrowLeft size={15} />
         Back to browsing
@@ -263,7 +350,15 @@ const Login = ({ initialMode = "login" }) => {
               </button>
 
               <AuthDivider />
-              <GoogleButton onClick={handleGoogleLogin} disabled={submitting} />
+              {googleLoginEnabled ? (
+                <GoogleButton
+                  onClick={handleGoogleLogin}
+                  disabled={submitting}
+                />
+              ) : (
+                <GoogleButton comingSoon />
+                // <GoogleButton  />
+              )}
             </form>
           ) : registerStep === "details" ? (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
@@ -447,15 +542,27 @@ const AuthDivider = () => (
   </div>
 );
 
-const GoogleButton = ({ onClick, disabled }) => (
+const GoogleButton = ({ onClick, disabled, comingSoon }) => (
   <button
     type="button"
-    onClick={onClick}
-    disabled={disabled}
-    className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-slate-50 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-100"
+    onClick={comingSoon ? undefined : onClick}
+    disabled={disabled || comingSoon}
+    className={`flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-slate-50 py-2.5 text-sm transition-colors ${
+      comingSoon
+        ? "cursor-not-allowed text-slate-400"
+        : "text-slate-600 hover:bg-slate-100"
+    }`}
   >
-    <span className="font-bold text-blue-500">G</span>{" "}
-    {disabled ? "Connecting..." : "Continue with Google"}
+    {comingSoon ? (
+      <LuLock size={15} />
+    ) : (
+      <span className="font-bold text-blue-500">G</span>
+    )}{" "}
+    {comingSoon
+      ? "Google sign-in coming soon"
+      : disabled
+        ? "Connecting..."
+        : "Continue with Google"}
   </button>
 );
 

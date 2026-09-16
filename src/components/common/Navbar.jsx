@@ -37,7 +37,11 @@ const Navbar = () => {
   useEffect(() => {
     const handleAuthChange = () => setAuthUser(getStoredUser());
     window.addEventListener("storage", handleAuthChange);
-    return () => window.removeEventListener("storage", handleAuthChange);
+    window.addEventListener("rental-auth-change", handleAuthChange);
+    return () => {
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener("rental-auth-change", handleAuthChange);
+    };
   }, []);
 
   const closeMenu = (path) => {

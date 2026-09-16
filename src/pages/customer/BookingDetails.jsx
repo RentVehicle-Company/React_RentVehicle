@@ -11,6 +11,7 @@ import { getBookingById } from "../../services/bookingService";
 
 const STATUS_CONFIG = {
   confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700" },
+  pending: { label: "Pending", className: "bg-amber-100 text-amber-700" },
   completed: { label: "Completed", className: "bg-slate-200 text-slate-700" },
   cancelled: { label: "Cancelled", className: "bg-red-100 text-red-700" },
 };
@@ -65,6 +66,14 @@ const BookingDetails = () => {
   const serviceFee = booking.serviceFee ?? 0;
   const duration = Math.max(1, Math.round(rentalFee / booking.pricePerDay));
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${booking.longitude - 0.04}%2C${booking.latitude - 0.03}%2C${booking.longitude + 0.04}%2C${booking.latitude + 0.03}&layer=mapnik&marker=${booking.latitude}%2C${booking.longitude}`;
+  const hasCoords =
+    Number.isFinite(Number(booking.latitude)) &&
+    Number.isFinite(Number(booking.longitude));
+  const googleMapsUrl = hasCoords
+    ? `https://www.google.com/maps/search/?api=1&query=${booking.latitude},${booking.longitude}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        booking.pickupLocation || ""
+      )}`;
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -157,12 +166,12 @@ const BookingDetails = () => {
             </div>
             <span
               className={`font-medium ${
-                booking.paymentStatus === "paid"
+booking.paymentStatus === "PAID"
                   ? "text-blue-600"
                   : "text-red-600"
               }`}
             >
-              {booking.paymentStatus === "paid" ? "PAID" : "UNPAID"}
+              {booking.paymentStatus === "PAID" ? "PAID" : "UNPAID"}
             </span>
           </div>
         </section>
@@ -180,14 +189,26 @@ const BookingDetails = () => {
         </button>
       </div>
 
-      <div className="print:hidden mt-3 overflow-hidden rounded-xl border border-borderColor bg-slate-100">
+      <a
+        href={googleMapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={`Open ${booking.pickupLocation} in Google Maps`}
+        className="print:hidden mt-3 group relative block cursor-pointer overflow-hidden rounded-xl border border-borderColor bg-slate-100 transition-colors hover:border-primary/50"
+      >
         <iframe
           title={`Map showing ${booking.pickupLocation}`}
           src={mapUrl}
-          className="w-full h-[280px] sm:h-[360px] border-0"
+          className="pointer-events-none w-full h-[280px] sm:h-[360px] border-0"
           loading="lazy"
         />
-      </div>
+        <span className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-medium text-slate-800 shadow-sm">
+            <LuMapPin size={15} className="text-primary" />
+            Open in Google Maps
+          </span>
+        </span>
+      </a>
       <p className="print:hidden mt-2 text-xs text-slate-500">
         {booking.pickupLocation} | Lat: {booking.latitude}, Long:{" "}
         {booking.longitude}

@@ -15,7 +15,7 @@ const FALLBACK_BOOKING = {
   endDate: "05/12/2026",
   totalPrice: 170,
   status: "confirmed",
-  paymentStatus: "unpaid",
+  paymentStatus: "UNPAID",
 };
 
 const DASHBOARD_STEPS = ["select", "card", "khqr", "success", "failed"];

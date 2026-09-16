@@ -338,7 +338,7 @@ const VehicleDetail = () => {
       totalPrice,
       duration: days,
       status: "confirmed",
-      paymentStatus: "unpaid",
+      paymentStatus: "UNPAID",
     };
     navigate(method === "visa" ? "/payment/visa" : "/payment/khqr", {
       state: { booking },

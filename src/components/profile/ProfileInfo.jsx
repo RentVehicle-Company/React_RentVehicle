@@ -22,12 +22,8 @@ const ProfileInfo = ({ user, onPhotoChange }) => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoError("");
-      onPhotoChange(reader.result);
-    };
-    reader.readAsDataURL(file);
+    setPhotoError("");
+    onPhotoChange(file);
   };
 
   return (

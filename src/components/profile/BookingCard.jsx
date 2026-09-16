@@ -4,25 +4,34 @@ import { LuBanknote, LuCalendar, LuRotateCcw } from "react-icons/lu";
 
 const STATUS_CONFIG = {
   confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700" },
+  pending: { label: "Pending", className: "bg-amber-100 text-amber-700" },
   completed: { label: "Completed", className: "bg-slate-200 text-slate-700" },
   cancelled: { label: "Cancelled", className: "bg-red-100 text-red-700" },
 };
 
 const PAYMENT_CONFIG = {
-  paid: { label: "Paid", className: "bg-blue-100 text-blue-700" },
-  unpaid: { label: "Unpaid", className: "bg-red-100 text-red-600" },
+  PAID: { label: "Paid", className: "bg-blue-100 text-blue-700" },
+  UNPAID: { label: "Unpaid", className: "bg-red-100 text-red-600" },
+  PENDING: { label: "Pending", className: "bg-amber-100 text-amber-700" },
 };
 
+// Actions are driven by payment state: a paid booking is locked (no cancel).
 const getActions = (booking) => {
+  if (booking.paymentStatus === "PAID") return ["details"];
   if (booking.status === "cancelled") return ["details"];
   if (booking.status === "completed") return ["details", "bookAgain"];
-  if (booking.paymentStatus === "unpaid") return ["details", "cancel"];
   return ["details", "cancel"];
 };
 
 const BookingCard = ({ booking, onCancelRequest }) => {
   const navigate = useNavigate();
-  const status = STATUS_CONFIG[booking.status];
+
+  // Paid reservations read as "Confirmed" (or stay "Completed"/"Cancelled"),
+  // never as the amber "Pending" placeholder.
+  const isPaid = booking.paymentStatus === "PAID";
+  const statusKey =
+    isPaid && booking.status === "pending" ? "confirmed" : booking.status;
+  const status = STATUS_CONFIG[statusKey] || STATUS_CONFIG.pending;
   const payment = PAYMENT_CONFIG[booking.paymentStatus] || null;
   const actions = getActions(booking);
 
@@ -34,13 +43,11 @@ const BookingCard = ({ booking, onCancelRequest }) => {
           alt={booking.vehicleName}
           className="w-full h-full object-cover"
         />
-        {status && (
-          <span
-            className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${status.className}`}
-          >
-            {status.label}
-          </span>
-        )}
+        <span
+          className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${status.className}`}
+        >
+          {status.label}
+        </span>
       </div>
 
       <div className="p-4 space-y-3">
@@ -74,7 +81,7 @@ const BookingCard = ({ booking, onCancelRequest }) => {
             <button
               type="button"
               onClick={() => navigate(`/bookings/${booking.id}`)}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-slate-800 bg-white border border-borderColor hover:bg-slate-50 transition-colors cursor-pointer"
+              className={`px-4 py-2 rounded-lg text-sm font-medium text-slate-800 bg-white border border-borderColor hover:bg-slate-50 transition-colors cursor-pointer ${actions.length === 1 ? "flex-1" : ""}`}
             >
               View Details
             </button>

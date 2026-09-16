@@ -9,6 +9,24 @@ export const API_ENDPOINTS = {
   khqrPayment: `${API_BASE_URL}/payments/khqr`,
   khqrPaymentStatus: (transactionId) =>
     `${API_BASE_URL}/payments/khqr/${transactionId}`,
+  currentUser: `${API_BASE_URL}/users/me`,
+  userById: (id) => `${API_BASE_URL}/users/${id}`,
+  userProfileImage: (id) => `${API_BASE_URL}/users/${id}/profile-image`,
+  authRegister: `${API_BASE_URL}/auth/register`,
+  authLogin: `${API_BASE_URL}/auth/login`,
+  authGoogle: `${API_BASE_URL}/auth/google`,
+  authVerifyEmail: `${API_BASE_URL}/auth/verify-email`,
+  authResendOtp: `${API_BASE_URL}/auth/resend-otp`,
+  authRefresh: `${API_BASE_URL}/auth/refresh`,
+  authLogout: `${API_BASE_URL}/auth/logout`,
+  products: `${API_BASE_URL}/products`,
+  productById: (id) => `${API_BASE_URL}/products/${id}`,
+  productImages: (productId) => `${API_BASE_URL}/products/${productId}/images`,
+  locations: `${API_BASE_URL}/locations`,
+  bookings: `${API_BASE_URL}/bookings`,
+  bookingById: (id) => `${API_BASE_URL}/bookings/${id}`,
+  payments: `${API_BASE_URL}/payments`,
+  paymentsByBooking: (bookingId) => `${API_BASE_URL}/bookings/${bookingId}/payments`,
 };
 
 export const request = async (path, options = {}) => {

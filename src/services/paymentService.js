@@ -1,10 +1,76 @@
 // Payment service for VISA and Bakong KHQR.
-// Talks to the Spring Boot backend via api.js; falls back to mock
-// results while the backend is offline so the checkout flow keeps working.
+// Talks to the Spring Boot backend via api.js.
 
 import { API_ENDPOINTS, request } from "./api.js";
+import { getCachedUser } from "./userService.js";
+import { loadCatalog, mapBooking } from "./bookingService.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const unwrapList = (data) => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
+
+const safe = (promise) => promise.catch(() => []);
+
+const formatPaymentDate = (payment, fallback) => {
+  const date = new Date(payment?.paidAt || payment?.expiresAt || null);
+  if (!Number.isNaN(date.getTime())) {
+    return date.toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  return fallback || "";
+};
+
+// GET /api/payments filtered to the current user's bookings, enriched with
+// the vehicle name so the Payments History table can render without N+1 calls.
+// Uses live data only — failures surface to the caller.
+export const getMyPayments = async () => {
+  const userId = getCachedUser().id;
+  const [bookingsData, paymentsData] = await Promise.all([
+    safe(request(API_ENDPOINTS.bookings)),
+    safe(request(API_ENDPOINTS.payments)),
+  ]);
+
+  const allBookings = unwrapList(bookingsData);
+  const allPayments = unwrapList(paymentsData);
+
+  const myBookings = userId
+    ? allBookings.filter((b) => String(b.userId) === String(userId))
+    : allBookings;
+
+  const context = await loadCatalog(myBookings);
+  const bookingById = new Map(myBookings.map((b) => [String(b.id), b]));
+  const enrichedById = new Map(
+    myBookings.map((b) => [String(b.id), mapBooking(b, context)])
+  );
+
+  return allPayments
+    .filter((payment) => bookingById.has(String(payment.bookingId)))
+    .map((payment) => {
+      const booking = enrichedById.get(String(payment.bookingId));
+      const isPaid =
+        String(payment.paymentStatus || "").toUpperCase() === "PAID";
+      return {
+        id: payment.bookingId,
+        bookingId: payment.bookingId,
+        startDate: formatPaymentDate(payment, booking?.startDate),
+        vehicleName: booking?.vehicleName || "Vehicle",
+        paymentMethod:
+          payment.paymentMethod === "CASH" ? "Cash" : "Bakong KHQR",
+        totalPrice: Number(payment.amount) || 0,
+        paymentStatus: isPaid ? "PAID" : "UNPAID",
+        transactionId: payment.transactionId,
+        paymentReference: payment.paymentReference,
+        currency: payment.currency,
+      };
+    });
+};
 
 export const PAYMENT_METHODS = {
   visa: "VISA",

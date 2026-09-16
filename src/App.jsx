@@ -16,15 +16,18 @@ import BookingDetails from "./pages/customer/BookingDetails";
 import Payments from "./pages/customer/Payments";
 import Footer from "./components/common/Footer";
 import LiveChatButton from "./components/LiveChatButton";
+import RequireAuth from "./components/common/RequireAuth";
 
 const App = () => {
   const location = useLocation();
   const isAuthRoute =
-    location.pathname === "/login" || location.pathname === "/register";
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/verify-email";
 
   return (
     <>
-      <Navbar />
+      {!isAuthRoute && <Navbar />}
       <main className="overflow-x-hidden">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -36,15 +39,43 @@ const App = () => {
           <Route path="/bicycles" element={<Bicycles />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="/bookings" element={<Mybooking />} />
-          <Route path="/bookings/:id" element={<BookingDetails />} />
-          <Route path="/payments" element={<Payments />} />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <UserProfile />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/bookings"
+            element={
+              <RequireAuth>
+                <Mybooking />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/bookings/:id"
+            element={
+              <RequireAuth>
+                <BookingDetails />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payments"
+            element={
+              <RequireAuth>
+                <Payments />
+              </RequireAuth>
+            }
+          />
 
           {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
         </Routes>
       </main>
-      <Footer />
+      {!isAuthRoute && <Footer />}
       <LiveChatButton />
     </>
   );

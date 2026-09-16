@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import ProfileInfo from "../../components/profile/ProfileInfo";
 import ProfileForm from "../../components/profile/ProfileForm";
@@ -7,18 +8,28 @@ import {
   getCachedUser,
   getCurrentUser,
   updateCurrentUser,
+  uploadProfileImage,
 } from "../../services/userService";
+import { signOut } from "../../services/authServices";
 
 const UserProfile = () => {
   const [user, setUser] = useState(() => getCachedUser());
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
-    getCurrentUser().then((data) => {
-      if (mounted) {
-        setUser(data);
-      }
-    });
+    getCurrentUser()
+      .then((data) => {
+        if (mounted) {
+          setUser(data);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          const cached = getCachedUser();
+          if (cached.id) setUser(cached);
+        }
+      });
     return () => {
       mounted = false;
     };
@@ -29,13 +40,14 @@ const UserProfile = () => {
     setUser((prev) => ({ ...prev, ...updated }));
   };
 
-  const handlePhotoChange = async (image) => {
-    const updated = await updateCurrentUser({ image });
+  const handlePhotoChange = async (file) => {
+    const updated = await uploadProfileImage(user.id, file);
     setUser((prev) => ({ ...prev, ...updated }));
   };
 
-  const handleLogout = () => {
-    // connect to the auth service once authentication
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
   };
 
   return (

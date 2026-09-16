@@ -33,10 +33,12 @@ const ProfileForm = ({ user, onSave }) => {
     name: user.name,
     email: user.email,
     phone: user.phone,
+    address: user.address,
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -44,6 +46,7 @@ const ProfileForm = ({ user, onSave }) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      address: user.address,
     });
   }, [user]);
 
@@ -58,9 +61,11 @@ const ProfileForm = ({ user, onSave }) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      address: user.address,
     });
     setErrors({});
     setSuccess(false);
+    setSubmitError("");
     setEditing(false);
   };
 
@@ -72,11 +77,14 @@ const ProfileForm = ({ user, onSave }) => {
 
     setSaving(true);
     setSuccess(false);
+    setSubmitError("");
     try {
       await onSave(values);
       setSuccess(true);
       setEditing(false);
       setTimeout(() => setSuccess(false), 3000);
+    } catch (error) {
+      setSubmitError(error?.message || "Could not save changes.");
     } finally {
       setSaving(false);
     }
@@ -165,7 +173,32 @@ const ProfileForm = ({ user, onSave }) => {
           />
           {errors.phone && <p className={errorTextClass}>{errors.phone}</p>}
         </div>
+
+        <div className="md:col-span-2">
+          <label
+            htmlFor="profile-address"
+            className="block text-sm font-medium text-slate-700 mb-1.5"
+          >
+            Address
+          </label>
+          <input
+            id="profile-address"
+            name="address"
+            type="text"
+            value={values.address}
+            onChange={handleChange}
+            disabled={!editing}
+            placeholder="123 Main Street, Phnom Penh"
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
+          />
+        </div>
       </div>
+
+      {submitError && (
+        <div className="mt-5 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+          {submitError}
+        </div>
+      )}
 
       {success && (
         <div className="mt-5 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">

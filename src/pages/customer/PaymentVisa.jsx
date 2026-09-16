@@ -28,7 +28,7 @@ const FALLBACK_BOOKING = {
   serviceFee: 5,
   totalPrice: 170,
   status: "confirmed",
-  paymentStatus: "unpaid",
+  paymentStatus: "UNPAID",
 };
 
 const STATUS_BADGE = {
