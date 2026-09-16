@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { LuCalendar, LuLogOut, LuMenu, LuSun, LuMoon, LuX } from "react-icons/lu";
+import {
+  LuCalendar,
+  LuLogOut,
+  LuMenu,
+  LuSun,
+  LuMoon,
+  LuX,
+} from "react-icons/lu";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 import AuthModal from "../auth/AuthModal";
@@ -10,7 +17,7 @@ import { useTheme } from "../../context/ThemeContext";
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t, currency, setCurrency } = usePreferences();
+  const { t } = usePreferences();
   const { user, isAuthenticated, logout, openAuth, closeAuth, authOpen } =
     useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -87,59 +94,15 @@ const Navbar = () => {
             <button
               type="button"
               onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
               className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-600"
             >
               {theme === "dark" ? <LuSun size={17} /> : <LuMoon size={17} />}
             </button>
-            <div
-              role="group"
-              aria-label="Currency"
-              className="hidden items-center rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 p-0.5 text-[11px] font-semibold sm:flex"
-            >
-              {[
-                { code: "USD", label: "USD" },
-                { code: "KHR", label: "៛" },
-              ].map((option) => (
-                <button
-                  key={option.code}
-                  type="button"
-                  onClick={() => setCurrency(option.code)}
-                  aria-pressed={currency === option.code}
-                  className={`cursor-pointer rounded-full px-2.5 py-1 transition-colors ${
-                    currency === option.code
-                      ? "bg-slate-900 dark:bg-primary text-white"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <div
-              role="group"
-              aria-label="Currency"
-              className="flex items-center rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 p-0.5 text-[11px] font-semibold sm:hidden"
-            >
-              {[
-                { code: "USD", label: "$" },
-                { code: "KHR", label: "៛" },
-              ].map((option) => (
-                <button
-                  key={option.code}
-                  type="button"
-                  onClick={() => setCurrency(option.code)}
-                  aria-pressed={currency === option.code}
-                  className={`cursor-pointer rounded-full px-2 py-1 transition-colors ${
-                    currency === option.code
-                      ? "bg-slate-900 dark:bg-primary text-white"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
             {isAuthenticated ? (
               <>
                 <div className="hidden items-center space-x-3 sm:flex">
@@ -182,9 +145,9 @@ const Navbar = () => {
                   onClick={() => closeMenu("/profile")}
                   className="sm:hidden"
                 >
-<span className="grid h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">
-  {initials}
-</span>
+                  <span className="grid h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">
+                    {initials}
+                  </span>
                 </Link>
               </>
             ) : (
@@ -208,7 +171,9 @@ const Navbar = () => {
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
-              aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-label={
+                menuOpen ? "Close navigation menu" : "Open navigation menu"
+              }
               aria-expanded={menuOpen}
               className="md:hidden p-2 text-slate-900 dark:text-slate-100 cursor-pointer"
             >
@@ -284,9 +249,7 @@ const Navbar = () => {
         )}
       </nav>
 
-      {authOpen && (
-        <AuthModal mode={authOpen.mode} onClose={closeAuth} />
-      )}
+      {authOpen && <AuthModal mode={authOpen.mode} onClose={closeAuth} />}
     </div>
   );
 };

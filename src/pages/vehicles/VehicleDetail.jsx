@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   LuArrowLeft,
   LuArrowRight,
@@ -48,7 +54,8 @@ import { useAuth } from "../../context/AuthContext";
 
 const inputClass =
   "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
+const labelClass =
+  "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
 
 const ADDONS = [
   { key: "insurance", label: "Full Comprehensive Insurance", rate: 15 },
@@ -115,7 +122,7 @@ const CITY_COORDS = {
   Kandal: [11.4833, 105.0333],
   Kep: [10.5363, 104.3175],
   "Koh Kong": [11.6155, 102.9817],
-  "Kratié": [12.4881, 106.0187],
+  Kratié: [12.4881, 106.0187],
   Mondulkiri: [12.784, 107.0265],
   "Oddar Meanchey": [14.181, 103.5172],
   Pailin: [12.8474, 102.6089],
@@ -128,7 +135,7 @@ const CITY_COORDS = {
   "Siem Reap": [13.3671, 103.8446],
   "Stung Treng": [13.5241, 105.9683],
   "Svay Rieng": [11.0875, 105.8162],
-  "Takéo": [10.983, 104.7843],
+  Takéo: [10.983, 104.7843],
   "Tboung Khmum": [11.7579, 105.9386],
 };
 
@@ -147,7 +154,7 @@ const buildGallery = (primary) => {
     ];
     for (let i = 0; i < crops.length; i++) {
       const p = new URLSearchParams(
-        Object.entries(crops[i]).map(([k, v]) => [k, String(v)])
+        Object.entries(crops[i]).map(([k, v]) => [k, String(v)]),
       );
       p.set("auto", "format");
       gallery.push(`${base}?${p.toString()}`);
@@ -263,7 +270,7 @@ const deriveSpecs = (vehicle) => {
     topSpeed: profile.topSpeed + offset * 8,
     acceleration: Math.max(
       2.5,
-      Math.round((profile.acceleration + offset * 0.12) * 10) / 10
+      Math.round((profile.acceleration + offset * 0.12) * 10) / 10,
     ),
     horsepower: profile.horsepower + offset * 14,
     drive: profile.drive,
@@ -314,6 +321,8 @@ const VehicleDetail = () => {
   const [deliveryCity, setDeliveryCity] = useState("Phnom Penh");
   const [deliveryDistrict, setDeliveryDistrict] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [idDocument, setIdDocument] = useState(null);
+  const [licenseDocument, setLicenseDocument] = useState(null);
   const [addOns, setAddOns] = useState({
     insurance: false,
     driver: false,
@@ -344,6 +353,8 @@ const VehicleDetail = () => {
     setDeliveryCity("Phnom Penh");
     setDeliveryDistrict("");
     setDeliveryAddress("");
+    setIdDocument(null);
+    setLicenseDocument(null);
     setAddOns({ insurance: false, driver: false, seat: false });
     setPaymentMethod("visa");
     setReviews(REVIEWS);
@@ -359,7 +370,7 @@ const VehicleDetail = () => {
       })
       .catch(() => {
         const fallback = ALL_MOCK_VEHICLES.find(
-          (vehicle) => String(vehicle.id) === String(id)
+          (vehicle) => String(vehicle.id) === String(id),
         );
         if (fallback) {
           setVehicle({ ...fallback });
@@ -377,12 +388,12 @@ const VehicleDetail = () => {
   }, [vehicle]);
 
   const derived = useMemo(
-    () => (vehicle ? vehicle.specs ?? deriveSpecs(vehicle) : null),
-    [vehicle]
+    () => (vehicle ? (vehicle.specs ?? deriveSpecs(vehicle)) : null),
+    [vehicle],
   );
   const features = useMemo(
-    () => (vehicle ? vehicle.features ?? deriveFeatures(vehicle) : []),
-    [vehicle]
+    () => (vehicle ? (vehicle.features ?? deriveFeatures(vehicle)) : []),
+    [vehicle],
   );
 
   useEffect(() => {
@@ -397,9 +408,15 @@ const VehicleDetail = () => {
   const [lat, lon] = coords;
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.04}%2C${lat - 0.03}%2C${lon + 0.04}%2C${lat + 0.03}&layer=mapnik&marker=${lat}%2C${lon}`;
 
-  const pickupMs = pickupDate ? new Date(`${pickupDate}T00:00:00`).getTime() : 0;
-  const returnMs = returnDate ? new Date(`${returnDate}T00:00:00`).getTime() : 0;
-  const hasValidDates = Boolean(pickupDate && returnDate && returnMs >= pickupMs);
+  const pickupMs = pickupDate
+    ? new Date(`${pickupDate}T00:00:00`).getTime()
+    : 0;
+  const returnMs = returnDate
+    ? new Date(`${returnDate}T00:00:00`).getTime()
+    : 0;
+  const hasValidDates = Boolean(
+    pickupDate && returnDate && returnMs >= pickupMs,
+  );
   const days = hasValidDates
     ? Math.max(1, Math.round((returnMs - pickupMs) / 86400000))
     : 1;
@@ -408,7 +425,7 @@ const VehicleDetail = () => {
   const activeAddOns = ADDONS.filter((addon) => addOns[addon.key]);
   const addOnTotal = activeAddOns.reduce(
     (sum, addon) => sum + addon.rate * days,
-    0
+    0,
   );
   const usingDelivery = deliveryMethod === "delivery";
   const deliveryFee = vehicle
@@ -421,8 +438,7 @@ const VehicleDetail = () => {
         .filter(Boolean)
         .join(", ")
     : "";
-  const totalPrice =
-    rentalFee + serviceFee + addOnTotal + deliveryFee;
+  const totalPrice = rentalFee + serviceFee + addOnTotal + deliveryFee;
 
   const reviewCount = reviews.length;
   const reviewAverage = reviewCount
@@ -431,6 +447,26 @@ const VehicleDetail = () => {
 
   const toggleAddOn = (key) =>
     setAddOns((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const documentPreviewUrls = useMemo(
+    () => ({
+      id: idDocument?.type.startsWith("image/")
+        ? URL.createObjectURL(idDocument)
+        : null,
+      license: licenseDocument?.type.startsWith("image/")
+        ? URL.createObjectURL(licenseDocument)
+        : null,
+    }),
+    [idDocument, licenseDocument],
+  );
+
+  useEffect(() => {
+    return () => {
+      Object.values(documentPreviewUrls).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [documentPreviewUrls]);
 
   const submitReview = () => {
     if (!user || reviewRating < 1) return;
@@ -458,13 +494,13 @@ const VehicleDetail = () => {
     const inCategory = ALL_MOCK_VEHICLES.filter(
       (item) =>
         String(item.id) !== String(vehicle.id) &&
-        item.category === vehicle.category
+        item.category === vehicle.category,
     );
     if (inCategory.length >= 3) return inCategory.slice(0, 3);
     const others = ALL_MOCK_VEHICLES.filter(
       (item) =>
         String(item.id) !== String(vehicle.id) &&
-        item.category !== vehicle.category
+        item.category !== vehicle.category,
     );
     return [...inCategory, ...others].slice(0, 3);
   }, [vehicle]);
@@ -474,7 +510,7 @@ const VehicleDetail = () => {
     if (!widget) return;
     const observer = new IntersectionObserver(
       ([entry]) => setShowStickyBar(!entry.isIntersecting),
-      { rootMargin: "0px 0px -15% 0px", threshold: 0 }
+      { rootMargin: "0px 0px -15% 0px", threshold: 0 },
     );
     observer.observe(widget);
     return () => observer.disconnect();
@@ -595,7 +631,8 @@ const VehicleDetail = () => {
             {
               icon: LuSettings2,
               label: "Transmission",
-              value: derived.transmission ?? vehicle.transmission ?? "Automatic",
+              value:
+                derived.transmission ?? vehicle.transmission ?? "Automatic",
             },
             {
               icon: LuGauge,
@@ -630,12 +667,28 @@ const VehicleDetail = () => {
           ]
         : [
             { icon: LuCog, label: "Engine", value: derived.engine },
-            { icon: LuGauge, label: "Top Speed", value: `${derived.topSpeed} km/h` },
-            { icon: LuTimer, label: "0-100 km/h", value: `${derived.acceleration} s` },
-            { icon: LuZap, label: "Horsepower", value: `${derived.horsepower} HP` },
+            {
+              icon: LuGauge,
+              label: "Top Speed",
+              value: `${derived.topSpeed} km/h`,
+            },
+            {
+              icon: LuTimer,
+              label: "0-100 km/h",
+              value: `${derived.acceleration} s`,
+            },
+            {
+              icon: LuZap,
+              label: "Horsepower",
+              value: `${derived.horsepower} HP`,
+            },
             { icon: LuCompass, label: "Drivetrain", value: derived.drive },
             { icon: LuFuel, label: "Fuel Type", value: vehicle.fuel_type },
-            { icon: LuUsers, label: "Seats", value: `${vehicle.seating_capacity} Passengers` },
+            {
+              icon: LuUsers,
+              label: "Seats",
+              value: `${vehicle.seating_capacity} Passengers`,
+            },
             { icon: LuMapPin, label: "Location", value: vehicle.location },
           ];
 
@@ -669,7 +722,7 @@ const VehicleDetail = () => {
       </div>
 
       <div className="mt-5 grid lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.9fr)] gap-5">
-        <div className="min-w-0 space-y-5">
+        <div className="contents lg:block lg:min-w-0 lg:space-y-5">
           {/* Gallery / 360 viewer */}
           <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
             <div className="relative bg-slate-900">
@@ -694,7 +747,8 @@ const VehicleDetail = () => {
                         type="button"
                         onClick={() =>
                           setFrameIndex(
-                            (prev) => (prev - 1 + images.length) % images.length
+                            (prev) =>
+                              (prev - 1 + images.length) % images.length,
                           )
                         }
                         aria-label="Previous frame"
@@ -708,7 +762,11 @@ const VehicleDetail = () => {
                         onClick={() => setSpinning((on) => !on)}
                         className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/40"
                       >
-                        {spinning ? <LuPause size={13} /> : <LuPlay size={13} />}
+                        {spinning ? (
+                          <LuPause size={13} />
+                        ) : (
+                          <LuPlay size={13} />
+                        )}
                         {spinning ? "Auto" : "Play"}
                       </button>
                       <button
@@ -788,8 +846,10 @@ const VehicleDetail = () => {
           </section>
 
           {/* Description */}
-          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Description</h2>
+          <section className="max-lg:order-6 bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              Description
+            </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               {vehicle.description}
             </p>
@@ -819,7 +879,9 @@ const VehicleDetail = () => {
                     <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm transition-transform duration-200 group-hover:scale-110">
                       <Icon size={17} />
                     </span>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{label}</p>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      {label}
+                    </p>
                     <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {value}
                     </p>
@@ -884,7 +946,9 @@ const VehicleDetail = () => {
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                     A refundable deposit of{" "}
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">$200.00</span>{" "}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      $200.00
+                    </span>{" "}
                     is required.
                   </p>
                 </div>
@@ -894,8 +958,12 @@ const VehicleDetail = () => {
 
           {/* Pickup location */}
           <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Location</h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pickup location</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              Location
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              Pickup location
+            </p>
             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
               <LuMapPin size={15} className="text-primary" />
               {vehicle.location}
@@ -914,12 +982,13 @@ const VehicleDetail = () => {
           </section>
 
           {similarVehicles.length > 0 && (
-            <section>
+            <section className="max-lg:order-8">
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 Similar Vehicles You Might Like
               </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                More {vehicle.category.toLowerCase()} options near {vehicle.location}
+                More {vehicle.category.toLowerCase()} options near{" "}
+                {vehicle.location}
               </p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {similarVehicles.map((similar) => (
@@ -967,10 +1036,12 @@ const VehicleDetail = () => {
         {/* Booking widget */}
         <aside
           id="booking-widget"
-          ref={bookingRef}
-          className="sticky top-6 space-y-4 self-start"
+          className="contents lg:sticky lg:top-6 lg:block lg:space-y-4 lg:self-start"
         >
-          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-4 sm:p-5 shadow-sm">
+          <section
+            ref={bookingRef}
+            className="max-lg:order-7 bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-4 sm:p-5 shadow-sm"
+          >
             <div className="relative -mx-4 -mt-4 overflow-hidden rounded-t-2xl bg-slate-900 px-5 py-4 sm:-mx-5 sm:-mt-5 sm:px-6">
               <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-blue-600/30 blur-2xl" />
               <div className="pointer-events-none absolute -bottom-14 -left-8 h-28 w-28 rounded-full bg-indigo-500/25 blur-2xl" />
@@ -1008,7 +1079,7 @@ const VehicleDetail = () => {
             <div className="mt-3 space-y-3.5">
               <div>
                 <label htmlFor="detail-location" className={labelClass}>
-{usingDelivery ? "Drop-off City" : "Pickup Location"}
+                  {usingDelivery ? "Drop-off City" : "Pickup Location"}
                 </label>
                 <div className="relative">
                   <LuMapPin
@@ -1021,11 +1092,7 @@ const VehicleDetail = () => {
                     onChange={(e) => setPickupLocation(e.target.value)}
                     className={`${inputClass} appearance-none pl-10 pr-9 cursor-pointer`}
                   >
-                    {[
-                      vehicle.location,
-                      pickupLocation,
-                      ...CAMBODIA_LOCATIONS,
-                    ]
+                    {[vehicle.location, pickupLocation, ...CAMBODIA_LOCATIONS]
                       .filter(Boolean)
                       .filter((city, index, all) => all.indexOf(city) === index)
                       .map((city) => (
@@ -1073,68 +1140,128 @@ const VehicleDetail = () => {
                 </p>
                 <div className="mt-2 space-y-2.5">
                   <div>
-                    <label
-                      htmlFor="detail-id-card"
-                      className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                    >
+                    <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
                       <LuIdCard size={13} className="text-primary" />
-                      ID Card / National ID Number
-                    </label>
-                    <input
-                      id="detail-id-card"
-                      type="text"
-                      placeholder="Enter your ID / National ID number"
-                      className={inputClass}
-                    />
-                    <label
-                      htmlFor="detail-id-upload"
-                      className="mt-1.5 flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-400 transition-colors hover:border-primary hover:text-primary"
+                      ID Card
+                    </div>
+                    <div
+                      className={`${inputClass} mt-1.5 flex items-center gap-2 text-xs ${
+                        idDocument
+                          ? "ring-2 ring-emerald-400/30 text-emerald-700 dark:text-emerald-300"
+                          : "text-slate-400"
+                      }`}
                     >
-                      <LuUpload size={14} />
-                      Upload document (optional)
+                      {documentPreviewUrls.id ? (
+                        <img
+                          src={documentPreviewUrls.id}
+                          alt="ID document preview"
+                          className="h-6 w-6 shrink-0 rounded object-cover"
+                        />
+                      ) : idDocument ? (
+                        <LuCheck
+                          size={14}
+                          className="shrink-0 text-emerald-500"
+                        />
+                      ) : (
+                        <LuUpload size={14} className="shrink-0" />
+                      )}
+                      <span className="min-w-0 flex-1 truncate">
+                        {idDocument ? idDocument.name : "Upload document"}
+                      </span>
+                      {idDocument ? (
+                        <button
+                          type="button"
+                          onClick={() => setIdDocument(null)}
+                          className="shrink-0 font-semibold text-emerald-700 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-white"
+                        >
+                          Change
+                        </button>
+                      ) : (
+                        <label
+                          htmlFor="detail-id-upload"
+                          className="shrink-0 cursor-pointer font-semibold text-primary hover:underline"
+                        >
+                          Choose
+                        </label>
+                      )}
                       <input
                         id="detail-id-upload"
+                        key={idDocument?.name || "empty-id-document"}
                         type="file"
                         className="hidden"
                         accept="image/*,.pdf"
+                        onChange={(event) =>
+                          setIdDocument(event.target.files?.[0] || null)
+                        }
                       />
-                    </label>
+                    </div>
                   </div>
                   <div>
-                    <label
-                      htmlFor="detail-drivers-license"
-                      className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                    >
+                    <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
                       <LuShieldCheck size={13} className="text-primary" />
-                      Driver's License Number
-                    </label>
-                    <input
-                      id="detail-drivers-license"
-                      type="text"
-                      placeholder="Enter your driver's license number"
-                      className={inputClass}
-                    />
-                    <label
-                      htmlFor="detail-license-upload"
-                      className="mt-1.5 flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-400 transition-colors hover:border-primary hover:text-primary"
+                      Driver's License
+                    </div>
+                    <div
+                      className={`${inputClass} mt-1.5 flex items-center gap-2 text-xs ${
+                        licenseDocument
+                          ? "ring-2 ring-emerald-400/30 text-emerald-700 dark:text-emerald-300"
+                          : "text-slate-400"
+                      }`}
                     >
-                      <LuUpload size={14} />
-                      Upload document (optional)
+                      {documentPreviewUrls.license ? (
+                        <img
+                          src={documentPreviewUrls.license}
+                          alt="Driver's license preview"
+                          className="h-6 w-6 shrink-0 rounded object-cover"
+                        />
+                      ) : licenseDocument ? (
+                        <LuCheck
+                          size={14}
+                          className="shrink-0 text-emerald-500"
+                        />
+                      ) : (
+                        <LuUpload size={14} className="shrink-0" />
+                      )}
+                      <span className="min-w-0 flex-1 truncate">
+                        {licenseDocument
+                          ? licenseDocument.name
+                          : "Upload document"}
+                      </span>
+                      {licenseDocument ? (
+                        <button
+                          type="button"
+                          onClick={() => setLicenseDocument(null)}
+                          className="shrink-0 font-semibold text-emerald-700 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-white"
+                        >
+                          Change
+                        </button>
+                      ) : (
+                        <label
+                          htmlFor="detail-license-upload"
+                          className="shrink-0 cursor-pointer font-semibold text-primary hover:underline"
+                        >
+                          Choose
+                        </label>
+                      )}
                       <input
                         id="detail-license-upload"
+                        key={licenseDocument?.name || "empty-license-document"}
                         type="file"
                         className="hidden"
                         accept="image/*,.pdf"
+                        onChange={(event) =>
+                          setLicenseDocument(event.target.files?.[0] || null)
+                        }
                       />
-                    </label>
+                    </div>
                   </div>
                   <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
                     <LuInfo size={12} className="mt-0.5 shrink-0" />
-                    Keys must be collected directly at the company location upon presenting valid identification.
+                    Keys must be collected directly at the company location upon
+                    presenting valid identification.
                   </p>
                 </div>
               </div>
-
             </div>
 
             <div className="mt-3 border-t border-borderColor dark:border-slate-700 pt-3">
@@ -1173,7 +1300,9 @@ const VehicleDetail = () => {
                         >
                           <AddOnIcon size={15} />
                         </span>
-                        <span className="text-slate-700 dark:text-slate-200">{addon.label}</span>
+                        <span className="text-slate-700 dark:text-slate-200">
+                          {addon.label}
+                        </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -1181,7 +1310,9 @@ const VehicleDetail = () => {
                         </span>
                         <span
                           className={`relative h-5 w-9 rounded-full transition-colors duration-200 ${
-                            active ? "bg-primary" : "bg-slate-300 dark:bg-slate-600"
+                            active
+                              ? "bg-primary"
+                              : "bg-slate-300 dark:bg-slate-600"
                           }`}
                         >
                           <span
@@ -1216,7 +1347,9 @@ const VehicleDetail = () => {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-slate-600 dark:text-slate-300">Service fee</span>
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Service fee
+                  </span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100">
                     {formatAmount(serviceFee)}
                   </span>
@@ -1247,7 +1380,9 @@ const VehicleDetail = () => {
                   </div>
                 )}
                 <div className="flex items-baseline justify-between gap-3 border-t border-borderColor dark:border-slate-700 pt-3">
-                  <span className="font-bold text-slate-900 dark:text-slate-100">Grand Total</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">
+                    Grand Total
+                  </span>
                   <span className="text-lg font-extrabold text-primary">
                     {formatPrice(totalPrice)}
                   </span>
@@ -1311,7 +1446,7 @@ const VehicleDetail = () => {
                   onClick={() => setPaymentMethod("khqr")}
                   className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
                     paymentMethod === "khqr"
-                      ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
                       : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                   }`}
                 >
@@ -1339,7 +1474,7 @@ const VehicleDetail = () => {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+          <section className="max-lg:order-9 rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Renter Feedback &amp; Ratings
             </h3>
@@ -1397,7 +1532,9 @@ const VehicleDetail = () => {
               {RATING_BARS.map((bar) => (
                 <li key={bar.label}>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-600 dark:text-slate-300">{bar.label}</span>
+                    <span className="text-slate-600 dark:text-slate-300">
+                      {bar.label}
+                    </span>
                     <span className="font-semibold text-slate-900 dark:text-slate-100">
                       {bar.value.toFixed(1)}
                     </span>
@@ -1429,9 +1566,7 @@ const VehicleDetail = () => {
                           Verified
                         </span>
                       </p>
-                      <p className="text-xs text-slate-400">
-                        {review.date}
-                      </p>
+                      <p className="text-xs text-slate-400">{review.date}</p>
                     </div>
                     <div className="ml-auto flex items-center gap-0.5">
                       {Array.from({ length: review.rating }).map((_, star) => (

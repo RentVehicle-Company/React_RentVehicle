@@ -1,11 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-const RIEL_RATE = 4100;
 const STORAGE_KEY = "rental_preferences";
 
 const TRANSLATIONS = {
@@ -41,7 +35,8 @@ const TRANSLATIONS = {
     pickup_location: "Pickup Location",
     from: "from",
     est_cost: "Estimated Cost",
-    add_to_compare_hint: "Check up to 3 {category} to compare specs side-by-side",
+    add_to_compare_hint:
+      "Check up to 3 {category} to compare specs side-by-side",
     trip_duration: "Trip duration",
     pickup: "Pickup",
     return: "Return",
@@ -91,7 +86,8 @@ const TRANSLATIONS = {
     pickup_location: "ទីតាំងយករថយន្ត",
     from: "ចាប់ពី",
     est_cost: "តម្លៃប៉ាន់ស្មាន",
-    add_to_compare_hint: "ជ្រើសរើស {category} រហូតដល់ 3 គ្រឿង ដើម្បីប្រៀបធៀបលក្ខណៈ",
+    add_to_compare_hint:
+      "ជ្រើសរើស {category} រហូតដល់ 3 គ្រឿង ដើម្បីប្រៀបធៀបលក្ខណៈ",
     trip_duration: "រយៈពេលធ្វើដំណើរ",
     pickup: "យករថយន្ត",
     return: "ប្រគល់រថយន្ត",
@@ -123,15 +119,6 @@ export const usePreferences = () => {
 };
 
 export const PreferencesProvider = ({ children }) => {
-  const [currency, setCurrency] = useState(() => {
-    try {
-      return (
-        JSON.parse(localStorage.getItem(STORAGE_KEY))?.currency || "USD"
-      );
-    } catch {
-      return "USD";
-    }
-  });
   const [language, setLanguage] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY))?.language || "en";
@@ -141,36 +128,20 @@ export const PreferencesProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ currency, language })
-    );
-  }, [currency, language]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ language }));
+  }, [language]);
 
   const formatPrice = (amount) => {
-    if (currency === "KHR") {
-      const riel = Math.round(amount * RIEL_RATE);
-      return `៛ ${riel.toLocaleString("en-US")}`;
-    }
     return `$${Number(amount).toLocaleString("en-US")}`;
   };
 
-  // Currency-aware formatter for booking totals & payment screens. Keeps two
-  // decimals for USD and rounds to whole Riel for KHR.
   const formatAmount = (amount) => {
     const value = Number(amount) || 0;
-    if (currency === "KHR") {
-      const riel = Math.round(value * RIEL_RATE);
-      return `៛ ${riel.toLocaleString("en-US")}`;
-    }
     return `$${value.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
   };
-
-  const toggleCurrency = () =>
-    setCurrency((prev) => (prev === "USD" ? "KHR" : "USD"));
 
   const t = (key, vars = {}) => {
     let text = TRANSLATIONS[language]?.[key] ?? TRANSLATIONS.en[key] ?? key;
@@ -181,9 +152,6 @@ export const PreferencesProvider = ({ children }) => {
   };
 
   const value = {
-    currency,
-    setCurrency,
-    toggleCurrency,
     language,
     setLanguage,
     formatPrice,
