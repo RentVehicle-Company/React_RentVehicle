@@ -1,10 +1,4 @@
-// Base HTTP client for the Rental Company frontend.
-// All services talk to the Spring Boot backend through this module.
-//
-// Set VITE_API_URL to the Spring Boot base URL (e.g. http://localhost:8080).
-// Falls back to "/api" so the frontend works when served behind the backend.
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export const API_ENDPOINTS = {
   vehicles: `${API_BASE_URL}/vehicles`,
@@ -15,9 +9,28 @@ export const API_ENDPOINTS = {
   khqrPayment: `${API_BASE_URL}/payments/khqr`,
   khqrPaymentStatus: (transactionId) =>
     `${API_BASE_URL}/payments/khqr/${transactionId}`,
+  currentUser: `${API_BASE_URL}/users/me`,
+  userById: (id) => `${API_BASE_URL}/users/${id}`,
+  userProfileImage: (id) => `${API_BASE_URL}/users/${id}/profile-image`,
+  authRegister: `${API_BASE_URL}/auth/register`,
+  authLogin: `${API_BASE_URL}/auth/login`,
+  authGoogle: `${API_BASE_URL}/auth/google`,
+  authVerifyEmail: `${API_BASE_URL}/auth/verify-email`,
+  authResendOtp: `${API_BASE_URL}/auth/resend-otp`,
+  authRefresh: `${API_BASE_URL}/auth/refresh`,
+  authLogout: `${API_BASE_URL}/auth/logout`,
+  products: `${API_BASE_URL}/products`,
+  productById: (id) => `${API_BASE_URL}/products/${id}`,
+  productImages: (productId) => `${API_BASE_URL}/products/${productId}/images`,
+  locations: `${API_BASE_URL}/locations`,
+  bookings: `${API_BASE_URL}/bookings`,
+  bookingById: (id) => `${API_BASE_URL}/bookings/${id}`,
+  payments: `${API_BASE_URL}/payments`,
+  paymentsByBooking: (bookingId) => `${API_BASE_URL}/bookings/${bookingId}/payments`,
 };
 
 export const request = async (path, options = {}) => {
+<<<<<<< HEAD
   let response;
   try {
     response = await fetch(path, {
@@ -44,16 +57,51 @@ export const request = async (path, options = {}) => {
       json = null;
     }
   }
+=======
+  const token = localStorage.getItem("rental-access-token");
+  const headers = new Headers(options.headers || {});
+
+  headers.set("Content-Type", "application/json");
+  headers.set("Accept", "application/json");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(path, {
+    ...options,
+    headers,
+  });
+>>>>>>> origin/dev
+
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
 
   if (!response.ok) {
+<<<<<<< HEAD
     if (json === null) return null;
     const error = new Error(
       json.message || `Request failed (${response.status})`
     );
+=======
+    const errorMessage =
+      typeof data === "object" && data !== null
+        ? data.message || data.error || "Request failed."
+        : data || "Request failed.";
+    const error = new Error(errorMessage);
+>>>>>>> origin/dev
     error.status = response.status;
     error.data = json;
     throw error;
   }
 
+<<<<<<< HEAD
   return json;
 };
+=======
+  return data;
+};
+
+export const apiRequest = request;
+>>>>>>> origin/dev

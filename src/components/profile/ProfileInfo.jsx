@@ -1,13 +1,60 @@
 import React from "react";
-import { LuBadgeCheck } from "react-icons/lu";
+import { useRef, useState } from "react";
+import { LuBadgeCheck, LuCamera } from "react-icons/lu";
 
-const ProfileInfo = ({ user }) => {
+const ProfileInfo = ({ user, onPhotoChange }) => {
+  const fileInputRef = useRef(null);
+  const [photoError, setPhotoError] = useState("");
   const initial = user.name ? user.name.charAt(0).toUpperCase() : "U";
+
+  const handlePhotoSelect = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Photo must be smaller than 5 MB.");
+      return;
+    }
+
+    setPhotoError("");
+    onPhotoChange(file);
+  };
 
   return (
     <div className="bg-white border border-borderColor rounded-2xl p-6 flex items-center gap-4">
-      <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-2xl font-semibold shrink-0">
-        {initial}
+      <div className="relative shrink-0">
+        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-2xl font-semibold text-slate-500">
+          {user.image ? (
+            <img
+              src={user.image}
+              alt={`${user.name} profile`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initial
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="Change profile photo"
+          className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-primary text-white shadow-sm transition-colors hover:bg-primary-dull"
+        >
+          <LuCamera size={14} />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoSelect}
+          className="hidden"
+        />
       </div>
       <div className="min-w-0">
         <h2 className="text-lg font-semibold text-slate-900 truncate">
@@ -22,6 +69,9 @@ const ProfileInfo = ({ user }) => {
           )}
           <span>Member since {user.memberSince}</span>
         </div>
+        {photoError && (
+          <p className="mt-1 text-xs text-red-600">{photoError}</p>
+        )}
       </div>
     </div>
   );

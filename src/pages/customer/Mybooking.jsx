@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import BookingFilters from "../../components/profile/BookingFilters";
 import BookingCard from "../../components/profile/BookingCard";
@@ -8,6 +8,7 @@ import {
   cancelBooking,
   getMyBookings,
 } from "../../services/bookingService";
+<<<<<<< HEAD
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
@@ -18,6 +19,9 @@ const FILTER_MAP = {
   completed: ["completed"],
   cancelled: ["cancelled"],
 };
+=======
+import { signOut } from "../../services/authServices";
+>>>>>>> origin/dev
 
 const Mybooking = () => {
   const { isAuthenticated, openAuth, logout } = useAuth();
@@ -25,23 +29,37 @@ const Mybooking = () => {
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [cancelTarget, setCancelTarget] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
+<<<<<<< HEAD
     if (!isAuthenticated) return;
     setLoading(true);
+=======
+>>>>>>> origin/dev
     getMyBookings()
       .then((data) => {
         setBookings(data);
         setLoading(false);
       })
+<<<<<<< HEAD
       .catch(() => setLoading(false));
   }, [isAuthenticated]);
+=======
+      .catch(() => {
+        setError("We couldn't load your bookings right now. Please try again.");
+        setLoading(false);
+      });
+  }, []);
+>>>>>>> origin/dev
 
   const allowedStatuses = FILTER_MAP[filter];
   const filteredBookings =
     allowedStatuses === null
       ? bookings
+<<<<<<< HEAD
       : bookings.filter((booking) => allowedStatuses.includes(booking.status));
 
   const handleConfirmCancel = async () => {
@@ -63,6 +81,27 @@ const Mybooking = () => {
 
   const handleLogout = () => {
     logout();
+=======
+      : bookings.filter((booking) => {
+          if (filter === "upcoming") {
+            return ["pending", "confirmed"].includes(booking.status);
+          }
+          return booking.status === filter;
+        });
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    const updated = await cancelBooking(cancelTarget.id);
+    setBookings((prev) =>
+      prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
+    );
+    setCancelTarget(null);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+>>>>>>> origin/dev
   };
 
   if (!isAuthenticated) {
@@ -109,6 +148,20 @@ const Mybooking = () => {
           <div className="mt-6">
             {loading ? (
               <p className="text-sm text-slate-500">Loading bookings...</p>
+            ) : error ? (
+              <div className="bg-white border border-borderColor rounded-2xl p-10 text-center">
+                <p className="text-base font-semibold text-slate-900">
+                  Something went wrong
+                </p>
+                <p className="text-sm text-slate-500 mt-1">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="inline-block mt-5 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-black hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Try Again
+                </button>
+              </div>
             ) : filteredBookings.length > 0 ? (
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
                 {filteredBookings.map((booking) => (

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import ProfileInfo from "../../components/profile/ProfileInfo";
 import ProfileForm from "../../components/profile/ProfileForm";
@@ -8,23 +9,45 @@ import {
   getCachedUser,
   getCurrentUser,
   updateCurrentUser,
+  uploadProfileImage,
 } from "../../services/userService";
+import { signOut } from "../../services/authServices";
 
 const UserProfile = () => {
+<<<<<<< HEAD
   const { user: sessionUser, isAuthenticated, logout, updateUser, openAuth } =
     useAuth();
   const [user, setUser] = useState(() =>
     sessionUser ? { ...sessionUser } : getCachedUser()
   );
+=======
+  const [user, setUser] = useState(() => getCachedUser());
+  const navigate = useNavigate();
+>>>>>>> origin/dev
 
   useEffect(() => {
     if (!isAuthenticated) return;
     let mounted = true;
+<<<<<<< HEAD
     getCurrentUser().then((data) => {
       if (mounted) {
         setUser((prev) => ({ ...prev, ...data }));
       }
     });
+=======
+    getCurrentUser()
+      .then((data) => {
+        if (mounted) {
+          setUser(data);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          const cached = getCachedUser();
+          if (cached.id) setUser(cached);
+        }
+      });
+>>>>>>> origin/dev
     return () => {
       mounted = false;
     };
@@ -36,8 +59,19 @@ const UserProfile = () => {
     await updateUser({ name: updated.name ?? updated.fullName });
   };
 
+<<<<<<< HEAD
   const handleLogout = () => {
     logout();
+=======
+  const handlePhotoChange = async (file) => {
+    const updated = await uploadProfileImage(user.id, file);
+    setUser((prev) => ({ ...prev, ...updated }));
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+>>>>>>> origin/dev
   };
 
   if (!isAuthenticated) {
@@ -79,7 +113,7 @@ const UserProfile = () => {
 
           <div className="grid lg:grid-cols-3 gap-5 sm:gap-6 mt-6">
             <div className="lg:col-span-2 space-y-6">
-              <ProfileInfo user={user} />
+              <ProfileInfo user={user} onPhotoChange={handlePhotoChange} />
               <ProfileForm user={user} onSave={handleSave} />
             </div>
             <LoginMethodCard />
