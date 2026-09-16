@@ -7,20 +7,13 @@ import {
   LuCreditCard,
 } from "react-icons/lu";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
-<<<<<<< HEAD
-import { getMyBookings } from "../../services/bookingService";
+import { getMyPayments } from "../../services/paymentService";
+import { signOut } from "../../services/authServices";
 import { usePreferences } from "../../context/PreferencesContext";
 
 const Payments = () => {
   const { formatAmount } = usePreferences();
-  const [bookings, setBookings] = useState([]);
-=======
-import { getMyPayments } from "../../services/paymentService";
-import { signOut } from "../../services/authServices";
-
-const Payments = () => {
   const [payments, setPayments] = useState([]);
->>>>>>> origin/dev
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();

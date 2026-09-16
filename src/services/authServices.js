@@ -1,9 +1,11 @@
-<<<<<<< HEAD
 // Mock authentication service backed by localStorage so the logged-in
 // session and registered accounts persist across reloads.
 //
 // TODO: Replace with Spring Boot API call — POST /api/auth/login, /api/auth/register
 //       and JWT-based session management via the httpOnly cookie / Bearer token.
+
+import { API_ENDPOINTS, apiRequest } from "./api";
+import { mapUser } from "./userService";
 
 const USERS_KEY = "rental_users";
 const SESSION_KEY = "rental_auth_session";
@@ -111,21 +113,11 @@ export const loginUser = async ({ email, password }) => {
 export const logoutUser = async () => {
   await delay(200);
   clearSession();
-=======
-// Auth service.
-// Talks to the Spring Boot backend via api.js:
-//   POST /api/auth/register   -> {name, email, password}            -> {message}
-//   POST /api/auth/login      -> {email, password}                  -> AuthResponseDTO
-//   POST /api/auth/google     -> {idToken}                          -> AuthResponseDTO
-//   POST /api/auth/verify-email -> {email, code}                    -> {message}
-//   POST /api/auth/resend-otp -> ?email=...
-//   POST /api/auth/refresh    -> {refreshToken}                     -> AuthResponseDTO
-//   POST /api/auth/logout     -> Authorization: Bearer <token>
-// User profile endpoints are wired in userService.js. Auth relies on the
-// live backend only — no demo/fallback accounts.
+};
 
-import { API_ENDPOINTS, apiRequest } from "./api";
-import { mapUser } from "./userService";
+// ---------------------------------------------------------------------------
+// Backend API auth helpers (used when the Spring Boot backend is available)
+// ---------------------------------------------------------------------------
 
 const notifyAuthChange = () => {
   window.dispatchEvent(new CustomEvent("rental-auth-change"));
@@ -230,5 +222,4 @@ export const signOut = async () => {
   localStorage.removeItem("rental-refresh-token");
   localStorage.removeItem("rental-auth-user");
   notifyAuthChange();
->>>>>>> origin/dev
 };

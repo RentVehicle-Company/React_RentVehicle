@@ -11,12 +11,12 @@ import {
   LuCheck,
   LuChevronDown,
   LuCircleDot,
-  LuClock3,
   LuCog,
   LuCompass,
   LuFuel,
   LuGauge,
   LuIdCard,
+  LuInfo,
   LuLayers,
   LuLock,
   LuMapPin,
@@ -30,6 +30,7 @@ import {
   LuStar,
   LuTimer,
   LuTruck,
+  LuUpload,
   LuUserPlus,
   LuUsers,
   LuX,
@@ -242,37 +243,6 @@ const DELIVERY_FEES = {
   Hatchback: 8,
   Motorcycle: 8,
   Bicycle: 5,
-};
-
-const DELIVERY_CITIES = ["Phnom Penh", "Siem Reap"];
-
-const DELIVERY_DISTRICTS = {
-  "Phnom Penh": [
-    "Chamkar Mon",
-    "Daun Penh",
-    "Toul Kork",
-    "Mean Chey",
-    "Sen Sok",
-    "Russey Keo",
-    "Dangkao",
-    "Porsenchey",
-  ],
-  "Siem Reap": [
-    "Svay Dangkum",
-    "Salakomroeuk",
-    "Sla Kram",
-    "Kouk Chak",
-    "Nokor Thum",
-    "Prasat Bakong",
-    "Kralanh",
-  ],
-};
-
-const pickDeliveryCity = (preferred) => {
-  const normalized = String(preferred || "").toLowerCase();
-  if (normalized === "phnom penh") return "Phnom Penh";
-  if (normalized === "siem reap" || normalized === "seam reap") return "Siem Reap";
-  return "Phnom Penh";
 };
 
 const formatDate = (iso) => {
@@ -1099,130 +1069,70 @@ const VehicleDetail = () => {
 
               <div>
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  Pick-up method
+                  Verification Documents
                 </p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    aria-pressed={!usingDelivery}
-                    onClick={() => {
-                      setDeliveryMethod("pickup");
-                      setDeliveryDistrict("");
-                    }}
-                    className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                      !usingDelivery
-                        ? "border-primary/40 bg-primary/5 text-primary"
-                        : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                    }`}
-                  >
-                    <LuMapPin size={16} />
-                    Self Pickup
-                    <span className="text-[10px] font-normal text-slate-400">
-                      Free — at {vehicle.location}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={usingDelivery}
-                    onClick={() => {
-                      setDeliveryMethod("delivery");
-                      setDeliveryCity(
-                        pickDeliveryCity(pickupLocation || vehicle.location)
-                      );
-                    }}
-                    className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                      usingDelivery
-                        ? "border-primary/40 bg-primary/5 text-primary"
-                        : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                    }`}
-                  >
-                    <LuTruck size={16} />
-                    Vehicle Delivery
-                    <span className="text-[10px] font-normal text-slate-400">
-                      From {formatPrice(DELIVERY_FEES[vehicle.category] ?? 10)}/day
-                    </span>
-                  </button>
-                </div>
-
-                {usingDelivery && (
-                  <div className="mt-3 space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3.5">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        Delivery city
-                      </p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {DELIVERY_CITIES.map((city) => (
-                          <button
-                            key={city}
-                            type="button"
-                            aria-pressed={deliveryCity === city}
-                            onClick={() => {
-                              setDeliveryCity(city);
-                              setDeliveryDistrict("");
-                            }}
-                            className={`cursor-pointer rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-                              deliveryCity === city
-                                ? "bg-primary text-white"
-                                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-borderColor dark:ring-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
-                            }`}
-                          >
-                            {city}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        District
-                      </p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {(DELIVERY_DISTRICTS[deliveryCity] ??
-                          DELIVERY_DISTRICTS["Phnom Penh"]).map((district) => (
-                          <button
-                            key={district}
-                            type="button"
-                            aria-pressed={deliveryDistrict === district}
-                            onClick={() => setDeliveryDistrict(district)}
-                            className={`cursor-pointer rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-                              deliveryDistrict === district
-                                ? "bg-primary text-white"
-                                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-borderColor dark:ring-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
-                            }`}
-                          >
-                            {district}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="detail-delivery-address"
-                        className="mb-1 block text-xs font-semibold text-slate-800 dark:text-slate-200"
-                      >
-                        Delivery address
-                      </label>
+                <div className="mt-2 space-y-2.5">
+                  <div>
+                    <label
+                      htmlFor="detail-id-card"
+                      className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                    >
+                      <LuIdCard size={13} className="text-primary" />
+                      ID Card / National ID Number
+                    </label>
+                    <input
+                      id="detail-id-card"
+                      type="text"
+                      placeholder="Enter your ID / National ID number"
+                      className={inputClass}
+                    />
+                    <label
+                      htmlFor="detail-id-upload"
+                      className="mt-1.5 flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-400 transition-colors hover:border-primary hover:text-primary"
+                    >
+                      <LuUpload size={14} />
+                      Upload document (optional)
                       <input
-                        id="detail-delivery-address"
-                        type="text"
-                        value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        placeholder="Street, building, landmark…"
-                        className={inputClass}
+                        id="detail-id-upload"
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.pdf"
                       />
-                    </div>
-
-                    <p className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      <LuClock3 size={12} />
-                      Same-day delivery within {deliveryCity} ·
-                      {formatPrice(
-                        (DELIVERY_FEES[vehicle.category] ?? 10) * days
-                      )}{" "}
-                      total
-                    </p>
+                    </label>
                   </div>
-                )}
+                  <div>
+                    <label
+                      htmlFor="detail-drivers-license"
+                      className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                    >
+                      <LuShieldCheck size={13} className="text-primary" />
+                      Driver's License Number
+                    </label>
+                    <input
+                      id="detail-drivers-license"
+                      type="text"
+                      placeholder="Enter your driver's license number"
+                      className={inputClass}
+                    />
+                    <label
+                      htmlFor="detail-license-upload"
+                      className="mt-1.5 flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-400 transition-colors hover:border-primary hover:text-primary"
+                    >
+                      <LuUpload size={14} />
+                      Upload document (optional)
+                      <input
+                        id="detail-license-upload"
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.pdf"
+                      />
+                    </label>
+                  </div>
+                  <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                    <LuInfo size={12} className="mt-0.5 shrink-0" />
+                    Keys must be collected directly at the company location upon presenting valid identification.
+                  </p>
+                </div>
               </div>
 
             </div>

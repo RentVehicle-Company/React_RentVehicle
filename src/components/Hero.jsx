@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { IoSearch } from "react-icons/io5";
+import { IoCarSport, IoSearch } from "react-icons/io5";
 import {
   LuCalendarDays,
   LuCheck,
@@ -95,16 +95,16 @@ function HudStat({
       initial={{ opacity: 0, y: -10, scale: 0.85 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 220, damping: 20 }}
-      className={`pointer-events-none absolute z-20 hidden rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-left shadow-lg shadow-slate-900/5 backdrop-blur-md md:block ${className}`}
+      className={`absolute z-20 hidden rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 p-4 text-left shadow-lg shadow-slate-900/5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 md:block ${className}`}
     >
-      <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+      <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
         {label}
       </span>
-      <span className="mt-0.5 block text-lg font-bold tabular-nums text-slate-900">
+      <span className="mt-0.5 block text-lg font-bold tabular-nums text-slate-900 dark:text-white">
         {showCount ? <CountUp value={value} decimals={decimals} /> : null}
         {suffix}
       </span>
-      <span className="mt-2 block h-1.5 w-24 overflow-hidden rounded-full bg-slate-200/80">
+      <span className="mt-2 block h-1.5 w-24 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-600/80">
         <motion.span
           className="block h-full rounded-full"
           style={{ backgroundColor: accent }}
@@ -143,7 +143,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [carColor, setCarColor] = useState("#FFD700");
-  const [cameraView, setCameraView] = useState("auto");
+  const [cameraView, setCameraView] = useState("three-quarter");
   const [headlightsOn, setHeadlightsOn] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState(() => {
@@ -250,8 +250,8 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   };
 
   return (
-    <section className="relative w-full flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-      <div className="mx-auto flex w-full flex-col items-center justify-center gap-6 text-center sm:gap-8">
+    <section className="relative w-full flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-indigo-50/30 to-white py-8 pb-16 min-h-[calc(100vh-80px)] dark:from-slate-900 dark:via-slate-900/50 dark:to-slate-900">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 text-center sm:gap-5 sm:px-6 lg:px-8">
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -261,27 +261,25 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           Find & Rent Your Next Ride in Minutes
         </motion.h1>
 
-        <div className="animate-pulse-glow relative w-full max-w-4xl rounded-2xl p-[2px] md:rounded-full">
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl md:rounded-full"
-          >
-            <span
-              className="animate-spin-slow absolute -inset-[100%] aspect-square"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, rgba(37,99,235,0.15), #2563eb, #38bdf8, #2563eb, rgba(37,99,235,0.15))",
-              }}
-            />
-          </span>
-          <motion.form
-            onSubmit={handleSearch}
-            initial={{ opacity: 0, y: 30, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-            className="relative flex flex-col md:flex-row items-start md:items-center
-                justify-between gap-4 rounded-2xl p-4 sm:p-5 md:rounded-full w-full bg-white shadow-[0px_8px_20px_rgba(0,0,0,0.1)]"
-          >
+        <motion.button
+          type="button"
+          onClick={() => navigate("/cars")}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.08, ease: "easeOut" }}
+          className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-7 py-3 text-sm font-semibold text-white shadow-md shadow-slate-200/50 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-dull hover:shadow-lg active:scale-95"
+        >
+          <IoCarSport size={18} />
+          Explore Vehicles
+        </motion.button>
+
+        <motion.form
+          onSubmit={handleSearch}
+          initial={{ opacity: 0, y: 30, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
+          className="relative flex w-full max-w-4xl flex-col md:flex-row items-start md:items-center justify-between gap-3 rounded-full border border-slate-200 dark:border-slate-700 bg-white p-2 pr-3 shadow-xl shadow-slate-200/50 dark:bg-slate-800 dark:shadow-none"
+        >
           <div className="grid w-full grid-cols-1 gap-4 text-left sm:grid-cols-3 md:ml-4 md:gap-6">
             <div className="relative flex flex-col gap-2">
               <button
@@ -294,7 +292,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 <span
                   className={
                     selectedLocation
-                      ? "font-medium text-slate-900"
+                      ? "font-medium text-slate-900 dark:text-white"
                       : "text-slate-400"
                   }
                 >
@@ -313,7 +311,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                   />
                 </span>
               </button>
-              <p className="px-1 text-xs text-gray-500">
+              <p className="px-1 text-xs text-gray-500 dark:text-slate-400">
                 {selectedLocation
                   ? `Pickup: ${selectedLocation}`
                   : "Select your pickup city"}
@@ -329,9 +327,9 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                   <div
                     role="listbox"
                     aria-label="Pickup location"
-                    className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-2xl"
+                    className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-2xl dark:border-slate-700 dark:bg-slate-800"
                   >
-                    <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:border-slate-700">
                       Choose pickup city
                     </p>
                     <ul className="max-h-64 overflow-y-auto p-1.5">
@@ -350,7 +348,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                               className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                                 isSelected
                                   ? "bg-primary/10 font-medium text-primary"
-                                  : "text-slate-700 hover:bg-slate-100"
+                                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
                               }`}
                             >
                               <LuMapPin
@@ -375,7 +373,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                           setSelectedLocation("");
                           setIsLocationOpen(false);
                         }}
-                        className="w-full cursor-pointer border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                        className="w-full cursor-pointer border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
                       >
                         Clear location
                       </button>
@@ -386,7 +384,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
             </div>
 
             <div className="flex flex-col text-start gap-2">
-              <label htmlFor="pickup-date" className="text-sm font-medium">
+              <label htmlFor="pickup-date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Pick-up Date
               </label>
               <input
@@ -396,12 +394,12 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 min={today}
                 value={pickupDate}
                 onChange={(e) => setPickupDate(e.target.value)}
-                className="w-full text-sm text-gray-500"
+                className="w-full rounded-lg px-2 py-1.5 text-sm text-gray-500 outline-none transition focus:ring-2 focus:ring-primary/30 dark:text-slate-300"
               />
             </div>
 
             <div className="flex flex-col text-start gap-2">
-              <label htmlFor="return-date" className="text-sm font-medium">
+              <label htmlFor="return-date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Return Date
               </label>
               <input
@@ -411,7 +409,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 min={pickupDate || today}
                 value={returnDate}
                 onChange={(e) => setReturnDate(e.target.value)}
-                className="w-full text-sm text-gray-500"
+                className="w-full rounded-lg px-2 py-1.5 text-sm text-gray-500 outline-none transition focus:ring-2 focus:ring-primary/30 dark:text-slate-300"
               />
             </div>
           </div>
@@ -419,7 +417,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           <div className="flex w-full flex-col md:w-auto">
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-1 rounded-xl bg-black px-7 py-3 text-sm text-white transition-all duration-200 hover:bg-gray-800 active:scale-95 cursor-pointer md:w-auto md:rounded-full"
+              className="flex w-full items-center justify-center gap-1 rounded-full bg-slate-900 px-7 py-3 text-sm text-white transition-all duration-200 hover:bg-slate-800 active:scale-95 cursor-pointer md:w-auto dark:bg-primary dark:hover:bg-primary-dull"
             >
               <IoSearch />
               Search
@@ -444,11 +442,10 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
             </div>
           )}
         </motion.form>
-        </div>
 
         {recentSearches.length > 0 && (
           <div className="-mt-4 flex w-full max-w-4xl flex-wrap items-center justify-center gap-2 sm:-mt-5">
-            <span className="inline-flex items-center gap-1 px-2 text-xs font-medium text-slate-500">
+            <span className="inline-flex items-center gap-1 px-2 text-xs font-medium text-slate-500 dark:text-slate-400">
               <LuHistory size={13} />
               Recent:
             </span>
@@ -461,7 +458,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                   setPickupDate(search.pickup);
                   setReturnDate(search.return);
                 }}
-                className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 shadow-sm transition-colors hover:border-slate-900 hover:text-slate-900"
+                className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 shadow-sm transition-colors hover:border-slate-900 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-300 dark:hover:text-white"
               >
                 {search.location || "Anywhere"}
                 {search.pickup && ` · ${search.pickup}`}
@@ -471,17 +468,17 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
             <button
               type="button"
               onClick={clearRecent}
-              className="cursor-pointer text-xs font-medium text-slate-400 underline-offset-2 transition-colors hover:text-slate-700 hover:underline"
+              className="cursor-pointer text-xs font-medium text-slate-400 underline-offset-2 transition-colors hover:text-slate-700 hover:underline dark:text-slate-500 dark:hover:text-slate-200"
             >
               Clear
             </button>
           </div>
         )}
 
-        <div className="relative w-full">
+        <div className="relative mx-auto w-full max-w-5xl py-6">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[820px] max-w-[120vw] -translate-x-1/2 -translate-y-1/2 transition-colors duration-700"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[780px] w-[1150px] max-w-[135vw] -translate-x-1/2 -translate-y-1/2 transition-colors duration-700"
           style={{
             color: carColor,
             backgroundImage:
@@ -496,7 +493,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           suffix=" km/h"
           pct={VEHICLE_SPECS[selectedVehicle].powerPct}
           accent={VEHICLE_SPECS[selectedVehicle].accent}
-          className="left-2 top-10 sm:left-4"
+          className="left-0 top-4 sm:left-6 sm:top-4 lg:left-14"
         />
         <HudStat
           label="0-100 km/h"
@@ -505,7 +502,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           decimals={1}
           pct={Math.max(40, 100 - VEHICLE_SPECS[selectedVehicle].zeroToSixty * 12)}
           accent={VEHICLE_SPECS[selectedVehicle].accent}
-          className="right-2 top-10 sm:right-4"
+          className="right-0 top-4 sm:right-6 sm:top-4 lg:right-14"
         />
         <HudStat
           label="Horsepower"
@@ -513,7 +510,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           suffix=" HP"
           pct={VEHICLE_SPECS[selectedVehicle].powerPct}
           accent={VEHICLE_SPECS[selectedVehicle].accent}
-          className="bottom-6 left-2 sm:left-4"
+          className="bottom-4 left-0 sm:bottom-4 sm:left-6 lg:left-14"
         />
         <HudStat
           label="Drivetrain"
@@ -522,7 +519,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           pct={65}
           accent={VEHICLE_SPECS[selectedVehicle].accent}
           showCount={false}
-          className="bottom-6 right-2 sm:right-4"
+          className="bottom-4 right-0 sm:bottom-4 sm:right-6 lg:right-14"
         />
 
         <AnimatePresence>
@@ -557,7 +554,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.28 }}
       >
-        <div className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Model
           </span>
@@ -572,7 +569,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 className={`relative cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out active:scale-95 ${
                   isActive
                     ? "text-white"
-                    : "text-slate-600 hover:text-slate-900"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                 }`}
               >
                 {isActive && (
@@ -599,7 +596,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.36 }}
       >
-        <div className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <span className="pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             View
           </span>
@@ -614,7 +611,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 className={`relative cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out active:scale-95 ${
                   isActive
                     ? "text-white"
-                    : "text-slate-600 hover:text-slate-900"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                 }`}
               >
                 {isActive && (
@@ -641,7 +638,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-sm transition-all duration-200 ease-out active:scale-95 ${
             headlightsOn
               ? "animate-pulse-glow-amber border-amber-400 bg-amber-50 text-amber-600"
-              : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900"
+              : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-300 dark:hover:text-white"
           }`}
         >
           <LuLightbulb size={14} />
@@ -655,7 +652,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium shadow-sm transition-all duration-200 ease-out active:scale-95 ${
             enginePlaying
               ? "animate-pulse-glow border-primary bg-primary/10 text-primary"
-              : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900"
+              : "border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-300 dark:hover:text-white"
           }`}
         >
           {enginePlaying ? "🔊 Stop Sound" : "🔊 Engine Sound"}
@@ -668,7 +665,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.2 }}
       >
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Car Color
         </span>
         {CAR_SWATCH_COLORS.map(({ hex, name }) => {

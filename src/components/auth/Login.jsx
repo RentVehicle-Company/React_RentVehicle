@@ -1,18 +1,7 @@
-<<<<<<< HEAD
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import AuthModal from "./AuthModal";
-
-const Login = () => {
-  const navigate = useNavigate();
-  return <AuthModal mode="login" onClose={() => navigate("/")} />;
-};
-
-export default Login;
-=======
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LuArrowLeft, LuEye, LuEyeOff, LuLock, LuMail } from "react-icons/lu";
+import Navbar from "../common/Navbar";
 import {
   login,
   loginWithGoogle,
@@ -23,7 +12,7 @@ import {
 } from "../../services/authServices";
 
 const fieldClass =
-  "w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200";
+  "w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-slate-400 dark:focus:ring-slate-600";
 
 // Feature flag: Google login shows only when BOTH the flag and the client ID
 // are present, so missing `.env` config never throws or shows a broken button.
@@ -245,24 +234,26 @@ const Login = ({ initialMode = "login" }) => {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-[#bfc1c3] px-4 py-10">
+    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
+      <Navbar />
+      <div className="relative flex flex-1 items-center justify-center px-4 py-10">
       <button
         type="button"
         onClick={handleBack}
-        className="absolute left-4 top-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-900"
+        className="absolute left-4 top-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-900 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
       >
         <LuArrowLeft size={15} />
         Back to browsing
       </button>
-      <section className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
-        <div className="grid grid-cols-2 border-b border-slate-200">
+      <section className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl dark:bg-slate-800 dark:shadow-2xl">
+        <div className="grid grid-cols-2 border-b border-slate-200 dark:border-slate-700">
           <button
             type="button"
             onClick={() => changeMode("login")}
             className={`border-b-2 px-4 py-3 text-sm font-semibold cursor-pointer transition-colors ${
               mode === "login"
-                ? "border-slate-700 text-slate-800"
-                : "border-transparent text-slate-400 hover:text-slate-600"
+                ? "border-slate-700 text-slate-800 dark:border-slate-200 dark:text-slate-100"
+                : "border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
             }`}
           >
             Log In
@@ -272,8 +263,8 @@ const Login = ({ initialMode = "login" }) => {
             onClick={() => changeMode("register")}
             className={`border-b-2 px-4 py-3 text-sm font-semibold cursor-pointer transition-colors ${
               mode === "register"
-                ? "border-slate-700 text-slate-800"
-                : "border-transparent text-slate-400 hover:text-slate-600"
+                ? "border-slate-700 text-slate-800 dark:border-slate-200 dark:text-slate-100"
+                : "border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
             }`}
           >
             Create Account
@@ -286,7 +277,7 @@ const Login = ({ initialMode = "login" }) => {
               <div>
                 <label
                   htmlFor="login-email"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
                 >
                   Email Address
                 </label>
@@ -310,13 +301,13 @@ const Login = ({ initialMode = "login" }) => {
                 <div className="mb-1.5 flex items-center justify-between">
                   <label
                     htmlFor="login-password"
-                    className="text-xs font-medium text-slate-600"
+                    className="text-xs font-medium text-slate-600 dark:text-slate-300"
                   >
                     Password
                   </label>
                   <button
                     type="button"
-                    className="text-[11px] text-slate-500 hover:text-slate-800"
+                    className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
                   >
                     Forgot Password?
                   </button>
@@ -342,7 +333,7 @@ const Login = ({ initialMode = "login" }) => {
                       showPassword ? "Hide password" : "Show password"
                     }
                     onClick={() => setShowPassword((visible) => !visible)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   >
                     {showPassword ? (
                       <LuEyeOff size={17} />
@@ -369,7 +360,6 @@ const Login = ({ initialMode = "login" }) => {
                 />
               ) : (
                 <GoogleButton comingSoon />
-                // <GoogleButton  />
               )}
             </form>
           ) : registerStep === "details" ? (
@@ -377,7 +367,7 @@ const Login = ({ initialMode = "login" }) => {
               <div>
                 <label
                   htmlFor="register-name"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
                 >
                   Full Name
                 </label>
@@ -398,7 +388,7 @@ const Login = ({ initialMode = "login" }) => {
               <div>
                 <label
                   htmlFor="register-email"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
                 >
                   Email Address
                 </label>
@@ -420,7 +410,7 @@ const Login = ({ initialMode = "login" }) => {
               <div>
                 <label
                   htmlFor="register-password"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
                 >
                   Password
                 </label>
@@ -448,7 +438,7 @@ const Login = ({ initialMode = "login" }) => {
                     onClick={() =>
                       setShowRegisterPassword((visible) => !visible)
                     }
-                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   >
                     {showRegisterPassword ? (
                       <LuEyeOff size={17} />
@@ -471,21 +461,21 @@ const Login = ({ initialMode = "login" }) => {
               <button
                 type="button"
                 onClick={() => setRegisterStep("details")}
-                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
               >
                 <LuArrowLeft size={14} /> Back
               </button>
               <div className="text-center">
-                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
                   <LuMail size={20} />
                 </div>
-                <h2 className="mt-3 text-base font-semibold text-slate-800">
+                <h2 className="mt-3 text-base font-semibold text-slate-800 dark:text-slate-100">
                   Verify your email
                 </h2>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
+                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
                   Enter the 6-digit code sent to
                   <br />
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-slate-700 dark:text-slate-200">
                     {registerValues.email}
                   </span>
                 </p>
@@ -520,7 +510,7 @@ const Login = ({ initialMode = "login" }) => {
                 type="button"
                 onClick={handleResendOtp}
                 disabled={submitting}
-                className="block w-full text-center text-xs font-medium text-slate-500 hover:text-slate-800"
+                className="block w-full text-center text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
               >
                 Resend code
               </button>
@@ -533,16 +523,17 @@ const Login = ({ initialMode = "login" }) => {
             </p>
           )}
           {message && (
-            <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-center text-xs text-slate-600">
+            <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-center text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
               {message}
             </p>
           )}
         </div>
-        <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-center text-[11px] text-slate-400">
+        <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-center text-[11px] text-slate-400 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-500">
           Secured by DriveLink Shield™
         </div>
       </section>
-    </main>
+      </div>
+    </div>
   );
 };
 
@@ -562,7 +553,7 @@ const GoogleButton = ({ onClick, disabled, comingSoon }) => (
     className={`flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-slate-50 py-2.5 text-sm transition-colors ${
       comingSoon
         ? "cursor-not-allowed text-slate-400"
-        : "text-slate-600 hover:bg-slate-100"
+        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
     }`}
   >
     {comingSoon ? (
@@ -579,4 +570,3 @@ const GoogleButton = ({ onClick, disabled, comingSoon }) => (
 );
 
 export default Login;
->>>>>>> origin/dev

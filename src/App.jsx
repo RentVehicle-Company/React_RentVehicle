@@ -15,12 +15,9 @@ import UserProfile from "./pages/customer/UserProfile";
 import Mybooking from "./pages/customer/Mybooking";
 import BookingDetails from "./pages/customer/BookingDetails";
 import Payments from "./pages/customer/Payments";
-<<<<<<< HEAD
 import AdminLayout from "./pages/admin/Layout";
 import Analytics from "./pages/admin/Analytics";
-=======
 import Footer from "./components/common/Footer";
->>>>>>> origin/dev
 import LiveChatButton from "./components/LiveChatButton";
 import RequireAuth from "./components/common/RequireAuth";
 
@@ -33,13 +30,8 @@ const App = () => {
 
   return (
     <>
-<<<<<<< HEAD
-      <Navbar />
-      <main className="overflow-x-hidden bg-white dark:bg-slate-900 transition-colors duration-200">
-=======
       {!isAuthRoute && <Navbar />}
-      <main className="overflow-x-hidden">
->>>>>>> origin/dev
+      <main className="overflow-x-hidden bg-white dark:bg-slate-900 transition-colors duration-200">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/cars" element={<Cars />} />
@@ -51,14 +43,6 @@ const App = () => {
           <Route path="/bicycles" element={<Bicycles />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-<<<<<<< HEAD
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="/bookings" element={<Mybooking />} />
-          <Route path="/bookings/:id" element={<BookingDetails />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/admin" element={<AdminLayout />} />
-          <Route path="/admin/analytics" element={<Analytics />} />
-=======
           <Route
             path="/profile"
             element={
@@ -91,7 +75,8 @@ const App = () => {
               </RequireAuth>
             }
           />
->>>>>>> origin/dev
+          <Route path="/admin" element={<AdminLayout />} />
+          <Route path="/admin/analytics" element={<Analytics />} />
 
           {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
         </Routes>

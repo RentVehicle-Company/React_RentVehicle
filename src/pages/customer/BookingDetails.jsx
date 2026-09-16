@@ -13,11 +13,8 @@ import { usePreferences } from "../../context/PreferencesContext";
 
 const STATUS_CONFIG = {
   confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700" },
-<<<<<<< HEAD
   active: { label: "Active", className: "bg-blue-100 text-blue-700" },
-=======
   pending: { label: "Pending", className: "bg-amber-100 text-amber-700" },
->>>>>>> origin/dev
   completed: { label: "Completed", className: "bg-slate-200 text-slate-700" },
   cancelled: { label: "Cancelled", className: "bg-red-100 text-red-700" },
 };

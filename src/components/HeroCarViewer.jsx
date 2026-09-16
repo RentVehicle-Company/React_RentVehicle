@@ -18,21 +18,21 @@ const VEHICLE_CONFIG = {
     model: "/bmw_m4csl.glb",
     name: "BMW M4 CSL",
     type: "Sportscar",
-    scale: [1.19, 1.19, 1.19],
+    scale: [1.55, 1.55, 1.55],
     offset: [0, -0.5, 0],
   },
   urus: {
     model: "/urus_absoluttm.glb",
     name: "Lamborghini Urus",
     type: "Super SUV",
-    scale: [1.12, 1.12, 1.12],
+    scale: [1.46, 1.46, 1.46],
     offset: [0, -0.5, 0],
   },
   raptor: {
     model: "/ford_f150_raptor.glb",
     name: "Ford F-150 Raptor",
     type: "Truck/Offroad",
-    scale: [1.05, 1.05, 1.05],
+    scale: [1.37, 1.37, 1.37],
     offset: [0, -0.5, 0],
   },
 };
@@ -385,19 +385,19 @@ const HeroCarViewer = ({
   const activeRef = useRef(false);
 
   return (
-    <div className="w-full h-[440px] sm:h-[520px] md:h-[540px] relative flex items-center justify-center -mt-10 sm:-mt-12 md:-mt-16">
+    <div className="w-full min-h-[380px] h-[460px] sm:h-[560px] md:h-[620px] relative flex items-center justify-center object-contain -mt-8 sm:-mt-12 md:-mt-16">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[460px] w-[720px] animate-ambient rounded-full bg-gradient-to-tr from-blue-600/30 via-indigo-500/20 to-cyan-400/30 blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[940px] animate-ambient rounded-full bg-gradient-to-tr from-blue-600/30 via-indigo-500/20 to-cyan-400/30 blur-3xl"
       />
       <div
         aria-hidden="true"
-        className="animate-ambient absolute left-1/2 top-1/2 h-[340px] w-[340px] rounded-full bg-primary/20 blur-2xl"
+        className="animate-ambient absolute left-1/2 top-1/2 h-[440px] w-[440px] rounded-full bg-primary/20 blur-2xl"
         style={{ animationDelay: "-5.5s" }}
       />
       <div
         aria-hidden="true"
-        className="animate-ambient absolute left-1/2 top-1/2 h-[280px] w-[280px] rounded-full bg-violet-500/25 blur-2xl"
+        className="animate-ambient absolute left-1/2 top-1/2 h-[360px] w-[360px] rounded-full bg-violet-500/25 blur-2xl"
         style={{ animationDelay: "-11s" }}
       />
       {Array.from({ length: 8 }).map((_, index) => {

@@ -30,34 +30,6 @@ export const API_ENDPOINTS = {
 };
 
 export const request = async (path, options = {}) => {
-<<<<<<< HEAD
-  let response;
-  try {
-    response = await fetch(path, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...(options.headers || {}),
-      },
-    });
-  } catch {
-    // Network unreachable -> no backend. Callers fall back to mocks.
-    return null;
-  }
-
-  const raw = await response.text().catch(() => null);
-  let json = null;
-  if (raw) {
-    try {
-      json = JSON.parse(raw);
-    } catch {
-      // Non-JSON body. While the backend is offline the dev server answers
-      // /api/* with index.html (or a 404) -> treat as "no backend".
-      json = null;
-    }
-  }
-=======
   const token = localStorage.getItem("rental-access-token");
   const headers = new Headers(options.headers || {});
 
@@ -67,41 +39,42 @@ export const request = async (path, options = {}) => {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(path, {
-    ...options,
-    headers,
-  });
->>>>>>> origin/dev
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers,
+    });
+  } catch {
+    // Network unreachable -> no backend. Callers fall back to mocks.
+    return null;
+  }
 
-  const contentType = response.headers.get("content-type") || "";
-  const data = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  const raw = await response.text().catch(() => null);
+  let data = null;
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      // Non-JSON body. While the backend is offline the dev server answers
+      // /api/* with index.html (or a 404) -> treat as "no backend".
+      data = raw;
+    }
+  }
 
   if (!response.ok) {
-<<<<<<< HEAD
-    if (json === null) return null;
-    const error = new Error(
-      json.message || `Request failed (${response.status})`
-    );
-=======
+    if (data === null) return null;
     const errorMessage =
       typeof data === "object" && data !== null
-        ? data.message || data.error || "Request failed."
-        : data || "Request failed.";
+        ? data.message || data.error || `Request failed (${response.status})`
+        : data || `Request failed (${response.status})`;
     const error = new Error(errorMessage);
->>>>>>> origin/dev
     error.status = response.status;
-    error.data = json;
+    error.data = data;
     throw error;
   }
 
-<<<<<<< HEAD
-  return json;
-};
-=======
   return data;
 };
 
 export const apiRequest = request;
->>>>>>> origin/dev
