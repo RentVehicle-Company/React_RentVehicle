@@ -328,7 +328,7 @@ const VehicleDetail = () => {
     driver: false,
     seat: false,
   });
-  const [paymentMethod, setPaymentMethod] = useState("visa");
+  const [paymentMethod, setPaymentMethod] = useState("khqr");
   const [reviews, setReviews] = useState(REVIEWS);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
@@ -356,7 +356,7 @@ const VehicleDetail = () => {
     setIdDocument(null);
     setLicenseDocument(null);
     setAddOns({ insurance: false, driver: false, seat: false });
-    setPaymentMethod("visa");
+    setPaymentMethod("khqr");
     setReviews(REVIEWS);
     setReviewOpen(false);
     setReviewRating(0);
@@ -516,7 +516,7 @@ const VehicleDetail = () => {
     return () => observer.disconnect();
   }, [vehicle]);
 
-  const handleBook = (method) => {
+  const handleBook = () => {
     if (!vehicle || !hasValidDates) return;
     const booking = {
       id: vehicle.id,
@@ -547,7 +547,7 @@ const VehicleDetail = () => {
       paymentStatus: "UNPAID",
     };
     navigate("/checkout", {
-      state: { booking, method, from: `/vehicles/${vehicle.id}` },
+      state: { booking, method: "khqr", from: `/vehicles/${vehicle.id}` },
     });
   };
 
@@ -1427,18 +1427,16 @@ const VehicleDetail = () => {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  aria-pressed={paymentMethod === "visa"}
-                  onClick={() => setPaymentMethod("visa")}
-                  className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
-                    paymentMethod === "visa"
-                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                      : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  disabled
+                  aria-disabled="true"
+                  title="Visa payments are temporarily unavailable. Please use Bakong KHQR."
+                  className="inline-flex cursor-not-allowed items-center justify-center gap-1.5 rounded-lg border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 opacity-60"
                 >
                   <span className="grid h-4 w-6 place-items-center rounded-sm bg-white text-[8px] font-extrabold italic text-blue-700">
                     VISA
                   </span>
                   Visa
+                  <LuLock size={11} strokeWidth={2.5} />
                 </button>
                 <button
                   type="button"
@@ -1463,7 +1461,7 @@ const VehicleDetail = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => handleBook(paymentMethod)}
+                  onClick={handleBook}
                   disabled={!hasValidDates}
                   className="relative inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >

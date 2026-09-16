@@ -24,7 +24,7 @@ const validate = (values) => {
 };
 
 const inputClass =
-  "w-full px-4 py-2.5 bg-white border border-borderColor rounded-xl text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-xl border border-borderColor bg-white px-4 py-2.5 text-sm text-slate-900 outline-none placeholder-slate-400 transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500";
 
 const errorTextClass = "mt-1.5 text-xs text-red-600";
 
@@ -93,10 +93,10 @@ const ProfileForm = ({ user, onSave }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white border border-borderColor rounded-2xl p-6"
+      className="rounded-2xl border border-borderColor bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
     >
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-slate-900">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
           Profile Information
         </h3>
         {!editing && (
@@ -117,7 +117,7 @@ const ProfileForm = ({ user, onSave }) => {
         <div>
           <label
             htmlFor="profile-name"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
           >
             Full Name
           </label>
@@ -129,7 +129,7 @@ const ProfileForm = ({ user, onSave }) => {
             onChange={handleChange}
             disabled={!editing}
             placeholder="Your full name"
-            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-400`}
           />
           {errors.name && <p className={errorTextClass}>{errors.name}</p>}
         </div>
@@ -137,7 +137,7 @@ const ProfileForm = ({ user, onSave }) => {
         <div>
           <label
             htmlFor="profile-email"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
           >
             Email Address
           </label>
@@ -149,7 +149,7 @@ const ProfileForm = ({ user, onSave }) => {
             onChange={handleChange}
             disabled={!editing}
             placeholder="you@example.com"
-            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-400`}
           />
           {errors.email && <p className={errorTextClass}>{errors.email}</p>}
         </div>
@@ -157,7 +157,7 @@ const ProfileForm = ({ user, onSave }) => {
         <div className="md:col-span-2">
           <label
             htmlFor="profile-phone"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
           >
             Phone Number
           </label>
@@ -169,7 +169,7 @@ const ProfileForm = ({ user, onSave }) => {
             onChange={handleChange}
             disabled={!editing}
             placeholder="+855 12 345 678"
-            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-400`}
           />
           {errors.phone && <p className={errorTextClass}>{errors.phone}</p>}
         </div>
@@ -177,7 +177,7 @@ const ProfileForm = ({ user, onSave }) => {
         <div className="md:col-span-2">
           <label
             htmlFor="profile-address"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
           >
             Address
           </label>
@@ -189,7 +189,7 @@ const ProfileForm = ({ user, onSave }) => {
             onChange={handleChange}
             disabled={!editing}
             placeholder="123 Main Street, Phnom Penh"
-            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
+            className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-400`}
           />
         </div>
       </div>
@@ -212,7 +212,7 @@ const ProfileForm = ({ user, onSave }) => {
           <button
             type="button"
             onClick={handleCancel}
-            className="cursor-pointer rounded-xl border border-borderColor bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            className="cursor-pointer rounded-xl border border-borderColor bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             Cancel
           </button>

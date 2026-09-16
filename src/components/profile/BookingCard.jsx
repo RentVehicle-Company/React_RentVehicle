@@ -51,8 +51,8 @@ const BookingCard = ({ booking, onCancelRequest }) => {
   const usingDelivery = booking.deliveryMethod === "delivery";
 
   return (
-    <div className="bg-white shadow-lg rounded-2xl overflow-hidden shadow-sm">
-      <div className="relative h-28 bg-slate-100">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="relative h-28 bg-slate-100 dark:bg-slate-800">
         <img
           src={booking.image}
           alt={booking.vehicleName}
@@ -70,18 +70,18 @@ const BookingCard = ({ booking, onCancelRequest }) => {
       </div>
 
       <div className="p-4 space-y-3">
-        <h3 className="text-base font-semibold text-slate-900 truncate">
+        <h3 className="truncate text-base font-semibold text-slate-900 dark:text-white">
           {booking.vehicleName}
         </h3>
 
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           <LuCalendar size={16} className="shrink-0" />
           <span>
             {booking.startDate} - {booking.endDate}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           {usingDelivery ? (
             <LuTruck size={16} className="shrink-0 text-primary" />
           ) : (
@@ -89,7 +89,9 @@ const BookingCard = ({ booking, onCancelRequest }) => {
           )}
           <span className="truncate">
             {usingDelivery && (
-              <span className="mr-1 text-slate-400">Delivered to</span>
+              <span className="mr-1 text-slate-400 dark:text-slate-500">
+                Delivered to
+              </span>
             )}
             {booking.pickupLocation}
           </span>
@@ -113,7 +115,7 @@ const BookingCard = ({ booking, onCancelRequest }) => {
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
             <LuBanknote size={16} className="shrink-0" />
             <span>{formatAmount(booking.totalPrice)}</span>
           </div>
@@ -126,12 +128,12 @@ const BookingCard = ({ booking, onCancelRequest }) => {
           )}
         </div>
 
-        <div className="pt-3 border-t border-borderColor flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 border-t border-borderColor pt-3 dark:border-slate-800">
           {actions.includes("details") && (
             <button
               type="button"
               onClick={() => navigate(`/bookings/${booking.id}`)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium text-slate-800 bg-white border border-borderColor hover:bg-slate-50 transition-colors cursor-pointer ${actions.length === 1 ? "flex-1" : ""}`}
+              className={`cursor-pointer rounded-lg border border-borderColor bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 ${actions.length === 1 ? "flex-1" : ""}`}
             >
               View Details
             </button>
@@ -140,7 +142,7 @@ const BookingCard = ({ booking, onCancelRequest }) => {
             <button
               type="button"
               onClick={() => navigate("/cars")}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-slate-800 bg-white border border-borderColor hover:bg-slate-50 transition-colors cursor-pointer"
+              className="cursor-pointer rounded-lg border border-borderColor bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
             >
               <LuRotateCcw size={14} className="inline mr-1" />
               Book Again

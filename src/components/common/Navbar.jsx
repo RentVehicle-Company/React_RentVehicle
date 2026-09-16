@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {
-  LuCalendar,
-  LuLogOut,
-  LuMenu,
-  LuSun,
-  LuMoon,
-  LuX,
-} from "react-icons/lu";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LuMenu, LuSun, LuMoon, LuX } from "react-icons/lu";
+import { Link, useLocation } from "react-router-dom";
 import Logo from "./Logo";
 import AuthModal from "../auth/AuthModal";
 import { useAuth } from "../../context/AuthContext";
@@ -16,10 +9,8 @@ import { useTheme } from "../../context/ThemeContext";
 
 const Navbar = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { t } = usePreferences();
-  const { user, isAuthenticated, logout, openAuth, closeAuth, authOpen } =
-    useAuth();
+  const { user, isAuthenticated, openAuth, closeAuth, authOpen } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState(location.pathname);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,12 +33,6 @@ const Navbar = () => {
   const closeMenu = (path) => {
     setActiveTab(path);
     setMenuOpen(false);
-  };
-
-  const handleLogout = () => {
-    setMenuOpen(false);
-    logout();
-    navigate("/");
   };
 
   return (
@@ -104,52 +89,19 @@ const Navbar = () => {
               {theme === "dark" ? <LuSun size={17} /> : <LuMoon size={17} />}
             </button>
             {isAuthenticated ? (
-              <>
-                <div className="hidden items-center space-x-3 sm:flex">
-                  <Link
-                    to="/bookings"
-                    onClick={() => closeMenu("/bookings")}
-                    className={`flex items-center gap-1.5 cursor-pointer text-sm font-medium transition-colors ${
-                      activeTab === "/bookings"
-                        ? "text-slate-900 dark:text-white font-semibold"
-                        : "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                    }`}
-                  >
-                    <LuCalendar size={15} />
-                    My Bookings
-                  </Link>
-                  <Link
-                    to="/profile"
-                    onClick={() => closeMenu("/profile")}
-                    className={`hidden lg:flex flex-row items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 transition-opacity hover:opacity-80`}
-                  >
-                    <span className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-600 text-sm font-semibold text-white">
-                      {initials}
-                    </span>
-                    <span className="max-w-[9rem] truncate text-sm font-medium text-slate-900 dark:text-white">
-                      {displayName}
-                    </span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    aria-label="Log out"
-                    title="Log out"
-                    className="grid h-9 w-9 cursor-pointer place-items-center rounded-full text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
-                  >
-                    <LuLogOut size={17} />
-                  </button>
-                </div>
-                <Link
-                  to="/profile"
-                  onClick={() => closeMenu("/profile")}
-                  className="sm:hidden"
-                >
-                  <span className="grid h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">
-                    {initials}
-                  </span>
-                </Link>
-              </>
+              <Link
+                to="/profile"
+                onClick={() => closeMenu("/profile")}
+                aria-label="Open profile"
+                className="flex cursor-pointer items-center gap-2 rounded-full border border-gray-200 bg-white px-2 py-1.5 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 sm:px-3"
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
+                  {initials}
+                </span>
+                <span className="hidden max-w-[9rem] truncate text-sm font-medium text-slate-900 dark:text-white lg:block">
+                  {displayName}
+                </span>
+              </Link>
             ) : (
               <>
                 <button
@@ -200,27 +152,7 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
-              {isAuthenticated ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      navigate("/bookings");
-                    }}
-                    className="col-span-2 rounded-lg bg-slate-900 px-3 py-2.5 text-center text-sm font-medium text-white"
-                  >
-                    My Bookings
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="col-span-2 rounded-lg bg-red-50 px-3 py-2.5 text-center text-sm font-medium text-red-600 hover:bg-red-100"
-                  >
-                    Log Out
-                  </button>
-                </>
-              ) : (
+              {!isAuthenticated && (
                 <>
                   <button
                     type="button"

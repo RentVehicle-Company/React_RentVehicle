@@ -11,29 +11,32 @@ const CancelBookingModal = ({ booking, onClose, onConfirm }) => {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative bg-white rounded-2xl w-full max-w-md shadow-lg p-6">
+      <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900">
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          className="absolute right-4 top-4 cursor-pointer text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
           aria-label="Close"
         >
           <LuX size={20} />
         </button>
 
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
           Cancel Booking?
         </h3>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           Are you sure you want to cancel this booking for{" "}
-          <span className="font-medium text-slate-700">{booking.vehicleName}</span>?
+          <span className="font-medium text-slate-700 dark:text-slate-200">
+            {booking.vehicleName}
+          </span>
+          ?
         </p>
 
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 bg-white border border-borderColor hover:bg-slate-50 transition-colors cursor-pointer"
+            className="cursor-pointer rounded-lg border border-borderColor bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             Keep Booking
           </button>

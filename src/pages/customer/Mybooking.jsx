@@ -4,10 +4,7 @@ import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import BookingFilters from "../../components/profile/BookingFilters";
 import BookingCard from "../../components/profile/BookingCard";
 import CancelBookingModal from "../../components/profile/CancelBookingModal";
-import {
-  cancelBooking,
-  getMyBookings,
-} from "../../services/bookingService";
+import { cancelBooking, getMyBookings } from "../../services/bookingService";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
@@ -53,11 +50,11 @@ const Mybooking = () => {
     try {
       const updated = await cancelBooking(cancelTarget.id);
       setBookings((prev) =>
-        prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
+        prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b)),
       );
       toast.success(
         "Booking cancelled",
-        `Your ${updated.vehicleName} booking has been cancelled.`
+        `Your ${updated.vehicleName} booking has been cancelled.`,
       );
       setCancelTarget(null);
     } catch (err) {
@@ -72,9 +69,11 @@ const Mybooking = () => {
   if (!isAuthenticated) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="bg-white border border-borderColor rounded-2xl p-12 text-center">
-          <p className="text-xl font-bold text-slate-900">Sign in required</p>
-          <p className="mt-1 text-sm text-slate-500">
+        <div className="rounded-2xl border border-borderColor bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xl font-bold text-slate-900 dark:text-white">
+            Sign in required
+          </p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Log in to view and manage your bookings.
           </p>
           <button
@@ -98,10 +97,10 @@ const Mybooking = () => {
 
         <div className="flex-1 min-w-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
               My Bookings
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Manage and track your reservations.
             </p>
           </div>
@@ -112,13 +111,17 @@ const Mybooking = () => {
 
           <div className="mt-6">
             {loading ? (
-              <p className="text-sm text-slate-500">Loading bookings...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Loading bookings...
+              </p>
             ) : error ? (
-              <div className="bg-white border border-borderColor rounded-2xl p-10 text-center">
-                <p className="text-base font-semibold text-slate-900">
+              <div className="rounded-2xl border border-borderColor bg-white p-10 text-center dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-base font-semibold text-slate-900 dark:text-white">
                   Something went wrong
                 </p>
-                <p className="text-sm text-slate-500 mt-1">{error}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {error}
+                </p>
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
@@ -138,11 +141,11 @@ const Mybooking = () => {
                 ))}
               </div>
             ) : (
-              <div className="bg-white border border-borderColor rounded-2xl p-10 text-center">
-                <p className="text-base font-semibold text-slate-900">
+              <div className="rounded-2xl border border-borderColor bg-white p-10 text-center dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-base font-semibold text-slate-900 dark:text-white">
                   No bookings found
                 </p>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   You don't have any bookings in this category.
                 </p>
                 <Link

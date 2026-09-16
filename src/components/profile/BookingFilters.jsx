@@ -21,7 +21,7 @@ const BookingFilters = ({ active, onChange }) => {
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
               isActive
                 ? "bg-black text-white"
-                : "bg-transparent text-slate-700 hover:bg-slate-100"
+                : "bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             }`}
           >
             {filter.label}

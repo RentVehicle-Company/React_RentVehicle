@@ -1,24 +1,18 @@
-// Mock authentication service backed by localStorage so the logged-in
-// session and registered accounts persist across reloads.
-//
-// TODO: Replace with Spring Boot API call — POST /api/auth/login, /api/auth/register
-//       and JWT-based session management via the httpOnly cookie / Bearer token.
+// Authentication helpers for the Spring Boot API and local session storage.
+// Backend base URL + canonical storage keys live in ./api.js.
 
-import { API_ENDPOINTS, apiRequest } from "./api";
+import {
+  API_ENDPOINTS,
+  STORAGE_KEYS,
+  apiRequest,
+  clearAuthStorage,
+} from "./api";
 import { mapUser } from "./userService";
 
-const USERS_KEY = "rental_users";
-const SESSION_KEY = "rental_auth_session";
-
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export const DEFAULT_USER = {
-  id: "usr_demo",
-  name: "John Doe",
-  email: "john123@gmail.com",
-  password: "demo1234",
-  loginMethod: "Email & Password",
-};
+// ---------------------------------------------------------------------------
+// Local session storage — always written/read through STORAGE_KEYS so the
+// navbar, profile page and RequireAuth stay in sync after navigation/refresh.
+// ---------------------------------------------------------------------------
 
 const readJson = (key, fallback) => {
   try {
@@ -40,83 +34,31 @@ const writeJson = (key, value) => {
 
 const sanitizeUser = ({ password: _password, ...user }) => user;
 
-export const getRegisteredUsers = () => {
-  const users = readJson(USERS_KEY, []);
-  if (!users.some((u) => u.email.toLowerCase() === DEFAULT_USER.email)) {
-    const seeded = [DEFAULT_USER, ...users];
-    writeJson(USERS_KEY, seeded);
-    return seeded;
-  }
-  return users;
+export const getStoredAuthUser = () => {
+  const storedUser = readJson(STORAGE_KEYS.user, null);
+  if (!storedUser || typeof storedUser !== "object") return null;
+  return storedUser;
 };
 
-export const getSession = () => {
-  const session = readJson(SESSION_KEY, null);
-  return session
-    ? {
-        id: session.id,
-        name: session.name,
-        email: session.email,
-        loginMethod: session.loginMethod || "Email & Password",
-      }
-    : null;
+// Persist the authenticated user under the single canonical key so profile
+// edits survive refresh/navigation without dropping the session.
+export const persistSession = (user) => {
+  writeJson(STORAGE_KEYS.user, sanitizeUser(user));
 };
 
 export const clearSession = () => {
   try {
-    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(STORAGE_KEYS.user);
+    // Clean up the legacy key used by older builds.
+    localStorage.removeItem("rental_auth_session");
   } catch {
     // ignore storage failures
   }
 };
 
-export const persistSession = (user) => {
-  writeJson(SESSION_KEY, sanitizeUser(user));
-};
-
-export const registerUser = async ({ name, email, password }) => {
-  await delay(700);
-  const normalizedEmail = String(email || "").trim().toLowerCase();
-  const users = getRegisteredUsers();
-
-  if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-    throw new Error("An account with this email already exists. Try logging in.");
-  }
-
-  const user = {
-    id: `usr_${Date.now().toString(36)}`,
-    name: String(name || "").trim(),
-    email: normalizedEmail,
-    password: String(password || ""),
-    loginMethod: "Email & Password",
-  };
-
-  writeJson(USERS_KEY, [user, ...users]);
-  persistSession(user);
-  return sanitizeUser({ ...user });
-};
-
-export const loginUser = async ({ email, password }) => {
-  await delay(600);
-  const normalizedEmail = String(email || "").trim().toLowerCase();
-  const users = getRegisteredUsers();
-  const match = users.find((u) => u.email.toLowerCase() === normalizedEmail);
-
-  if (!match || match.password !== String(password || "")) {
-    throw new Error("Invalid email or password.");
-  }
-
-  persistSession(match);
-  return sanitizeUser({ ...match });
-};
-
-export const logoutUser = async () => {
-  await delay(200);
-  clearSession();
-};
-
 // ---------------------------------------------------------------------------
-// Backend API auth helpers (used when the Spring Boot backend is available)
+// Backend API auth helpers — Spring Boot backend at
+// https://spring-rentvehicle.onrender.com/api (see VITE_API_URL in api.js)
 // ---------------------------------------------------------------------------
 
 const notifyAuthChange = () => {
@@ -129,36 +71,65 @@ const post = (path, body) =>
     body: JSON.stringify(body),
   });
 
+const networkError = () =>
+  new Error(
+    "Unable to reach the server. Please check your connection and try again.",
+  );
+
+// POST /api/auth/login  { email, password }
 export const login = async (credentials) => {
-  const email = credentials.email.trim().toLowerCase();
-  return post(API_ENDPOINTS.authLogin, { ...credentials, email });
+  const email = String(credentials.email || "").trim().toLowerCase();
+  const response = await post(API_ENDPOINTS.authLogin, {
+    email,
+    password: credentials.password,
+  });
+  if (!response) throw networkError();
+  return response;
 };
 
-export const register = (values) =>
-  post(API_ENDPOINTS.authRegister, {
-    name: values.name,
-    email: values.email,
-    password: values.password,
+// POST /api/auth/register  { name, email, password }
+// Used by the full-page flow that then verifies the email via OTP.
+export const register = async ({ name, email, password }) => {
+  const response = await post(API_ENDPOINTS.authRegister, {
+    name: String(name || "").trim(),
+    email: String(email || "").trim().toLowerCase(),
+    password: String(password || ""),
   });
+  if (!response) throw networkError();
+  return response;
+};
+
+// Register + best-effort auto-session: if the backend returns a token it is
+// persisted immediately; otherwise only user info comes back (email-verification
+// flow) and no session is created.
+export const registerUser = async ({ name, email, password }) => {
+  const response = await register({ name, email, password });
+  const fallbackName = String(name || "").trim().split(" ")[0] || "New User";
+
+  const accessToken =
+    response?.accessToken || response?.token || response?.data?.accessToken;
+
+  if (accessToken) {
+    return storeAuthSession(response, fallbackName);
+  }
+
+  const user = getAuthUser(response, fallbackName);
+  return user && (user.id !== undefined || user.name) ? user : null;
+};
 
 export const verifyEmail = (email, code) =>
   post(API_ENDPOINTS.authVerifyEmail, { email, code });
 
 export const resendOtp = (email) =>
-  apiRequest(`${API_ENDPOINTS.authResendOtp}?email=${encodeURIComponent(email)}`);
+  apiRequest(
+    `${API_ENDPOINTS.authResendOtp}?email=${encodeURIComponent(email)}`,
+  );
 
 export const refreshToken = (refreshTokenValue) =>
   post(API_ENDPOINTS.authRefresh, { refreshToken: refreshTokenValue });
 
-export const logout = () => {
-  const token =
-    localStorage.getItem("rental-refresh-token") ||
-    localStorage.getItem("rental-access-token");
-  return apiRequest(API_ENDPOINTS.authLogout, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-};
+export const logout = () =>
+  apiRequest(API_ENDPOINTS.authLogout, { method: "POST" });
 
 export const loginWithGoogle = (idToken) =>
   post(API_ENDPOINTS.authGoogle, { idToken });
@@ -188,6 +159,8 @@ export const getAuthUser = (response, fallbackName = "John Doe") => {
   };
 };
 
+// Persist the token(s) + user returned by the backend under the canonical
+// keys. Returns the mapped user, or null when no usable session exists.
 export const storeAuthSession = (response, fallbackName) => {
   const accessToken =
     response?.accessToken || response?.token || response?.data?.accessToken;
@@ -195,17 +168,21 @@ export const storeAuthSession = (response, fallbackName) => {
     response?.refreshToken || response?.data?.refreshToken;
 
   if (accessToken) {
-    localStorage.setItem("rental-access-token", accessToken);
+    // Mirror the token under every key components might read so a refresh or
+    // navigation never finds a blank "token"/"authToken" entry.
+    localStorage.setItem(STORAGE_KEYS.accessToken, accessToken);
+    localStorage.setItem(STORAGE_KEYS.token, accessToken);
+    localStorage.setItem(STORAGE_KEYS.authToken, accessToken);
   }
   if (refreshTokenValue) {
-    localStorage.setItem("rental-refresh-token", refreshTokenValue);
+    localStorage.setItem(STORAGE_KEYS.refreshToken, refreshTokenValue);
   }
 
   const user = getAuthUser(response, fallbackName);
 
   if (!user || !(user.id !== undefined || user.name)) return null;
 
-  localStorage.setItem("rental-auth-user", JSON.stringify(user));
+  localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
   notifyAuthChange();
   return user;
 };
@@ -218,8 +195,6 @@ export const signOut = async () => {
   } catch {
     // offline/server errors shouldn't block local sign-out
   }
-  localStorage.removeItem("rental-access-token");
-  localStorage.removeItem("rental-refresh-token");
-  localStorage.removeItem("rental-auth-user");
+  clearAuthStorage();
   notifyAuthChange();
 };

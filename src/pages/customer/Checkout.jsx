@@ -65,6 +65,14 @@ const inputClass =
   "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
 
+const getErrorMessage = (err) =>
+  err?.response?.data?.message ||
+  err?.response?.data?.error ||
+  err?.data?.message ||
+  err?.data?.error ||
+  err?.message ||
+  "Payment failed. Please try again.";
+
 const buildAmount = (booking = {}) => {
   const rentalFee = booking.rentalFee ?? booking.totalPrice ?? 0;
   const serviceFee = booking.serviceFee ?? 0;
@@ -240,14 +248,20 @@ const CreditCardPreview = ({ card, cardholder }) => {
   );
 };
 
-const PaymentTab = ({ active, onClick, icon, label }) => (
+const PaymentTab = ({ active, onClick, icon, label, disabled }) => (
   <button
     type="button"
     role="tab"
     aria-selected={active}
+    disabled={disabled}
     onClick={onClick}
-    className={`relative inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors duration-200 ${
-      active ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-100"
+    title={disabled ? "Visa payments are temporarily unavailable. Please use KHQR (Bakong)." : undefined}
+    className={`relative inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors duration-200 ${
+      disabled
+        ? "cursor-not-allowed text-slate-400 dark:text-slate-500 opacity-60"
+        : active
+          ? "cursor-pointer text-slate-900 dark:text-white"
+          : "cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-100"
     }`}
   >
     {active && (
@@ -260,6 +274,7 @@ const PaymentTab = ({ active, onClick, icon, label }) => (
     <span className="relative z-10 inline-flex items-center gap-2">
       {icon}
       {label}
+      {disabled && <LuLock size={12} strokeWidth={2.5} />}
     </span>
   </button>
 );
@@ -395,9 +410,7 @@ const Checkout = () => {
     .join("")
     .toUpperCase();
 
-  const [method, setMethod] = useState(() =>
-    location.state?.method === "khqr" ? "khqr" : "card"
-  );
+  const [method, setMethod] = useState("khqr");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -537,7 +550,7 @@ const Checkout = () => {
         `${created.vehicleName} — find it under My Bookings.`
       );
     } catch (err) {
-      setError(err?.message || "Payment failed. Please try again.");
+      setError(getErrorMessage(err));
     } finally {
       setProcessing(false);
     }
@@ -565,9 +578,7 @@ const Checkout = () => {
         `${created.vehicleName} — find it under My Bookings.`
       );
     } catch (err) {
-      setError(
-        err?.message || "Payment could not be verified. Please try again."
-      );
+      setError(getErrorMessage(err));
     } finally {
       setVerifying(false);
     }
@@ -672,11 +683,8 @@ const Checkout = () => {
                   className="mt-4 grid grid-cols-2 gap-1 rounded-xl border border-borderColor dark:border-slate-700 bg-slate-100 dark:bg-slate-700/60 p-1"
                 >
                   <PaymentTab
-                    active={method === "card"}
-                    onClick={() => {
-                      setMethod("card");
-                      setError(null);
-                    }}
+                    active={false}
+                    disabled
                     icon={<VisaMark size={18} />}
                     label="Credit / Debit Card"
                   />

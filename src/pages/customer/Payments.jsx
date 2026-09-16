@@ -25,7 +25,9 @@ const Payments = () => {
         setLoading(false);
       })
       .catch(() => {
-        setError("We couldn't load your payment history right now. Please try again.");
+        setError(
+          "We couldn't load your payment history right now. Please try again.",
+        );
         setLoading(false);
       });
   }, []);
@@ -44,18 +46,18 @@ const Payments = () => {
 
         <div className="flex-1 min-w-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
               Payments History
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Review your payment history.
             </p>
           </div>
 
-          <div className="mt-6 overflow-hidden bg-white border border-borderColor rounded-xl">
+          <div className="mt-6 overflow-hidden rounded-xl border border-borderColor bg-white dark:border-slate-800 dark:bg-slate-900">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="bg-slate-50 border-b border-borderColor text-[11px] uppercase tracking-wide text-slate-500">
+                <thead className="border-b border-borderColor bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Date</th>
                     <th className="px-4 py-3 font-semibold">Booking ID</th>
@@ -69,12 +71,12 @@ const Payments = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-borderColor">
+                <tbody className="divide-y divide-borderColor dark:divide-slate-800">
                   {loading ? (
                     <tr>
                       <td
                         colSpan="8"
-                        className="px-4 py-10 text-center text-sm text-slate-500"
+                        className="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
                       >
                         Loading payment history...
                       </td>
@@ -92,7 +94,7 @@ const Payments = () => {
                     <tr>
                       <td
                         colSpan="8"
-                        className="px-4 py-10 text-center text-sm text-slate-500"
+                        className="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
                       >
                         No payment history found.
                       </td>
@@ -103,9 +105,11 @@ const Payments = () => {
                       return (
                         <tr
                           key={booking.id}
-                          className={isPaid ? "" : "bg-red-50/40"}
+                          className={
+                            isPaid ? "" : "bg-red-50/40 dark:bg-red-950/20"
+                          }
                         >
-                          <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                          <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">
                             {booking.startDate}
                           </td>
                           <td className="px-4 py-3 font-medium text-primary">
@@ -113,10 +117,10 @@ const Payments = () => {
                               BK-{String(1024 - index).padStart(4, "0")}
                             </Link>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                          <td className="whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-200">
                             {booking.vehicleName}
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                          <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">
                             <span className="inline-flex items-center gap-1.5">
                               {isPaid ? (
                                 <LuCreditCard size={14} />
@@ -126,7 +130,7 @@ const Payments = () => {
                               {isPaid ? booking.paymentMethod : "Bakong KHQR"}
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
+                          <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                             {formatAmount(booking.totalPrice)}
                           </td>
                           <td className="px-4 py-3">
@@ -136,8 +140,11 @@ const Payments = () => {
                               {isPaid ? "Paid" : "Pending"}
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-slate-500">
-                            {isPaid ? booking.transactionId || `TXN-${55921 + index * 189}` : "N/A"}
+                          <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">
+                            {isPaid
+                              ? booking.transactionId ||
+                                `TXN-${55921 + index * 189}`
+                              : "N/A"}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-right">
                             {isPaid ? (
@@ -164,7 +171,7 @@ const Payments = () => {
               </table>
             </div>
 
-            <div className="flex flex-col gap-3 border-t border-borderColor px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 border-t border-borderColor px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
               <span>
                 Showing {payments.length} of {payments.length} entries
               </span>
@@ -173,7 +180,7 @@ const Payments = () => {
                   type="button"
                   aria-label="Previous page"
                   disabled
-                  className="rounded border border-borderColor p-1.5 text-slate-400"
+                  className="rounded border border-borderColor p-1.5 text-slate-400 dark:border-slate-700"
                 >
                   <LuChevronLeft size={14} />
                 </button>
@@ -187,7 +194,7 @@ const Payments = () => {
                   type="button"
                   aria-label="Next page"
                   disabled
-                  className="rounded border border-borderColor p-1.5 text-slate-400"
+                  className="rounded border border-borderColor p-1.5 text-slate-400 dark:border-slate-700"
                 >
                   <LuChevronRight size={14} />
                 </button>

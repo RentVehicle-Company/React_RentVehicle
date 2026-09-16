@@ -10,7 +10,7 @@ const sidebarItems = [
 
 const ProfileSidebar = ({ onLogout }) => {
   return (
-    <div className="bg-white shadow-xl  rounded-2xl p-2 sm:p-4">
+    <div className="rounded-2xl border border-transparent bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-4">
       <nav className="grid grid-cols-3 gap-1 lg:block lg:space-y-1">
         {sidebarItems.map(({ to, end, label, icon: Icon }) => (
           <NavLink
@@ -21,7 +21,7 @@ const ProfileSidebar = ({ onLogout }) => {
               `flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-center text-[11px] leading-4 font-medium transition-colors lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:py-2.5 lg:text-left lg:text-sm ${
                 isActive
                   ? "bg-primary text-white"
-                  : "text-slate-900 hover:bg-slate-100"
+                  : "text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
               }`
             }
           >
@@ -29,7 +29,7 @@ const ProfileSidebar = ({ onLogout }) => {
               <>
                 <Icon
                   size={18}
-                  className={isActive ? "text-white" : "text-slate-700"}
+                  className={isActive ? "text-white" : "text-slate-400"}
                 />
                 {label}
               </>
@@ -38,7 +38,7 @@ const ProfileSidebar = ({ onLogout }) => {
         ))}
       </nav>
 
-      <div className="col-span-3 h-px bg-borderColor my-1 lg:my-3" />
+      <div className="col-span-3 my-1 h-px bg-borderColor dark:bg-slate-800 lg:my-3" />
 
       <button
         type="button"

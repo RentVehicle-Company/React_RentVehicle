@@ -12,10 +12,15 @@ import {
 } from "../../services/userService";
 
 const UserProfile = () => {
-  const { user: sessionUser, isAuthenticated, logout, updateUser, openAuth } =
-    useAuth();
+  const {
+    user: sessionUser,
+    isAuthenticated,
+    logout,
+    updateUser,
+    openAuth,
+  } = useAuth();
   const [user, setUser] = useState(() =>
-    sessionUser ? { ...sessionUser } : getCachedUser()
+    sessionUser ? { ...sessionUser } : getCachedUser(),
   );
 
   useEffect(() => {
@@ -56,9 +61,11 @@ const UserProfile = () => {
   if (!isAuthenticated) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="bg-white border border-borderColor rounded-2xl p-12 text-center">
-          <p className="text-xl font-bold text-slate-900">Sign in required</p>
-          <p className="mt-1 text-sm text-slate-500">
+        <div className="rounded-2xl border border-borderColor bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xl font-bold text-slate-900 dark:text-white">
+            Sign in required
+          </p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Log in to view and manage your profile.
           </p>
           <button
@@ -82,10 +89,10 @@ const UserProfile = () => {
 
         <div className="flex-1 min-w-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
               My Profile
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Manage your personal information and security settings.
             </p>
           </div>

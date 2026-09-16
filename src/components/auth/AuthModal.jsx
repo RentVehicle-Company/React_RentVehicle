@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  LuEye,
-  LuEyeOff,
-  LuLock,
-  LuMail,
-  LuUser,
-} from "react-icons/lu";
+import { LuEye, LuEyeOff, LuLock, LuMail, LuUser } from "react-icons/lu";
 import Logo from "../common/Logo";
 import { useAuth } from "../../context/AuthContext";
 
 const inputClass =
   "w-full rounded-xl border border-white/60 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-sm outline-none backdrop-blur-sm transition focus:border-primary focus:ring-2 focus:ring-primary/30";
-const labelClass = "mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300";
+const labelClass =
+  "mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300";
+
+const getErrorMessage = (err) =>
+  err?.response?.data?.message ||
+  err?.response?.data?.error ||
+  err?.data?.message ||
+  err?.data?.error ||
+  err?.message ||
+  "Something went wrong. Please try again.";
 
 const AuthModal = ({ mode = "login", onClose }) => {
   const { login, register } = useAuth();
@@ -77,7 +80,7 @@ const AuthModal = ({ mode = "login", onClose }) => {
       }
       onClose?.();
     } catch (err) {
-      setError(err?.message || "Something went wrong. Please try again.");
+      setError(getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +113,10 @@ const AuthModal = ({ mode = "login", onClose }) => {
         className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/50 dark:border-slate-700 bg-white/70 dark:bg-slate-900/80 shadow-2xl shadow-slate-900/20 backdrop-blur-2xl"
       >
         {/* Ambient blobs */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
           <span className="animate-float absolute -left-16 -top-16 h-48 w-48 rounded-full bg-primary/25 blur-3xl" />
           <span className="animate-float-slow absolute -bottom-20 -right-12 h-52 w-52 rounded-full bg-indigo-500/25 blur-3xl" />
           <span className="absolute left-1/2 top-1/3 h-40 w-40 -translate-x-1/2 rounded-full bg-sky-300/20 blur-3xl" />
@@ -215,13 +221,6 @@ const AuthModal = ({ mode = "login", onClose }) => {
                 </button>
               </div>
             </div>
-
-            {formMode === "login" && (
-              <p className="rounded-xl bg-primary/5 px-3 py-2 text-xs text-slate-600 dark:text-slate-300 ring-1 ring-primary/10">
-                Demo account: <span className="font-semibold text-slate-900 dark:text-white">john123@gmail.com</span> /{" "}
-                <span className="font-semibold text-slate-900 dark:text-white">demo1234</span>
-              </p>
-            )}
 
             {error && (
               <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">

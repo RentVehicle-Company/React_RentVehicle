@@ -5,9 +5,14 @@
 //   POST /api/users/{id}/profile-image       -> upload profile photo (multipart)
 // A localStorage cache keeps the profile usable while offline.
 
-import { API_ENDPOINTS, request } from "./api.js";
+import {
+  API_ENDPOINTS,
+  STORAGE_KEYS,
+  buildAuthHeaders,
+  request,
+} from "./api.js";
 
-const STORAGE_KEY = "rental-auth-user";
+const STORAGE_KEY = STORAGE_KEYS.user;
 
 let cachedUser = null;
 
@@ -120,12 +125,14 @@ export const uploadProfileImage = async (id, file) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const token = localStorage.getItem("rental-access-token");
-    const response = await fetch(API_ENDPOINTS.userProfileImage(targetId), {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const response = await fetch(
+      API_ENDPOINTS.userProfileImage(targetId),
+      {
+        method: "POST",
+        headers: buildAuthHeaders(),
+        body: formData,
+      },
+    );
 
     const json = await response.json().catch(() => null);
     if (!response.ok) {

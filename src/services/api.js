@@ -1,4 +1,61 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://spring-rentvehicle.onrender.com/api";
+
+// Canonical localStorage keys — every auth/service module must read and
+// write through this object so sessions never get mismatched or wiped.
+// The token is mirrored under "token"/"authToken" too, so any component
+// written against those keys never sees a blank value.
+export const STORAGE_KEYS = {
+  accessToken: "rental-access-token",
+  refreshToken: "rental-refresh-token",
+  user: "rental-auth-user",
+  token: "token",
+  authToken: "authToken",
+};
+
+// Rough sanity check that stops us sending garbage such as "undefined",
+// "[object Object]" or a stray short value as a Bearer token. Backends reject
+// malformed tokens with 401 even on public endpoints.
+const isValidToken = (value) => {
+  if (typeof value !== "string" || value.length < 10) return false;
+  if (["undefined", "null", "NaN", "[object Object]"].includes(value)) {
+    return false;
+  }
+  return true;
+};
+
+// Reads the token from any of the accepted keys so components written against
+// "rental-access-token", "token" or "authToken" always see the same value.
+// Returns null for blank or obviously corrupt entries.
+export const readAuthToken = () => {
+  const { accessToken, token, authToken } = STORAGE_KEYS;
+  const value =
+    localStorage.getItem(accessToken) ||
+    localStorage.getItem(token) ||
+    localStorage.getItem(authToken) ||
+    null;
+  return isValidToken(value) ? value : null;
+};
+
+// Clears every token/user key. Called on explicit sign-out and on a 401 that
+// was returned FOR a request that actually sent a token.
+export const clearAuthStorage = () => {
+  const { accessToken, refreshToken, user, token, authToken } = STORAGE_KEYS;
+  [accessToken, refreshToken, user, token, authToken].forEach((key) =>
+    localStorage.removeItem(key),
+  );
+  localStorage.removeItem("rental_auth_session");
+};
+
+// Adds the Authorization header (Bearer token) when a usable token exists.
+// Reads from the same keys login/AuthContext write to (see STORAGE_KEYS).
+export const buildAuthHeaders = (headers = new Headers()) => {
+  const token = readAuthToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return headers;
+};
 
 export const API_ENDPOINTS = {
   vehicles: `${API_BASE_URL}/vehicles`,
@@ -26,18 +83,14 @@ export const API_ENDPOINTS = {
   bookings: `${API_BASE_URL}/bookings`,
   bookingById: (id) => `${API_BASE_URL}/bookings/${id}`,
   payments: `${API_BASE_URL}/payments`,
-  paymentsByBooking: (bookingId) => `${API_BASE_URL}/bookings/${bookingId}/payments`,
+  paymentsByBooking: (bookingId) =>
+    `${API_BASE_URL}/bookings/${bookingId}/payments`,
 };
 
 export const request = async (path, options = {}) => {
-  const token = localStorage.getItem("rental-access-token");
-  const headers = new Headers(options.headers || {});
-
+  const headers = buildAuthHeaders(new Headers(options.headers || {}));
   headers.set("Content-Type", "application/json");
   headers.set("Accept", "application/json");
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
 
   let response;
   try {
@@ -63,6 +116,11 @@ export const request = async (path, options = {}) => {
   }
 
   if (!response.ok) {
+    // IMPORTANT: never clear auth storage here. A 401 can come from a
+    // checkout/payment request, a bad token on a public listing, or any
+    // upstream rejection — blindly wiping localStorage would silently log the
+    // user out. Session invalidation is handled deliberately in AuthContext
+    // only when GET /users/me confirms the token is actually invalid.
     if (data === null) return null;
     const errorMessage =
       typeof data === "object" && data !== null
