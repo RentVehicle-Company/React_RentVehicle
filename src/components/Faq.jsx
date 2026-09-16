@@ -38,10 +38,10 @@ const Faq = () => {
           transition={{ duration: 0.55, ease: "easeOut" }}
           className="text-center"
         >
-          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
             Frequently Asked Questions
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 dark:text-slate-400">
             Everything you need to know before hitting the road. Can't find
             your answer? Contact our support team.
           </p>
@@ -57,10 +57,10 @@ const Faq = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "0px 0px -40px 0px" }}
                 transition={{ duration: 0.45, delay: index * 0.06 }}
-                className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 ${
+                className={`overflow-hidden rounded-2xl border bg-white dark:bg-slate-800 transition-all duration-200 ${
                   isOpen
                     ? "animate-pulse-glow border-primary/40 shadow-sm"
-                    : "border-borderColor"
+                    : "border-borderColor dark:border-slate-700"
                 }`}
               >
                 <motion.button
@@ -77,7 +77,7 @@ const Faq = () => {
                       isOpen ? "h-8" : "h-0"
                     }`}
                   />
-                  <span className="text-sm font-semibold text-slate-900 sm:text-base">
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">
                     {item.question}
                   </span>
                   <motion.span
@@ -87,7 +87,7 @@ const Faq = () => {
                     className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors duration-200 ${
                       isOpen
                         ? "bg-primary text-white"
-                        : "bg-slate-100 text-slate-500"
+                        : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
                     }`}
                   >
                     <LuChevronDown size={16} />
@@ -101,7 +101,7 @@ const Faq = () => {
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <p className="px-5 pb-5 text-sm leading-6 text-slate-500">
+                    <p className="px-5 pb-5 text-sm leading-6 text-slate-500 dark:text-slate-400">
                       {item.answer}
                     </p>
                   </div>

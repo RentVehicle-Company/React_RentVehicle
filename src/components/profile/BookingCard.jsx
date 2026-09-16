@@ -1,9 +1,19 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { LuBanknote, LuCalendar, LuRotateCcw } from "react-icons/lu";
+import {
+  LuBanknote,
+  LuCalendar,
+  LuMapPin,
+  LuRotateCcw,
+  LuSettings2,
+  LuTruck,
+  LuUsers,
+} from "react-icons/lu";
+import { usePreferences } from "../../context/PreferencesContext";
 
 const STATUS_CONFIG = {
   confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700" },
+  active: { label: "Active", className: "bg-blue-100 text-blue-700" },
   completed: { label: "Completed", className: "bg-slate-200 text-slate-700" },
   cancelled: { label: "Cancelled", className: "bg-red-100 text-red-700" },
 };
@@ -16,15 +26,18 @@ const PAYMENT_CONFIG = {
 const getActions = (booking) => {
   if (booking.status === "cancelled") return ["details"];
   if (booking.status === "completed") return ["details", "bookAgain"];
-  if (booking.paymentStatus === "unpaid") return ["details", "cancel"];
+  if (booking.status === "active") return ["details"];
   return ["details", "cancel"];
 };
 
 const BookingCard = ({ booking, onCancelRequest }) => {
   const navigate = useNavigate();
+  const { formatAmount } = usePreferences();
   const status = STATUS_CONFIG[booking.status];
   const payment = PAYMENT_CONFIG[booking.paymentStatus] || null;
   const actions = getActions(booking);
+  const specs = booking.vehicleSpecs;
+  const usingDelivery = booking.deliveryMethod === "delivery";
 
   return (
     <div className="bg-white border border-borderColor rounded-2xl overflow-hidden shadow-sm">
@@ -34,13 +47,15 @@ const BookingCard = ({ booking, onCancelRequest }) => {
           alt={booking.vehicleName}
           className="w-full h-full object-cover"
         />
-        {status && (
-          <span
-            className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${status.className}`}
-          >
-            {status.label}
-          </span>
-        )}
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          {status && (
+            <span
+              className={`px-2.5 py-1 rounded-full text-xs font-medium ${status.className}`}
+            >
+              {status.label}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="p-4 space-y-3">
@@ -55,10 +70,41 @@ const BookingCard = ({ booking, onCancelRequest }) => {
           </span>
         </div>
 
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          {usingDelivery ? (
+            <LuTruck size={16} className="shrink-0 text-primary" />
+          ) : (
+            <LuMapPin size={16} className="shrink-0 text-primary" />
+          )}
+          <span className="truncate">
+            {usingDelivery && (
+              <span className="mr-1 text-slate-400">Delivered to</span>
+            )}
+            {booking.pickupLocation}
+          </span>
+        </div>
+
+        {specs && (
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+            <span className="rounded-full bg-slate-100 px-2 py-0.5">
+              {specs.category}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5">
+              <LuSettings2 size={11} />
+              {specs.transmission}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5">
+              <LuUsers size={11} />
+              {specs.seating_capacity}{" "}
+              {specs.seating_capacity === 1 ? "rider" : "seats"}
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
             <LuBanknote size={16} className="shrink-0" />
-            <span>${booking.totalPrice.toFixed(2)}</span>
+            <span>{formatAmount(booking.totalPrice)}</span>
           </div>
           {payment && (
             <span

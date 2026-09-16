@@ -41,13 +41,23 @@ const TRANSLATIONS = {
     pickup_location: "Pickup Location",
     from: "from",
     est_cost: "Estimated Cost",
-    add_to_compare_hint: "Check up to 3 cars to compare specs side-by-side",
+    add_to_compare_hint: "Check up to 3 {category} to compare specs side-by-side",
     trip_duration: "Trip duration",
     pickup: "Pickup",
     return: "Return",
     book_now: "Book Now",
     save_3plus: "Save {pct}% (3+ days)",
     book_3plus_save: "Book 3+ days and save {pct}% automatically",
+    horsepower: "Horsepower",
+    acceleration: "0-100 km/h",
+    drivetrain: "Drivetrain",
+    engine_cc: "Engine (cc)",
+    fuel_efficiency: "Fuel Efficiency",
+    top_speed: "Top Speed",
+    frame: "Frame Material",
+    gears: "Gears",
+    wheel_size: "Wheel Size",
+    vehicle_type: "Type",
   },
   km: {
     nav_home: "ទំព័រដើម",
@@ -81,13 +91,23 @@ const TRANSLATIONS = {
     pickup_location: "ទីតាំងយករថយន្ត",
     from: "ចាប់ពី",
     est_cost: "តម្លៃប៉ាន់ស្មាន",
-    add_to_compare_hint: "ជ្រើសរើសរថយន្តរហូតដល់ 3 គ្រឿង ដើម្បីប្រៀបធៀបលក្ខណៈ",
+    add_to_compare_hint: "ជ្រើសរើស {category} រហូតដល់ 3 គ្រឿង ដើម្បីប្រៀបធៀបលក្ខណៈ",
     trip_duration: "រយៈពេលធ្វើដំណើរ",
     pickup: "យករថយន្ត",
     return: "ប្រគល់រថយន្ត",
     book_now: "កក់ឥឡូវនេះ",
     save_3plus: "សន្សំ {pct}% (3+ ថ្ងៃ)",
     book_3plus_save: "កក់ 3+ ថ្ងៃ និងសន្សំ {pct}% ដោយស្វ័យប្រវត្តិ",
+    horsepower: "កម្លាំងសេះ",
+    acceleration: "0-100 គ.ម/ម៉",
+    drivetrain: "ប្រព័ន្ធដ្រាយ",
+    engine_cc: "ម៉ាស៊ីន (cc)",
+    fuel_efficiency: "ស៊ីប្រេង",
+    top_speed: "ល្បឿនអតិបរមា",
+    frame: "សម្ភារៈស៊ុម",
+    gears: "ហ្គែរ",
+    wheel_size: "ទំហំកង់",
+    vehicle_type: "ប្រភេទ",
   },
 };
 
@@ -132,8 +152,25 @@ export const PreferencesProvider = ({ children }) => {
       const riel = Math.round(amount * RIEL_RATE);
       return `៛ ${riel.toLocaleString("en-US")}`;
     }
-    return `$${amount}`;
+    return `$${Number(amount).toLocaleString("en-US")}`;
   };
+
+  // Currency-aware formatter for booking totals & payment screens. Keeps two
+  // decimals for USD and rounds to whole Riel for KHR.
+  const formatAmount = (amount) => {
+    const value = Number(amount) || 0;
+    if (currency === "KHR") {
+      const riel = Math.round(value * RIEL_RATE);
+      return `៛ ${riel.toLocaleString("en-US")}`;
+    }
+    return `$${value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const toggleCurrency = () =>
+    setCurrency((prev) => (prev === "USD" ? "KHR" : "USD"));
 
   const t = (key, vars = {}) => {
     let text = TRANSLATIONS[language]?.[key] ?? TRANSLATIONS.en[key] ?? key;
@@ -146,9 +183,11 @@ export const PreferencesProvider = ({ children }) => {
   const value = {
     currency,
     setCurrency,
+    toggleCurrency,
     language,
     setLanguage,
     formatPrice,
+    formatAmount,
     t,
   };
 

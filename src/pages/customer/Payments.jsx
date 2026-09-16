@@ -8,8 +8,10 @@ import {
 } from "react-icons/lu";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import { getMyBookings } from "../../services/bookingService";
+import { usePreferences } from "../../context/PreferencesContext";
 
 const Payments = () => {
+  const { formatAmount } = usePreferences();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -107,7 +109,7 @@ const Payments = () => {
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
-                            ${booking.totalPrice.toFixed(2)}
+                            {formatAmount(booking.totalPrice)}
                           </td>
                           <td className="px-4 py-3">
                             <span

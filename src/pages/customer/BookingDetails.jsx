@@ -5,20 +5,22 @@ import {
   LuClock3,
   LuDownload,
   LuMapPin,
+  LuTruck,
   LuWalletCards,
 } from "react-icons/lu";
 import { getBookingById } from "../../services/bookingService";
+import { usePreferences } from "../../context/PreferencesContext";
 
 const STATUS_CONFIG = {
   confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700" },
+  active: { label: "Active", className: "bg-blue-100 text-blue-700" },
   completed: { label: "Completed", className: "bg-slate-200 text-slate-700" },
   cancelled: { label: "Cancelled", className: "bg-red-100 text-red-700" },
 };
 
-const formatMoney = (value) => `$${value.toFixed(2)}`;
-
 const BookingDetails = () => {
   const { id } = useParams();
+  const { formatAmount } = usePreferences();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -63,6 +65,7 @@ const BookingDetails = () => {
   const status = STATUS_CONFIG[booking.status] || STATUS_CONFIG.confirmed;
   const rentalFee = booking.rentalFee ?? booking.totalPrice;
   const serviceFee = booking.serviceFee ?? 0;
+  const usingDelivery = booking.deliveryMethod === "delivery";
   const duration = Math.max(1, Math.round(rentalFee / booking.pricePerDay));
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${booking.longitude - 0.04}%2C${booking.latitude - 0.03}%2C${booking.longitude + 0.04}%2C${booking.latitude + 0.03}&layer=mapnik&marker=${booking.latitude}%2C${booking.longitude}`;
 
@@ -100,9 +103,11 @@ const BookingDetails = () => {
 
               <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 text-sm">
                 <div>
-                  <p className="text-xs text-slate-500">Pickup Location</p>
+                  <p className="text-xs text-slate-500">
+                    {usingDelivery ? "Delivery Address" : "Pickup Location"}
+                  </p>
                   <p className="mt-1 flex items-center gap-1.5 font-medium text-slate-900">
-                    <LuMapPin size={15} />
+                    {usingDelivery ? <LuTruck size={15} /> : <LuMapPin size={15} />}
                     {booking.pickupLocation}
                   </p>
                 </div>
@@ -135,20 +140,29 @@ const BookingDetails = () => {
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-4 text-slate-600">
               <span>Price per day</span>
-              <span>{formatMoney(booking.pricePerDay)}</span>
+              <span>{formatAmount(booking.pricePerDay)}</span>
             </div>
             <div className="flex justify-between gap-4 text-slate-600">
               <span>Rental fee</span>
-              <span>{formatMoney(rentalFee)}</span>
+              <span>{formatAmount(rentalFee)}</span>
             </div>
             <div className="flex justify-between gap-4 text-slate-600">
               <span>Service fee</span>
-              <span>{formatMoney(serviceFee)}</span>
+              <span>{formatAmount(serviceFee)}</span>
             </div>
+            {usingDelivery && (
+              <div className="flex justify-between gap-4 text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <LuTruck size={14} />
+                  Delivery fee
+                </span>
+                <span>{formatAmount(booking.deliveryFee || 0)}</span>
+              </div>
+            )}
           </div>
           <div className="border-t border-borderColor mt-4 pt-4 flex justify-between gap-4 font-bold text-slate-900">
             <span>Total</span>
-            <span>{formatMoney(booking.totalPrice)}</span>
+            <span>{formatAmount(booking.totalPrice)}</span>
           </div>
           <div className="mt-5 flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-4 py-3 text-sm">
             <div className="flex items-center gap-2 text-slate-900">

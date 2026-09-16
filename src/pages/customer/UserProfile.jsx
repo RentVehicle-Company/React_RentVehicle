@@ -3,6 +3,7 @@ import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import ProfileInfo from "../../components/profile/ProfileInfo";
 import ProfileForm from "../../components/profile/ProfileForm";
 import LoginMethodCard from "../../components/profile/LoginMethodCard";
+import { useAuth } from "../../context/AuthContext";
 import {
   getCachedUser,
   getCurrentUser,
@@ -10,28 +11,54 @@ import {
 } from "../../services/userService";
 
 const UserProfile = () => {
-  const [user, setUser] = useState(() => getCachedUser());
+  const { user: sessionUser, isAuthenticated, logout, updateUser, openAuth } =
+    useAuth();
+  const [user, setUser] = useState(() =>
+    sessionUser ? { ...sessionUser } : getCachedUser()
+  );
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     let mounted = true;
     getCurrentUser().then((data) => {
       if (mounted) {
-        setUser(data);
+        setUser((prev) => ({ ...prev, ...data }));
       }
     });
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const handleSave = async (values) => {
     const updated = await updateCurrentUser(values);
     setUser((prev) => ({ ...prev, ...updated }));
+    await updateUser({ name: updated.name ?? updated.fullName });
   };
 
   const handleLogout = () => {
-    // connect to the auth service once authentication
+    logout();
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="bg-white border border-borderColor rounded-2xl p-12 text-center">
+          <p className="text-xl font-bold text-slate-900">Sign in required</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Log in to view and manage your profile.
+          </p>
+          <button
+            type="button"
+            onClick={() => openAuth("login")}
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-black px-6 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            Log In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">

@@ -8,13 +8,16 @@ import {
   LuLock,
   LuMapPin,
   LuShieldCheck,
+  LuTruck,
 } from "react-icons/lu";
 import { assets } from "../../assets/assets";
-import { getBookingById } from "../../services/bookingService";
+import { createBooking, getBookingById } from "../../services/bookingService";
 import {
   buildPaymentAmount,
   processVisaPayment,
 } from "../../services/paymentService";
+import { useToast } from "../../context/ToastContext";
+import { usePreferences } from "../../context/PreferencesContext";
 
 const FALLBACK_BOOKING = {
   id: 123,
@@ -41,12 +44,12 @@ const inputClass =
   "w-full px-4 py-2.5 bg-white border border-borderColor rounded-xl text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 const labelClass = "block text-sm font-medium text-slate-700 mb-1.5";
 
-const formatMoney = (value) => `$${Number(value).toFixed(2)}`;
-
 const PaymentVisa = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
+  const { formatAmount } = usePreferences();
   const locationBooking = location.state?.booking || null;
   const [booking, setBooking] = useState(locationBooking);
   const [loading, setLoading] = useState(!locationBooking);
@@ -125,7 +128,33 @@ const PaymentVisa = () => {
     setError(null);
     try {
       const result = await processVisaPayment({ booking, card });
+      const { rentalFee, serviceFee, total } = buildPaymentAmount(booking);
+      const created = await createBooking({
+        vehicleName: booking.vehicleName,
+        image: booking.image,
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        pickupDate: booking.pickupDate,
+        returnDate: booking.returnDate,
+        pickupLocation: booking.pickupLocation || "Phnom Penh",
+        deliveryMethod: booking.deliveryMethod,
+        deliveryFee: booking.deliveryFee,
+        deliveryCity: booking.deliveryCity,
+        deliveryDistrict: booking.deliveryDistrict,
+        deliveryAddress: booking.deliveryAddress,
+        pricePerDay: booking.pricePerDay,
+        rentalFee,
+        serviceFee,
+        totalPrice: total,
+        paymentStatus: "paid",
+        paymentMethod: "Visa",
+      });
+      setBooking(created);
       setTransaction(result.transaction);
+      toast.success(
+        "Booking confirmed",
+        `${created.vehicleName} — find it under My Bookings.`
+      );
     } catch (err) {
       setError(err?.message || "Payment failed. Please try again.");
     } finally {
@@ -143,7 +172,7 @@ const PaymentVisa = () => {
       `Dates: ${booking.startDate} - ${booking.endDate}`,
       `Payment Method: ${transaction.method} (${transaction.card})`,
       "Status: Paid",
-      `Total Paid: ${formatMoney(transaction.amount)}`,
+      `Total Paid: ${formatAmount(transaction.amount)}`,
       `Transaction ID: ${transaction.transactionId}`,
       "",
       "Thank you for your booking!",
@@ -168,6 +197,7 @@ const PaymentVisa = () => {
     );
   }
 
+  const usingDelivery = booking.deliveryMethod === "delivery";
   const amount = buildPaymentAmount(booking);
   const duration = booking.pricePerDay
     ? Math.max(1, Math.round(amount.rentalFee / booking.pricePerDay))
@@ -208,10 +238,23 @@ const PaymentVisa = () => {
 
             <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
               <div>
-                <p className="text-xs text-slate-500">Pickup Location</p>
-                <p className="mt-1 flex items-center gap-1.5 font-medium text-slate-900">
-                  <LuMapPin size={15} />
-                  {booking.pickupLocation || "Phnom Penh"}
+                <p className="text-xs text-slate-500">
+                  {usingDelivery ? "Delivery Address" : "Pickup Location"}
+                </p>
+                <p className="mt-1 font-medium text-slate-900">
+                  {usingDelivery ? (
+                    <span className="flex items-start gap-1.5">
+                      <LuTruck size={15} className="shrink-0 mt-0.5" />
+                      {booking.pickupLocation ||
+                        booking.deliveryCity ||
+                        "Phnom Penh"}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <LuMapPin size={15} />
+                      {booking.pickupLocation || "Phnom Penh"}
+                    </span>
+                  )}
                 </p>
               </div>
               <div>
@@ -238,19 +281,28 @@ const PaymentVisa = () => {
             <div className="mt-5 space-y-2 border-t border-borderColor pt-4 text-sm">
               <div className="flex justify-between gap-4 text-slate-600">
                 <span>Price per day</span>
-                <span>{formatMoney(booking.pricePerDay)}</span>
+                <span>{formatAmount(booking.pricePerDay)}</span>
               </div>
               <div className="flex justify-between gap-4 text-slate-600">
                 <span>Rental fee</span>
-                <span>{formatMoney(amount.rentalFee)}</span>
+                <span>{formatAmount(amount.rentalFee)}</span>
               </div>
               <div className="flex justify-between gap-4 text-slate-600">
                 <span>Service fee</span>
-                <span>{formatMoney(amount.serviceFee)}</span>
+                <span>{formatAmount(amount.serviceFee)}</span>
               </div>
+              {booking.deliveryFee > 0 && (
+                <div className="flex justify-between gap-4 text-slate-600">
+                  <span className="flex items-center gap-1.5">
+                    <LuTruck size={14} />
+                    Delivery fee
+                  </span>
+                  <span>{formatAmount(booking.deliveryFee)}</span>
+                </div>
+              )}
               <div className="mt-3 flex justify-between gap-4 border-t border-borderColor pt-3 font-bold text-slate-900">
                 <span>Total</span>
-                <span>{formatMoney(amount.total)}</span>
+                <span>{formatAmount(amount.total)}</span>
               </div>
             </div>
           </div>
@@ -285,7 +337,7 @@ const PaymentVisa = () => {
                 <div className="flex justify-between gap-3">
                   <span className="text-slate-500">Amount</span>
                   <span className="font-semibold text-slate-900">
-                    {formatMoney(transaction.amount)}
+                    {formatAmount(transaction.amount)}
                   </span>
                 </div>
               </div>
@@ -430,7 +482,7 @@ const PaymentVisa = () => {
               >
                 {processing
                   ? "Processing..."
-                  : `Pay ${formatMoney(amount.total)}`}
+                  : `Pay ${formatAmount(amount.total)}`}
               </button>
             </form>
           )}

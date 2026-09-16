@@ -1,11 +1,10 @@
-import React from 'react'
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import AuthModal from "./AuthModal";
 
 const Login = () => {
-  return (
-    <div>
-      <div className="p-8 text-black">Sign In Page</div>
-    </div>
-  )
-}
+  const navigate = useNavigate();
+  return <AuthModal mode="login" onClose={() => navigate("/")} />;
+};
 
-export default Login
+export default Login;

@@ -18,22 +18,42 @@ export const API_ENDPOINTS = {
 };
 
 export const request = async (path, options = {}) => {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(options.headers || {}),
-    },
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    // Network unreachable -> no backend. Callers fall back to mocks.
+    return null;
+  }
+
+  const raw = await response.text().catch(() => null);
+  let json = null;
+  if (raw) {
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      // Non-JSON body. While the backend is offline the dev server answers
+      // /api/* with index.html (or a 404) -> treat as "no backend".
+      json = null;
+    }
+  }
 
   if (!response.ok) {
-    const detail = await response.text().catch(() => null);
-    const error = new Error(detail || `Request failed (${response.status})`);
+    if (json === null) return null;
+    const error = new Error(
+      json.message || `Request failed (${response.status})`
+    );
     error.status = response.status;
+    error.data = json;
     throw error;
   }
 
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  return json;
 };

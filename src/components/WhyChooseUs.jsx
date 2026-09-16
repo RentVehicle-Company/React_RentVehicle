@@ -32,14 +32,14 @@ const WhyChooseUs = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {FEATURES.map(({ icon: Icon, title, text }, index) => (
             <Reveal key={title} delay={index * 100}>
-              <TiltCard className="group flex h-full flex-col items-center gap-3 rounded-2xl border border-borderColor bg-white p-6 text-center shadow-sm transition-all duration-200 ease-out hover:shadow-md">
+              <TiltCard className="group flex h-full flex-col items-center gap-3 rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 p-6 text-center shadow-sm transition-all duration-200 ease-out hover:shadow-md">
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-sm transition-transform duration-200 ease-out group-hover:scale-110">
                   <Icon size={22} />
                 </span>
-                <h3 className="text-base font-semibold text-slate-900">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                   {title}
                 </h3>
-                <p className="text-sm leading-6 text-slate-500">{text}</p>
+                <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{text}</p>
               </TiltCard>
             </Reveal>
           ))}

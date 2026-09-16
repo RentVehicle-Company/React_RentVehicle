@@ -3,6 +3,7 @@ import React from "react";
 const filters = [
   { id: "all", label: "All" },
   { id: "upcoming", label: "Upcoming" },
+  { id: "active", label: "Active" },
   { id: "completed", label: "Completed" },
   { id: "cancelled", label: "Cancelled" },
 ];

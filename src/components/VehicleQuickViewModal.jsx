@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   LuBike,
   LuCalendarHeart,
@@ -21,18 +21,32 @@ import {
   LuX,
   LuZap,
 } from "react-icons/lu";
-import { assets } from "../assets/assets";
 import { isAutomobile, isBicycle, isMotorbike } from "../services/vehicleServices";
 import { usePreferences } from "../context/PreferencesContext";
 
-const GALLERY_IMAGES = [
-  assets.car_image1,
-  assets.car_image2,
-  assets.car_image3,
-  assets.car_image4,
-  assets.main_car,
-  assets.banner_car_image,
-];
+// Builds a gallery from a vehicle's own primary image (crop variants), so the
+// quick view never mixes in photos of other vehicles.
+const buildGallery = (primary) => {
+  if (!primary) return [];
+  const gallery = [primary];
+  if (primary.includes("unsplash.com")) {
+    const base = primary.split("?")[0];
+    const crops = [
+      { fit: "crop", crop: "faces", w: 800, h: 600, q: 80 },
+      { fit: "crop", crop: "entropy", w: 900, h: 500, q: 80 },
+      { fit: "crop", w: 1000, h: 400, q: 80 },
+      { fit: "crop", crop: "faces", w: 600, h: 800, q: 80 },
+    ];
+    for (let i = 0; i < crops.length; i++) {
+      const p = new URLSearchParams(
+        Object.entries(crops[i]).map(([k, v]) => [k, String(v)])
+      );
+      p.set("auto", "format");
+      gallery.push(`${base}?${p.toString()}`);
+    }
+  }
+  return gallery.slice(0, 6);
+};
 
 const CATEGORY_ACCELERATION = {
   "Sports Car": 4.4,
@@ -69,6 +83,7 @@ const deriveBadges = (vehicle, count = 4) => {
 };
 
 const VehicleQuickViewModal = ({ vehicle, onClose }) => {
+  const location = useLocation();
   const { formatPrice, t } = usePreferences();
   const [viewMode, setViewMode] = useState("photo");
   const [activeImg, setActiveImg] = useState(0);
@@ -77,7 +92,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
 
   const frames = vehicle.images?.length
     ? vehicle.images
-    : [vehicle.image, ...GALLERY_IMAGES.filter((image) => image !== vehicle.image)];
+    : buildGallery(vehicle.image);
   const badges = deriveBadges(vehicle);
 
   const deriveTiles = () => {
@@ -236,7 +251,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-lg animate-fade-in overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+      <div className="relative w-full max-w-lg animate-fade-in overflow-hidden rounded-t-2xl bg-white dark:bg-slate-800 shadow-2xl sm:rounded-2xl">
         <div className="relative">
           {viewMode === "photo" ? (
             <div className="relative h-52 w-full overflow-hidden">
@@ -338,13 +353,13 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
             type="button"
             onClick={onClose}
             aria-label="Close quick view"
-            className="absolute right-4 top-4 grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-white/90 text-slate-700 shadow-sm transition-colors hover:bg-white hover:text-slate-900"
+            className="absolute right-4 top-4 grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 shadow-sm transition-colors hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
           >
             <LuX size={18} />
           </button>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto border-b border-slate-100 bg-slate-50 p-2">
+        <div className="flex gap-2 overflow-x-auto border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-2">
           {frames.map((src, index) => (
             <button
               key={src + index}
@@ -375,19 +390,19 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
               <p className="text-xs font-medium uppercase tracking-wide text-primary">
                 {vehicle.category}
               </p>
-              <h2 className="mt-0.5 text-xl font-bold text-slate-900">
+              <h2 className="mt-0.5 text-xl font-bold text-slate-900 dark:text-white">
                 {vehicle.brand} {vehicle.model}
               </h2>
-              <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+              <p className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                 <LuMapPin size={13} />
                 {vehicle.location}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xl font-bold text-slate-900">
+              <p className="text-xl font-bold text-slate-900 dark:text-white">
                 {formatPrice(vehicle.price_per_day)}
               </p>
-              <p className="text-xs text-slate-500">{t("per_day_label")}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t("per_day_label")}</p>
             </div>
           </div>
 
@@ -395,17 +410,17 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
             {specs.map(({ icon: Icon, label, value, iconBox, hover }) => (
               <div
                 key={label}
-                className={`group flex flex-col items-center gap-1.5 rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${hover}`}
+                className={`group flex flex-col items-center gap-1.5 rounded-xl bg-white dark:bg-slate-700 px-2 py-3 text-center shadow-sm ring-1 ring-slate-100 dark:ring-slate-600 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${hover}`}
               >
                 <span
                   className={`grid h-8 w-8 place-items-center rounded-lg ${iconBox} transition-transform duration-200 group-hover:scale-110`}
                 >
                   <Icon size={16} />
                 </span>
-                <dt className="text-[10px] uppercase tracking-wide text-slate-400">
+                <dt className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   {label}
                 </dt>
-                <dd className="text-xs font-semibold text-slate-900">
+                <dd className="text-xs font-semibold text-slate-900 dark:text-white">
                   {value}
                 </dd>
               </div>
@@ -416,7 +431,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
             {badges.map((badge) => (
               <span
                 key={badge}
-                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700"
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-200"
               >
                 <LuCheck size={12} className="text-primary" strokeWidth={3} />
                 {badge}
@@ -424,7 +439,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
             ))}
           </div>
 
-          <p className="mt-4 text-sm leading-6 text-slate-600">
+          <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
             {vehicle.description}
           </p>
 
@@ -435,7 +450,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
                 className="animate-pulse-glow pointer-events-none absolute -inset-1 rounded-xl"
               />
               <Link
-                to={`/vehicles/${vehicle.id}`}
+                to={`/vehicles/${vehicle.id}${location.search}`}
                 onClick={onClose}
                 className="group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary-dull px-5 py-3 text-base font-bold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-primary/40 active:scale-95"
               >
@@ -448,7 +463,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
               </Link>
             </div>
             <Link
-              to={`/vehicles/${vehicle.id}`}
+              to={`/vehicles/${vehicle.id}${location.search}`}
               onClick={onClose}
               className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary transition-all duration-200 hover:border-primary hover:bg-primary hover:text-white active:scale-95"
             >
@@ -461,7 +476,7 @@ const VehicleQuickViewModal = ({ vehicle, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-borderColor px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-borderColor dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               {t("close")}
             </button>

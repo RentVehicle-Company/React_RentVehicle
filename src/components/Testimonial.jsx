@@ -32,23 +32,23 @@ const Testimonial = () => {
     <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-16">
       <div className="mx-auto max-w-5xl">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
             What Our Customers Say
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 dark:text-slate-400">
             Discover why discerning travelers choose Rental Company for their
             luxury accommodations around the world.
           </p>
         </div>
 
         <div className="mt-6 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 shadow-sm sm:text-sm">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-sm sm:text-sm">
             <span className="flex items-center gap-0.5 text-amber-400">
               {Array.from({ length: 1 }).map((_, index) => (
                 <LuStar key={index} size={16} fill="currentColor" />
               ))}
             </span>
-            <span className="font-semibold text-slate-900">
+            <span className="font-semibold text-slate-900 dark:text-white">
               4.9 out of 5 stars
             </span>
             based on 1,200+ verified customer reviews
@@ -58,7 +58,7 @@ const Testimonial = () => {
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           {testimonials.map((testimonial, index) => (
             <Reveal key={testimonial.name} delay={index * 100}>
-              <article className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md">
+              <article className="rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <img
                     src={testimonial.image}
@@ -66,10 +66,10 @@ const Testimonial = () => {
                     className="h-10 w-10 rounded-full object-cover"
                   />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                       {testimonial.name}
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {testimonial.location}
                     </p>
                   </div>
@@ -82,7 +82,7 @@ const Testimonial = () => {
                     <LuStar key={index} size={14} fill="currentColor" />
                   ))}
                 </div>
-                <p className="mt-3 text-xs leading-5 text-slate-500">
+                <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
                   “{testimonial.quote}”
                 </p>
               </article>

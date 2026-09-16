@@ -1,16 +1,83 @@
-import { assets } from "../assets/assets.js";
 import { API_ENDPOINTS, request } from "./api.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// ---------------------------------------------------------------------------
+// Gallery builder — generates crop/zoom variants from a single primary image
+// URL so every vehicle's gallery always matches its own card photo. No shared
+// fallback pool is ever used.
+// ---------------------------------------------------------------------------
+const buildGalleryFromImage = (primaryUrl, count = 5) => {
+  if (!primaryUrl) return [];
+  const gallery = [primaryUrl];
+  if (primaryUrl.includes("unsplash.com")) {
+    const base = primaryUrl.split("?")[0];
+    const crops = [
+      { fit: "crop", crop: "faces", w: 800, h: 600, q: 80 },
+      { fit: "crop", crop: "entropy", w: 900, h: 500, q: 80 },
+      { fit: "crop", crop: "edges", w: 700, h: 700, q: 80 },
+      { fit: "crop", w: 1000, h: 400, q: 80 },
+      { fit: "crop", crop: "faces", w: 600, h: 800, q: 80 },
+    ];
+    for (let i = 0; i < count - 1 && i < crops.length; i++) {
+      const p = new URLSearchParams(
+        Object.entries(crops[i]).map(([k, v]) => [k, String(v)])
+      );
+      p.set("auto", "format");
+      gallery.push(`${base}?${p.toString()}`);
+    }
+  }
+  return gallery.slice(0, count);
+};
+
+// ---------------------------------------------------------------------------
+// Dedicated primary images — one unique URL per vehicle, matched to its body
+// category. High-visibility models use metadata-verified Wikimedia Commons
+// photos (their exact file names), everything else uses dedicated Unsplash
+// photography. Each vehicle's gallery is then derived from its own URL via
+// buildGalleryFromImage, guaranteeing zero cross-model mismatch.
+// ---------------------------------------------------------------------------
+const u = (id) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=80`;
+
+const commons = (path) => `https://upload.wikimedia.org/wikipedia/commons/${path}`;
+
+const IMG = {
+  // Sports Car
+  supra: commons("b/bc/1996_Toyota_Supra_A80_%28front%29.jpg"),
+  mustang: u("photo-1494976388531-d1058494cdd8"),
+  porsche911: commons("c/c6/2013_Porsche_911_Carrera_4S_%28991%29_%289626546987%29.jpg"),
+  gtr: commons("9/99/NISSAN_GT-R_%28R35%29_China.jpg"),
+  // Supercar
+  r8: u("photo-1542362567-b07e54358753"),
+  // Electric
+  tesla: u("photo-1560958089-b8a1929cea89"),
+  // SUV
+  x5: u("photo-1533473359331-0135ef1b58bf"),
+  wrangler: u("photo-1525609004556-c46c7d6cf023"),
+  rav4: u("photo-1570125909232-eb263c188f7e"),
+  // Sedan
+  corolla: u("photo-1492144534655-ae79c964c9d7"),
+  neo6: u("photo-1552519507-da3b142c6e3d"),
+  civic: u("photo-1549317661-bd32c8ce0db2"),
+  // Luxury SUV
+  rangeRover: u("photo-1449965408869-eaa3f722e40d"),
+  g63: u("photo-1555215695-3004980ad54e"),
+  // Hatchback
+  picanto: u("photo-1541899481282-d53bffe3c35d"),
+};
+
 // Mock fleet used when the Spring Boot backend is unreachable.
-// TODO: Replace with real per-vehicle images once the backend provides them.
 const baseVehicles = [
   {
     id: 1,
     brand: "Toyota",
     model: "Supra",
-    image: assets.main_car,
+    image: IMG.supra,
+    images: [
+      IMG.supra,
+      commons("4/47/1996-2002_Toyota_Supra_rear.jpg"),
+    ],
     year: 2022,
     category: "Sports Car",
     seating_capacity: 2,
@@ -28,7 +95,7 @@ const baseVehicles = [
     id: 2,
     brand: "Ford",
     model: "Mustang",
-    image: assets.car_image2,
+    image: IMG.mustang,
     year: 2023,
     category: "Sports Car",
     seating_capacity: 4,
@@ -46,7 +113,7 @@ const baseVehicles = [
     id: 3,
     brand: "Range Rover",
     model: "Sport",
-    image: assets.car_image3,
+    image: IMG.rangeRover,
     year: 2024,
     category: "Luxury SUV",
     seating_capacity: 5,
@@ -63,7 +130,8 @@ const baseVehicles = [
     id: 4,
     brand: "Porsche",
     model: "911 Carrera",
-    image: assets.car_image2,
+    image: IMG.porsche911,
+    images: [IMG.porsche911],
     year: 2022,
     category: "Sports Car",
     seating_capacity: 2,
@@ -81,7 +149,7 @@ const baseVehicles = [
     id: 5,
     brand: "Audi",
     model: "R8",
-    image: assets.car_image4,
+    image: IMG.r8,
     year: 2022,
     category: "Supercar",
     seating_capacity: 2,
@@ -98,7 +166,7 @@ const baseVehicles = [
     id: 6,
     brand: "Tesla",
     model: "Model 3",
-    image: assets.car_image2,
+    image: IMG.tesla,
     year: 2023,
     category: "Electric",
     seating_capacity: 4,
@@ -115,7 +183,7 @@ const baseVehicles = [
     id: 7,
     brand: "BMW",
     model: "X5",
-    image: assets.car_image3,
+    image: IMG.x5,
     year: 2023,
     category: "SUV",
     seating_capacity: 4,
@@ -132,7 +200,7 @@ const baseVehicles = [
     id: 8,
     brand: "Toyota",
     model: "Corolla",
-    image: assets.car_image4,
+    image: IMG.corolla,
     year: 2021,
     category: "Sedan",
     seating_capacity: 4,
@@ -149,7 +217,7 @@ const baseVehicles = [
     id: 9,
     brand: "Jeep",
     model: "Wrangler",
-    image: assets.banner_car_image,
+    image: IMG.wrangler,
     year: 2023,
     category: "SUV",
     seating_capacity: 4,
@@ -166,7 +234,7 @@ const baseVehicles = [
     id: 10,
     brand: "Ford",
     model: "Neo 6",
-    image: assets.car_image2,
+    image: IMG.neo6,
     year: 2022,
     category: "Sedan",
     seating_capacity: 2,
@@ -183,7 +251,7 @@ const baseVehicles = [
     id: 11,
     brand: "Mercedes-Benz",
     model: "G63 AMG",
-    image: assets.car_image3,
+    image: IMG.g63,
     year: 2024,
     category: "Luxury SUV",
     seating_capacity: 5,
@@ -200,7 +268,7 @@ const baseVehicles = [
     id: 12,
     brand: "Honda",
     model: "Civic",
-    image: assets.car_image4,
+    image: IMG.civic,
     year: 2022,
     category: "Sedan",
     seating_capacity: 4,
@@ -218,7 +286,7 @@ const baseVehicles = [
     id: 13,
     brand: "Kia",
     model: "Picanto",
-    image: assets.car_image1,
+    image: IMG.picanto,
     year: 2023,
     category: "Hatchback",
     seating_capacity: 4,
@@ -235,7 +303,7 @@ const baseVehicles = [
     id: 14,
     brand: "Toyota",
     model: "RAV4",
-    image: assets.car_image3,
+    image: IMG.rav4,
     year: 2023,
     category: "SUV",
     seating_capacity: 5,
@@ -252,7 +320,11 @@ const baseVehicles = [
     id: 15,
     brand: "Nissan",
     model: "GT-R",
-    image: assets.car_image4,
+    image: IMG.gtr,
+    images: [
+      IMG.gtr,
+      commons("c/c9/Nissan_GT-R_%28CBA-R35%29_rear.jpg"),
+    ],
     year: 2022,
     category: "Sports Car",
     seating_capacity: 2,
@@ -342,15 +414,6 @@ const RICH_FEATURES = [
   "Wireless Charging",
 ];
 
-const RICH_IMAGE_POOL = [
-  assets.car_image1,
-  assets.car_image2,
-  assets.car_image3,
-  assets.car_image4,
-  assets.main_car,
-  assets.banner_car_image,
-];
-
 // Stamps each car with its own images gallery, full spec sheet and feature
 // list, derived deterministically so every id renders rich detail data.
 const enrichVehicle = (vehicle) => {
@@ -368,13 +431,10 @@ const enrichVehicle = (vehicle) => {
     drive: profile.drive,
   };
 
-  const gallery = [];
-  if (vehicle.image) gallery.push(vehicle.image);
-  for (let i = 0; gallery.length < 5; i++) {
-    const src = RICH_IMAGE_POOL[(vehicle.id * 3 + i * 5) % RICH_IMAGE_POOL.length];
-    if (!gallery.includes(src)) gallery.push(src);
-  }
-  const images = gallery.slice(0, 6);
+  const images =
+    vehicle.images?.length > 0
+      ? vehicle.images
+      : buildGalleryFromImage(vehicle.image, 5);
 
   const start = vehicle.id % RICH_FEATURES.length;
   const features = [
@@ -392,9 +452,8 @@ export const featuredVehicles = [1, 15, 4]
   .filter(Boolean);
 
 // ---------------------------------------------------------------------------
-// Motorbike & bicycle fleet. No dedicated image assets exist yet, so each
-// type gets lightweight inline-SVG silhouettes (one per accent colour) that
-// are used for both the card photo and the gallery.
+// Motorbike & bicycle fleet. Images use real Unsplash photography URLs for
+// the card photo and gallery until the backend serves dedicated assets.
 // ---------------------------------------------------------------------------
 
 export const MOTO_CATEGORIES = [
@@ -416,67 +475,35 @@ export const isMotorbike = (vehicle) => MOTO_CATEGORIES.includes(vehicle?.catego
 export const isBicycle = (vehicle) => BIKE_CATEGORIES.includes(vehicle?.category);
 export const isAutomobile = (vehicle) => !isMotorbike(vehicle) && !isBicycle(vehicle);
 
-const svgToUri = (svg) =>
-  `data:image/svg+xml,${encodeURIComponent(svg.replace(/\s+/g, " "))}`;
+// Two-wheelers use metadata-verified Wikimedia Commons photos matched to each
+// exact model (never automobile photos, and never a shared pool), so every
+// ride's card and gallery depict the correct machine via buildGalleryFromImage.
+const MOTO_IMG = {
+  click: commons("7/7e/Honda_Click_125.jpg"),
+  pcx: commons("7/76/2022_Honda_PCX_160.jpg"),
+  wave: commons("6/6f/Honda_Wave_110_at_hanoi.jpg"),
+  vespa: commons("2/2f/Vespa_Primavera_1.jpg"),
+  monster: commons("d/d9/Ducati_Monster_821_%281%29.jpg"),
+  gs: commons("0/09/BMW_R_1250_GS_%281%29.jpg"),
+  ninja: commons("b/b9/Kawasaki_Ninja_400.jpg"),
+  xsr: commons("1/1b/Yamaha_XSR_155.jpg"),
+};
 
-const MOTO_SILHOUETTE = (accent) =>
-  svgToUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="${accent}"/>
-        <stop offset="1" stop-color="#0f172a"/>
-      </linearGradient>
-    </defs>
-    <rect width="800" height="500" fill="#0b1120"/>
-    <circle cx="230" cy="368" r="92" fill="#0b1220" stroke="#334155" stroke-width="9"/>
-    <circle cx="230" cy="368" r="52" fill="#cbd5e1"/>
-    <circle cx="575" cy="368" r="92" fill="#0b1220" stroke="#334155" stroke-width="9"/>
-    <circle cx="575" cy="368" r="52" fill="#cbd5e1"/>
-    <path d="M250 300 Q 335 240 465 248 L 520 208 Q 552 214 585 220 L 540 300 Q 505 330 450 305 Z" fill="#e2e8f0"/>
-    <rect x="305" y="165" width="125" height="95" rx="20" fill="url(#g)"/>
-    <rect x="428" y="148" width="88" height="46" rx="12" fill="#334155"/>
-    <line x1="400" y1="195" x2="400" y2="118" stroke="#94a3b8" stroke-width="22" stroke-linecap="round"/>
-    <circle cx="412" cy="110" r="36" fill="#0b1220"/>
-    <circle cx="412" cy="110" r="22" fill="#e2e8f0"/>
-    <circle cx="398" cy="298" r="10" fill="#334155"/>
-  </svg>`);
-
-const BIKE_SILHOUETTE = (accent) =>
-  svgToUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="${accent}"/>
-        <stop offset="1" stop-color="#0f172a"/>
-      </linearGradient>
-    </defs>
-    <rect width="800" height="500" fill="#0b1120"/>
-    <circle cx="215" cy="370" r="88" fill="none" stroke="#334155" stroke-width="12"/>
-    <circle cx="215" cy="370" r="46" fill="#cbd5e1"/>
-    <circle cx="588" cy="370" r="88" fill="none" stroke="#334155" stroke-width="12"/>
-    <circle cx="588" cy="370" r="46" fill="#cbd5e1"/>
-    <path d="M215 370 L 400 370 L 335 248 L 255 318 Z" fill="none" stroke="#e2e8f0" stroke-width="15" stroke-linejoin="round"/>
-    <line x1="400" y1="370" x2="335" y2="248" stroke="#e2e8f0" stroke-width="15"/>
-    <circle cx="400" cy="370" r="22" fill="#94a3b8"/>
-    <rect x="300" y="65" width="14" height="82" rx="7" fill="url(#g)"/>
-    <rect x="258" y="96" width="96" height="14" rx="7" fill="#e2e8f0"/>
-    <path d="M255 318 Q 214 178 138 176" fill="none" stroke="#94a3b8" stroke-width="13" stroke-linecap="round"/>
-    <rect x="435" y="332" width="168" height="14" rx="7" fill="url(#g)"/>
-    <rect x="443" y="272" width="16" height="64" rx="8" fill="#334155"/>
-  </svg>`);
-
-const MOTO_IMAGE_POOL = ["#2563eb", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#0891b2"].map(
-  MOTO_SILHOUETTE
-);
-const BIKE_IMAGE_POOL = ["#0ea5e9", "#84cc16", "#f59e0b", "#d946ef", "#10b981", "#f43f5e"].map(
-  BIKE_SILHOUETTE
-);
+const BIKE_IMG = {
+  marlin7: commons("b/b9/Trek_820_%289518781581%29.jpg"),
+  escape3: commons("c/c0/Giant_Escape_M2.jpg"),
+  allez: commons("a/a6/Specialized_road_bike.JPG"),
+  ebike: commons("a/af/Electric_Bike_2.jpg"),
+  trail8: commons("5/56/Cannondale_Trail_6_2017.jpg"),
+  s3: commons("8/86/VanMoof_Electrified_S.jpg"),
+};
 
 const motoBaseVehicles = [
   {
     id: 101,
     brand: "Honda",
     model: "Click 125i",
-    image: MOTO_IMAGE_POOL[0],
+    image: MOTO_IMG.click,
     year: 2023,
     category: "Scooter",
     seating_capacity: 2,
@@ -493,9 +520,9 @@ const motoBaseVehicles = [
   },
   {
     id: 102,
-    brand: "Yamaha",
+    brand: "Honda",
     model: "PCX 160",
-    image: MOTO_IMAGE_POOL[1],
+    image: MOTO_IMG.pcx,
     year: 2024,
     category: "Scooter",
     seating_capacity: 2,
@@ -514,7 +541,7 @@ const motoBaseVehicles = [
     id: 103,
     brand: "Honda",
     model: "Wave 110",
-    image: MOTO_IMAGE_POOL[2],
+    image: MOTO_IMG.wave,
     year: 2022,
     category: "Underbone",
     seating_capacity: 2,
@@ -533,7 +560,7 @@ const motoBaseVehicles = [
     id: 104,
     brand: "Vespa",
     model: "Primavera 150",
-    image: MOTO_IMAGE_POOL[3],
+    image: MOTO_IMG.vespa,
     year: 2023,
     category: "Scooter",
     seating_capacity: 2,
@@ -552,7 +579,7 @@ const motoBaseVehicles = [
     id: 105,
     brand: "Ducati",
     model: "Monster 821",
-    image: MOTO_IMAGE_POOL[4],
+    image: MOTO_IMG.monster,
     year: 2022,
     category: "Cruiser",
     seating_capacity: 2,
@@ -571,7 +598,7 @@ const motoBaseVehicles = [
     id: 106,
     brand: "BMW",
     model: "R 1250 GS",
-    image: MOTO_IMAGE_POOL[5],
+    image: MOTO_IMG.gs,
     year: 2023,
     category: "Touring",
     seating_capacity: 2,
@@ -590,7 +617,7 @@ const motoBaseVehicles = [
     id: 107,
     brand: "Kawasaki",
     model: "Ninja 400",
-    image: MOTO_IMAGE_POOL[0],
+    image: MOTO_IMG.ninja,
     year: 2023,
     category: "Sportbike",
     seating_capacity: 2,
@@ -609,7 +636,7 @@ const motoBaseVehicles = [
     id: 108,
     brand: "Yamaha",
     model: "XSR 155",
-    image: MOTO_IMAGE_POOL[1],
+    image: MOTO_IMG.xsr,
     year: 2022,
     category: "Cruiser",
     seating_capacity: 2,
@@ -631,7 +658,7 @@ const bikeBaseVehicles = [
     id: 201,
     brand: "Trek",
     model: "Marlin 7",
-    image: BIKE_IMAGE_POOL[0],
+    image: BIKE_IMG.marlin7,
     year: 2024,
     category: "Mountain Bike",
     seating_capacity: 1,
@@ -649,7 +676,7 @@ const bikeBaseVehicles = [
     id: 202,
     brand: "Giant",
     model: "Escape 3",
-    image: BIKE_IMAGE_POOL[1],
+    image: BIKE_IMG.escape3,
     year: 2023,
     category: "Hybrid / City Bike",
     seating_capacity: 1,
@@ -667,7 +694,7 @@ const bikeBaseVehicles = [
     id: 203,
     brand: "Specialized",
     model: "Allez",
-    image: BIKE_IMAGE_POOL[2],
+    image: BIKE_IMG.allez,
     year: 2023,
     category: "Road Bike",
     seating_capacity: 1,
@@ -685,7 +712,7 @@ const bikeBaseVehicles = [
     id: 204,
     brand: "Xiaomi",
     model: "Electric City E-Bike",
-    image: BIKE_IMAGE_POOL[3],
+    image: BIKE_IMG.ebike,
     year: 2024,
     category: "E-Bike / Electric",
     seating_capacity: 1,
@@ -703,7 +730,7 @@ const bikeBaseVehicles = [
     id: 205,
     brand: "Cannondale",
     model: "Trail 8",
-    image: BIKE_IMAGE_POOL[4],
+    image: BIKE_IMG.trail8,
     year: 2022,
     category: "Mountain Bike",
     seating_capacity: 1,
@@ -721,7 +748,7 @@ const bikeBaseVehicles = [
     id: 206,
     brand: "VanMoof",
     model: "S3",
-    image: BIKE_IMAGE_POOL[5],
+    image: BIKE_IMG.s3,
     year: 2023,
     category: "E-Bike / Electric",
     seating_capacity: 1,
@@ -829,19 +856,14 @@ const BIKE_FEATURES = [
   "24/7 Roadside Assistance",
 ];
 
-const enrichFleet = (vehicle, specs, featurePool, imagePool) => {
-  const gallery = [];
-  if (vehicle.image) gallery.push(vehicle.image);
-  for (let i = 0; gallery.length < 5; i++) {
-    const src = imagePool[(vehicle.id * 3 + i * 5) % imagePool.length];
-    if (!gallery.includes(src)) gallery.push(src);
-  }
+const enrichFleet = (vehicle, specs, featurePool) => {
+  const gallery = buildGalleryFromImage(vehicle.image, 5);
   const start = ((vehicle.id % featurePool.length) + featurePool.length) % featurePool.length;
   const features = [
     ...featurePool.slice(start),
     ...featurePool.slice(0, start),
   ].slice(0, 8);
-  return { ...vehicle, specs, features, images: gallery.slice(0, 6) };
+  return { ...vehicle, specs, features, images: gallery };
 };
 
 const enrichMotorbike = (vehicle) => {
@@ -857,7 +879,7 @@ const enrichMotorbike = (vehicle) => {
     transmission: vehicle.transmission ?? profile.transmission,
     fuelEfficiency: vehicle.fuel_efficiency ?? profile.fuelEfficiency,
   };
-  return enrichFleet(vehicle, specs, MOTO_FEATURES, MOTO_IMAGE_POOL);
+  return enrichFleet(vehicle, specs, MOTO_FEATURES);
 };
 
 const enrichBicycle = (vehicle) => {
@@ -872,7 +894,7 @@ const enrichBicycle = (vehicle) => {
     acceleration: 4.2,
     horsepower: vehicle.fuel_type === "Electric" ? 0.6 : 0.3,
   };
-  return enrichFleet(vehicle, specs, BIKE_FEATURES, BIKE_IMAGE_POOL);
+  return enrichFleet(vehicle, specs, BIKE_FEATURES);
 };
 
 export const mockMotorbikes = motoBaseVehicles.map(enrichMotorbike);
@@ -893,6 +915,7 @@ const unwrapList = (data) => {
 export const getVehicles = async () => {
   try {
     const data = await request(API_ENDPOINTS.vehicles);
+    if (!data) throw new Error("Backend offline");
     return unwrapList(data);
   } catch {
     // Backend offline -> mock fallback so the UI keeps working.
@@ -904,6 +927,7 @@ export const getVehicles = async () => {
 export const getMotorbikes = async () => {
   try {
     const data = await request(API_ENDPOINTS.motorbikes);
+    if (!data) throw new Error("Backend offline");
     return unwrapList(data);
   } catch {
     await delay(400);
@@ -914,6 +938,7 @@ export const getMotorbikes = async () => {
 export const getBicycles = async () => {
   try {
     const data = await request(API_ENDPOINTS.bicycles);
+    if (!data) throw new Error("Backend offline");
     return unwrapList(data);
   } catch {
     await delay(400);

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   LuBadgePercent,
   LuCalendarRange,
@@ -16,9 +16,10 @@ const DISCOUNT_PCT = 0.1;
 const toISODate = (date) => date.toISOString().split("T")[0];
 
 const inputClass =
-  "w-full px-3 py-2.5 bg-white border border-borderColor rounded-xl text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const VehiclePricingModal = ({ vehicle, onClose }) => {
+  const location = useLocation();
   const { formatPrice, t } = usePreferences();
   const [pickupDate, setPickupDate] = useState(() => toISODate(new Date()));
   const [returnDate, setReturnDate] = useState(() =>
@@ -66,7 +67,7 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-md animate-fade-in overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative w-full max-w-md animate-fade-in overflow-hidden rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
         <div className="relative h-28 bg-slate-900">
           <img
             src={vehicle.image}
@@ -86,14 +87,14 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
             type="button"
             onClick={onClose}
             aria-label="Close pricing"
-            className="absolute right-3 top-3 grid h-8 w-8 cursor-pointer place-items-center rounded-full bg-white/90 text-slate-700 transition-colors hover:bg-white hover:text-slate-900"
+            className="absolute right-3 top-3 grid h-8 w-8 cursor-pointer place-items-center rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 transition-colors hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
           >
             <LuX size={16} />
           </button>
         </div>
 
         <div className="p-5">
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
             <LuCalendarRange size={16} className="text-primary" />
             {t("trip_duration")}
             {hasDiscount && (
@@ -106,7 +107,7 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
 
           <div className="mt-3 grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t("pickup")}
               </span>
               <input
@@ -118,7 +119,7 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t("return")}
               </span>
               <input
@@ -131,13 +132,13 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
             </label>
           </div>
 
-          <div className="mt-4 space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm">
-            <div className="flex items-center justify-between text-slate-600">
+          <div className="mt-4 space-y-2 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 p-4 text-sm">
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
               <span>
                 {formatPrice(vehicle.price_per_day)} × {days}{" "}
                 {days === 1 ? "day" : "days"}
               </span>
-              <span className="font-semibold text-slate-900">
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
                 {formatPrice(subtotal)}
               </span>
             </div>
@@ -155,14 +156,14 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
             )}
 
             {!hasDiscount && (
-              <p className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+              <p className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                 <LuBadgePercent size={13} />
                 {t("book_3plus_save", { pct: Math.round(DISCOUNT_PCT * 100) })}
               </p>
             )}
 
-            <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-base">
-              <span className="font-semibold text-slate-900">
+            <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-2 text-base">
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
                 {t("est_cost")}
               </span>
               <span className="text-xl font-bold text-primary">
@@ -173,7 +174,7 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
 
           <div className="mt-5 flex flex-col gap-2">
             <Link
-              to={`/vehicles/${vehicle.id}`}
+              to={`/vehicles/${vehicle.id}${location.search}`}
               onClick={onClose}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-base font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-dull"
             >
@@ -183,7 +184,7 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-borderColor px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-borderColor dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               {t("close")}
             </button>

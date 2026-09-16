@@ -1,11 +1,10 @@
-import React from 'react'
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import AuthModal from "./AuthModal";
 
 const Register = () => {
-  return (
-    <div className=''> 
-      <h1 className="text-black">Register Page</h1>
-    </div>
-  )
-}
+  const navigate = useNavigate();
+  return <AuthModal mode="register" onClose={() => navigate("/")} />;
+};
 
-export default Register
+export default Register;

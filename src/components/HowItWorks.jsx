@@ -44,12 +44,12 @@ const HowItWorks = () => {
           <div className="relative grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
             {STEPS.map(({ number, icon: Icon, title, text }, index) => (
               <Reveal key={number} delay={index * 100} className="h-full">
-                <div className="group relative h-full overflow-hidden rounded-2xl border border-borderColor bg-white p-6 pt-7 text-center shadow-sm transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-blue-400 hover:shadow-lg hover:shadow-primary/10">
+                <div className="group relative h-full overflow-hidden rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 p-6 pt-7 text-center shadow-sm transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-blue-400 hover:shadow-lg hover:shadow-primary/10">
                   <span
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-x-4 top-0 h-0.5 rounded-full bg-gradient-to-r from-primary/0 via-primary/60 to-primary/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                   />
-                  <span className="pointer-events-none absolute -right-1 -top-2 select-none text-5xl font-bold tracking-tighter text-slate-100/70 transition-colors duration-300 group-hover:text-primary/10">
+                  <span className="pointer-events-none absolute -right-1 -top-2 select-none text-5xl font-bold tracking-tighter text-slate-100/70 dark:text-slate-700/70 transition-colors duration-300 group-hover:text-primary/10">
                     {number}
                   </span>
                   <span className="absolute left-4 top-4 flex select-none items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-bold tracking-tight text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
@@ -58,10 +58,10 @@ const HowItWorks = () => {
                   <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/30 ring-1 ring-primary/20 transition-transform duration-300 ease-out group-hover:scale-110">
                     <Icon size={22} />
                   </span>
-                  <h3 className="mt-4 text-base font-semibold text-slate-900">
+                  <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
                     {title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{text}</p>
                 </div>
               </Reveal>
             ))}

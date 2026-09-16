@@ -9,7 +9,9 @@ import {
   LuX,
 } from "react-icons/lu";
 import { getBicycles, BIKE_CATEGORIES } from "../../services/vehicleServices";
+import { CAMBODIA_LOCATIONS } from "../../assets/assets";
 import BikeCard from "../../components/vehicles/BikeCard";
+import { usePreferences } from "../../context/PreferencesContext";
 
 const PAGE_SIZE = 6;
 
@@ -23,11 +25,12 @@ const PRICE_MIN = 5;
 const PRICE_MAX = 60;
 
 const inputClass =
-  "w-full px-4 py-2.5 bg-white border border-borderColor rounded-xl text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClass = "block text-sm font-medium text-slate-700 mb-1.5";
+  "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
 
 const Bicycles = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { formatPrice } = usePreferences();
 
   const [bicycles, setBicycles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,10 +61,7 @@ const Bicycles = () => {
     });
   }, []);
 
-  const locations = useMemo(
-    () => [...new Set(bicycles.map((bike) => bike.location))],
-    [bicycles]
-  );
+  const locations = CAMBODIA_LOCATIONS;
 
   const filtered = useMemo(() => {
     let list = bicycles;
@@ -204,7 +204,7 @@ const Bicycles = () => {
   if (maxPrice < PRICE_MAX) {
     badges.push({
       key: "price",
-      label: `Max Price: $${maxPrice}/day`,
+      label: `Max Price: ${formatPrice(maxPrice)}/day`,
       clear: () => {
         setMaxPrice(PRICE_MAX);
         setPage(1);
@@ -255,13 +255,13 @@ const Bicycles = () => {
           {BIKE_OPTIONS.map((option) => (
             <label
               key={option}
-              className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-700"
+              className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200"
             >
               <input
                 type="checkbox"
                 checked={categories.includes(option)}
                 onChange={() => toggleCategory(option)}
-                className="h-4 w-4 rounded border-borderColor accent-primary cursor-pointer"
+                className="h-4 w-4 rounded border-borderColor dark:border-slate-700 accent-primary cursor-pointer"
               />
               {option}
             </label>
@@ -272,8 +272,8 @@ const Bicycles = () => {
       <div>
         <div className="flex items-center justify-between">
           <label className={labelClass}>Price / day</label>
-          <span className="text-sm font-semibold text-slate-900">
-            ${PRICE_MIN} – ${maxPrice}
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            {formatPrice(PRICE_MIN)} – {formatPrice(maxPrice)}
           </span>
         </div>
         <input
@@ -287,11 +287,11 @@ const Bicycles = () => {
             setPage(1);
           }}
           className="w-full accent-primary cursor-pointer"
-          aria-label={`Maximum price $${maxPrice}`}
+          aria-label={`Maximum price ${formatPrice(maxPrice)}`}
         />
         <div className="mt-1 flex justify-between text-[11px] text-slate-400">
-          <span>${PRICE_MIN}</span>
-          <span>${PRICE_MAX}</span>
+          <span>{formatPrice(PRICE_MIN)}</span>
+          <span>{formatPrice(PRICE_MAX)}</span>
         </div>
       </div>
 
@@ -322,17 +322,17 @@ const Bicycles = () => {
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">
           Rent a Bicycle
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           Mountain, road, hybrid and electric bikes for the whole family.
         </p>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="hidden lg:block self-start">
-          <div className="rounded-2xl border border-borderColor bg-white shadow-sm">
+          <div className="rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
             <AnimatePresence initial={false}>
               {!sidebarCollapsed && (
                 <motion.div
@@ -343,8 +343,8 @@ const Bicycles = () => {
                   transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-center justify-between border-b border-borderColor px-5 py-4">
-                    <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <div className="flex items-center justify-between border-b border-borderColor dark:border-slate-700 px-5 py-4">
+                    <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
                       <LuSlidersHorizontal size={16} className="text-primary" />
                       Filters
                     </h2>
@@ -352,7 +352,7 @@ const Bicycles = () => {
                       type="button"
                       onClick={() => setSidebarCollapsed(true)}
                       aria-label="Collapse filters"
-                      className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                      className="rounded-lg p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:bg-slate-700/60 dark:hover:bg-slate-700 hover:text-slate-900 dark:text-slate-100 transition-colors cursor-pointer"
                     >
                       <LuChevronLeft size={16} />
                     </button>
@@ -365,7 +365,7 @@ const Bicycles = () => {
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(false)}
-                className="flex w-full items-center justify-between gap-2 px-5 py-4 text-sm font-semibold text-slate-900 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer"
+                className="flex w-full items-center justify-between gap-2 px-5 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors cursor-pointer"
               >
                 <span className="flex items-center gap-2">
                   <LuSlidersHorizontal size={16} className="text-primary" />
@@ -387,7 +387,7 @@ const Bicycles = () => {
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-borderColor bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer lg:hidden"
+                className="inline-flex items-center gap-2 rounded-xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer lg:hidden"
               >
                 <LuSlidersHorizontal size={15} />
                 Filters
@@ -400,16 +400,16 @@ const Bicycles = () => {
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed((prev) => !prev)}
-                className="hidden items-center gap-2 rounded-xl border border-borderColor bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer lg:inline-flex"
+                className="hidden items-center gap-2 rounded-xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer lg:inline-flex"
               >
                 <LuSlidersHorizontal size={15} />
                 {sidebarCollapsed ? "Expand Filters" : "Collapse Filters"}
               </button>
             </div>
 
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Showing{" "}
-              <span className="font-semibold text-slate-900">
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
                 {filtered.length}
               </span>{" "}
               {filtered.length === 1 ? "Bicycle" : "Bicycles"}
@@ -442,10 +442,10 @@ const Bicycles = () => {
                   key={badge.key}
                   type="button"
                   onClick={badge.clear}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700/60 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
                 >
                   {badge.label}
-                  <LuX size={12} className="text-slate-500" />
+                  <LuX size={12} className="text-slate-500 dark:text-slate-400" />
                 </button>
               ))}
               <button
@@ -460,7 +460,7 @@ const Bicycles = () => {
 
           <div className="mt-6">
             {loading ? (
-              <p className="text-sm text-slate-500">Loading bicycles...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading bicycles...</p>
             ) : filtered.length > 0 ? (
               <>
                 <motion.div
@@ -496,7 +496,7 @@ const Bicycles = () => {
 
                 {filtered.length > PAGE_SIZE && (
                   <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       Showing {pageStart + 1}-
                       {Math.min(pageEnd, filtered.length)} of {filtered.length}{" "}
                       bicycles
@@ -507,7 +507,7 @@ const Bicycles = () => {
                         aria-label="Previous page"
                         disabled={currentPage === 1}
                         onClick={() => setPage(currentPage - 1)}
-                        className="rounded border border-borderColor p-1.5 text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                        className="rounded border border-borderColor dark:border-slate-700 p-1.5 text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:bg-slate-700/60 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
                       >
                         <LuChevronLeft size={14} />
                       </button>
@@ -528,7 +528,7 @@ const Bicycles = () => {
                             className={`min-w-[32px] rounded px-2 py-1.5 text-xs font-medium transition cursor-pointer ${
                               item === currentPage
                                 ? "bg-primary text-white"
-                                : "border border-borderColor text-slate-600 hover:bg-slate-100"
+                                : "border border-borderColor dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-700/60 dark:hover:bg-slate-700"
                             }`}
                           >
                             {item}
@@ -540,7 +540,7 @@ const Bicycles = () => {
                         aria-label="Next page"
                         disabled={currentPage === totalPages}
                         onClick={() => setPage(currentPage + 1)}
-                        className="rounded border border-borderColor p-1.5 text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                        className="rounded border border-borderColor dark:border-slate-700 p-1.5 text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:bg-slate-700/60 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
                       >
                         <LuChevronRight size={14} />
                       </button>
@@ -549,11 +549,11 @@ const Bicycles = () => {
                 )}
               </>
             ) : (
-              <div className="bg-white border border-borderColor rounded-2xl p-10 text-center">
-                <p className="text-base font-semibold text-slate-900">
+              <div className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-10 text-center">
+                <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   No bicycles found
                 </p>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                   Try adjusting or clearing your search filters.
                 </p>
                 <button
@@ -585,10 +585,10 @@ const Bicycles = () => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="absolute inset-y-0 left-0 w-[85%] max-w-sm overflow-y-auto bg-white p-5 shadow-2xl"
+              className="absolute inset-y-0 left-0 w-[85%] max-w-sm overflow-y-auto bg-white dark:bg-slate-800 p-5 shadow-2xl"
             >
               <div className="mb-5 flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
+                <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
                   <LuSlidersHorizontal size={18} className="text-primary" />
                   Filters
                   {badges.length > 0 && (
@@ -601,7 +601,7 @@ const Bicycles = () => {
                   type="button"
                   onClick={() => setMobileFiltersOpen(false)}
                   aria-label="Close filters"
-                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                  className="rounded-lg p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:bg-slate-700/60 dark:hover:bg-slate-700 hover:text-slate-900 dark:text-slate-100 transition-colors cursor-pointer"
                 >
                   <LuX size={20} />
                 </button>

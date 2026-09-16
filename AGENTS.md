@@ -110,7 +110,7 @@ RentalCompany/
         ├── api.js
         ├── authServices.js
         ├── bookingService.js
-        ├── userSrevice.js      # NOTE: typo in filename (should be userService)
+        ├── userService.js
         └── vehicleServices.js
 ```
 
@@ -180,7 +180,6 @@ Hardcoded in `src/assets/assets.js`:
 
 ## Known Issues
 
-- **Typo:** `src/services/userSrevice.js` should be `userService.js`
 - **Duplicate component names:** `Title.jsx` exists in 3 locations (`components/`, `components/common/`, `components/owner/`)
 - **Owner routes** are not registered in `App.jsx` yet
 

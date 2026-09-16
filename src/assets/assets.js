@@ -43,7 +43,36 @@ import car_image3 from "./car_image3.png";
 import car_image4 from "./car_image4.png";
 import logout from "./logout.svg";
 
-export const cityList = ["New York", "Los Angeles", "Houston", "Chicago"];
+export const CAMBODIA_LOCATIONS = [
+  "Phnom Penh",
+  "Banteay Meanchey",
+  "Battambang",
+  "Kampong Cham",
+  "Kampong Chhnang",
+  "Kampong Speu",
+  "Kampong Thom",
+  "Kampot",
+  "Kandal",
+  "Kep",
+  "Koh Kong",
+  "Kratié",
+  "Mondulkiri",
+  "Oddar Meanchey",
+  "Pailin",
+  "Preah Sihanouk",
+  "Preah Vihear",
+  "Prey Veng",
+  "Pursat",
+  "Ratanakiri",
+  "Siem Reap",
+  "Stung Treng",
+  "Svay Rieng",
+  "Takéo",
+  "Tboung Khmum",
+];
+
+// Backwards-compatible alias.
+export const cityList = CAMBODIA_LOCATIONS;
 
 export const assets = {
   logo,

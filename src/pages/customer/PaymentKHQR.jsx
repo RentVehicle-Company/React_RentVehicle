@@ -9,13 +9,17 @@ import {
   LuQrCode,
   LuScanLine,
   LuStore,
+  LuTruck,
 } from "react-icons/lu";
 import { assets } from "../../assets/assets";
+import { createBooking } from "../../services/bookingService";
 import {
   buildPaymentAmount,
   MERCHANT_NAME,
   verifyKhqrPayment,
 } from "../../services/paymentService";
+import { useToast } from "../../context/ToastContext";
+import { usePreferences } from "../../context/PreferencesContext";
 
 const QR_IMAGE_URL =
   "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=KHQR_SAMPLE_PAYMENT";
@@ -40,8 +44,6 @@ const STATUS_BADGE = {
   completed: "bg-slate-200 text-slate-700",
   cancelled: "bg-red-100 text-red-700",
 };
-
-const formatMoney = (value) => `$${Number(value).toFixed(2)}`;
 
 const HOW_TO_PAY = [
   {
@@ -182,6 +184,8 @@ const QrCodeMock = ({ seed, size = 250 }) => {
 const PaymentKHQR = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
+  const { formatAmount } = usePreferences();
   const locationBooking = location.state?.booking || null;
 
   const [booking] = useState(locationBooking || { ...FALLBACK_BOOKING });
@@ -199,7 +203,32 @@ const PaymentKHQR = () => {
         transactionId: payment.transactionId,
         booking,
       });
-      navigate("/payments");
+      const { rentalFee, serviceFee, total } = buildPaymentAmount(booking);
+      await createBooking({
+        vehicleName: booking.vehicleName,
+        image: booking.image,
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        pickupDate: booking.pickupDate,
+        returnDate: booking.returnDate,
+        pickupLocation: booking.pickupLocation || "Phnom Penh",
+        deliveryMethod: booking.deliveryMethod,
+        deliveryFee: booking.deliveryFee,
+        deliveryCity: booking.deliveryCity,
+        deliveryDistrict: booking.deliveryDistrict,
+        deliveryAddress: booking.deliveryAddress,
+        pricePerDay: booking.pricePerDay,
+        rentalFee,
+        serviceFee,
+        totalPrice: total,
+        paymentStatus: "paid",
+        paymentMethod: "Bakong KHQR",
+      });
+      toast.success(
+        "Booking confirmed",
+        `${booking.vehicleName} — find it under My Bookings.`
+      );
+      navigate("/bookings");
     } catch {
       setError("Payment could not be verified. Please try again.");
       setVerifying(false);
@@ -217,6 +246,7 @@ const PaymentKHQR = () => {
   };
 
   const amount = buildPaymentAmount(booking);
+  const usingDelivery = booking.deliveryMethod === "delivery";
   const duration = booking.pricePerDay
     ? Math.max(1, Math.round(amount.rentalFee / booking.pricePerDay))
     : 1;
@@ -256,10 +286,16 @@ const PaymentKHQR = () => {
 
             <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
               <div>
-                <p className="text-xs text-slate-500">Pickup Location</p>
+                <p className="text-xs text-slate-500">
+                  {usingDelivery ? "Delivery Address" : "Pickup Location"}
+                </p>
                 <p className="mt-1 flex items-center gap-1.5 font-medium text-slate-900">
-                  <LuMapPin size={15} />
-                  {booking.pickupLocation || "Phnom Penh"}
+                  {usingDelivery ? (
+                    <LuTruck size={15} className="shrink-0" />
+                  ) : (
+                    <LuMapPin size={15} />
+                  )}
+                  {booking.pickupLocation || booking.deliveryCity || "Phnom Penh"}
                 </p>
               </div>
               <div>
@@ -290,19 +326,28 @@ const PaymentKHQR = () => {
               <div className="mt-3 space-y-2">
                 <div className="flex justify-between gap-4 text-slate-600">
                   <span>Price per day</span>
-                  <span>{formatMoney(booking.pricePerDay)}</span>
+                  <span>{formatAmount(booking.pricePerDay)}</span>
                 </div>
                 <div className="flex justify-between gap-4 text-slate-600">
                   <span>Rental fee</span>
-                  <span>{formatMoney(amount.rentalFee)}</span>
+                  <span>{formatAmount(amount.rentalFee)}</span>
                 </div>
                 <div className="flex justify-between gap-4 text-slate-600">
                   <span>Service fee</span>
-                  <span>{formatMoney(amount.serviceFee)}</span>
+                  <span>{formatAmount(amount.serviceFee)}</span>
                 </div>
+                {booking.deliveryFee > 0 && (
+                  <div className="flex justify-between gap-4 text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <LuTruck size={14} />
+                      Delivery fee
+                    </span>
+                    <span>{formatAmount(booking.deliveryFee)}</span>
+                  </div>
+                )}
                 <div className="mt-3 flex justify-between gap-4 border-t border-borderColor pt-3 font-bold text-slate-900">
                   <span>Total</span>
-                  <span>{formatMoney(amount.total)}</span>
+                  <span>{formatAmount(amount.total)}</span>
                 </div>
               </div>
             </div>
@@ -352,7 +397,7 @@ const PaymentKHQR = () => {
             <p className="text-xs font-medium uppercase tracking-wider text-blue-200">
               Total Payment
             </p>
-            <p className="mt-1 text-3xl font-bold">{formatMoney(amount.total)}</p>
+            <p className="mt-1 text-3xl font-bold">{formatAmount(amount.total)}</p>
             <p className="mt-0.5 text-[11px] text-blue-200">
               Due via Bakong KHQR — VAT and fees included
             </p>
@@ -361,15 +406,24 @@ const PaymentKHQR = () => {
           <div className="mt-4 space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
             <div className="flex justify-between gap-3 text-slate-600">
               <span>Rental fee</span>
-              <span>{formatMoney(amount.rentalFee)}</span>
+              <span>{formatAmount(amount.rentalFee)}</span>
             </div>
             <div className="flex justify-between gap-3 text-slate-600">
               <span>Service fee</span>
-              <span>{formatMoney(amount.serviceFee)}</span>
+              <span>{formatAmount(amount.serviceFee)}</span>
             </div>
+            {booking.deliveryFee > 0 && (
+              <div className="flex justify-between gap-3 text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <LuTruck size={14} />
+                  Delivery fee
+                </span>
+                <span>{formatAmount(booking.deliveryFee)}</span>
+              </div>
+            )}
             <div className="flex justify-between gap-3 border-t border-borderColor pt-2 font-bold text-slate-900">
               <span>Total due</span>
-              <span>{formatMoney(amount.total)}</span>
+              <span>{formatAmount(amount.total)}</span>
             </div>
           </div>
 

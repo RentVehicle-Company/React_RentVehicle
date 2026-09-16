@@ -49,8 +49,8 @@ const FeaturedSection = ({
                 whileTap={{ scale: 0.92 }}
                 className={`cursor-pointer rounded-full border px-4 py-1.5 text-xs font-medium transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-95 sm:text-sm ${
                   isActive
-                    ? "border-slate-900 bg-slate-900 text-white shadow-md"
-                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-900 hover:bg-slate-900 hover:text-white"
+                    ? "border-slate-900 dark:border-primary bg-slate-900 dark:bg-primary text-white shadow-md"
+                    : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-900 dark:hover:border-primary hover:bg-slate-900 dark:hover:bg-primary hover:text-white"
                 }`}
               >
                 {pill.label}
@@ -68,7 +68,7 @@ const FeaturedSection = ({
         </div>
 
         {isEmpty && (
-          <p className="mt-10 text-center text-sm text-slate-500">
+          <p className="mt-10 text-center text-sm text-slate-500 dark:text-slate-400">
             No vehicles found in this category.
           </p>
         )}
@@ -76,7 +76,7 @@ const FeaturedSection = ({
         <div className="mt-10 text-center">
           <Link
             to="/cars"
-            className="inline-block rounded-xl border-2 border-slate-900 px-8 py-3 text-sm font-semibold text-slate-900 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-900 hover:text-white"
+            className="inline-block rounded-xl border-2 border-slate-900 dark:border-primary px-8 py-3 text-sm font-semibold text-slate-900 dark:text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-900 dark:hover:bg-primary hover:text-white"
           >
             Show All Vehicles
           </Link>

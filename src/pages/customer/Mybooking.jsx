@@ -8,39 +8,82 @@ import {
   cancelBooking,
   getMyBookings,
 } from "../../services/bookingService";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
+
+const FILTER_MAP = {
+  all: null,
+  upcoming: ["confirmed"],
+  active: ["active"],
+  completed: ["completed"],
+  cancelled: ["cancelled"],
+};
 
 const Mybooking = () => {
+  const { isAuthenticated, openAuth, logout } = useAuth();
+  const toast = useToast();
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [cancelTarget, setCancelTarget] = useState(null);
 
   useEffect(() => {
-    getMyBookings().then((data) => {
-      setBookings(data);
-      setLoading(false);
-    });
-  }, []);
+    if (!isAuthenticated) return;
+    setLoading(true);
+    getMyBookings()
+      .then((data) => {
+        setBookings(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [isAuthenticated]);
 
+  const allowedStatuses = FILTER_MAP[filter];
   const filteredBookings =
-    filter === "all"
+    allowedStatuses === null
       ? bookings
-      : bookings.filter(
-          (booking) => booking.status === filter
-        );
+      : bookings.filter((booking) => allowedStatuses.includes(booking.status));
 
   const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
-    const updated = await cancelBooking(cancelTarget.id);
-    setBookings((prev) =>
-      prev.map((b) => (b.id === updated.id ? updated : b))
-    );
-    setCancelTarget(null);
+    try {
+      const updated = await cancelBooking(cancelTarget.id);
+      setBookings((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+      toast.success(
+        "Booking cancelled",
+        `Your ${updated.vehicleName} booking has been cancelled.`
+      );
+      setCancelTarget(null);
+    } catch (err) {
+      toast.error("Could not cancel booking", err?.message);
+    }
   };
 
   const handleLogout = () => {
-    // connect to the auth service once authentication is implemented
+    logout();
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="bg-white border border-borderColor rounded-2xl p-12 text-center">
+          <p className="text-xl font-bold text-slate-900">Sign in required</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Log in to view and manage your bookings.
+          </p>
+          <button
+            type="button"
+            onClick={() => openAuth("login")}
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-black px-6 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            Log In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">

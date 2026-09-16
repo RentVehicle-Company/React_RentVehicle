@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   LuArrowLeft,
   LuArrowRight,
@@ -9,18 +9,19 @@ import {
   LuCalendarDays,
   LuCamera,
   LuCheck,
+  LuChevronDown,
   LuCircleDot,
   LuClock3,
   LuCog,
   LuCompass,
   LuFuel,
   LuGauge,
-  LuHeadset,
   LuIdCard,
   LuLayers,
+  LuLock,
   LuMapPin,
   LuPause,
-  LuPhone,
+  LuPenLine,
   LuPlay,
   LuQrCode,
   LuRotateCcw,
@@ -28,22 +29,25 @@ import {
   LuShieldCheck,
   LuStar,
   LuTimer,
+  LuTruck,
   LuUserPlus,
   LuUsers,
+  LuX,
   LuZap,
 } from "react-icons/lu";
-import { assets } from "../../assets/assets";
 import {
   ALL_MOCK_VEHICLES,
   getVehicleById,
   isBicycle,
   isMotorbike,
 } from "../../services/vehicleServices";
+import { CAMBODIA_LOCATIONS } from "../../assets/assets";
 import { usePreferences } from "../../context/PreferencesContext";
+import { useAuth } from "../../context/AuthContext";
 
 const inputClass =
-  "w-full px-4 py-2.5 bg-white border border-borderColor rounded-xl text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClass = "block text-sm font-medium text-slate-700 mb-1.5";
+  "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
 
 const ADDONS = [
   { key: "insurance", label: "Full Comprehensive Insurance", rate: 15 },
@@ -53,6 +57,7 @@ const ADDONS = [
 
 const REVIEWS = [
   {
+    id: "seed_0",
     name: "Sokha Chea",
     date: "3 days ago",
     rating: 5,
@@ -61,6 +66,7 @@ const REVIEWS = [
     color: "bg-blue-500",
   },
   {
+    id: "seed_1",
     name: "James Miller",
     date: "1 week ago",
     rating: 5,
@@ -70,6 +76,26 @@ const REVIEWS = [
   },
 ];
 
+const AVATAR_COLORS = [
+  "bg-blue-500",
+  "bg-indigo-500",
+  "bg-emerald-500",
+  "bg-rose-500",
+  "bg-amber-500",
+  "bg-teal-500",
+];
+
+const getInitials = (name) => {
+  const initials = String(name || "")
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  return initials || "R";
+};
+
 const RATING_BARS = [
   { label: "Cleanliness", value: 5.0 },
   { label: "Vehicle Condition", value: 4.9 },
@@ -77,25 +103,57 @@ const RATING_BARS = [
 ];
 
 const CITY_COORDS = {
-  "New York": [40.7128, -74.006],
-  "Los Angeles": [34.0522, -118.2437],
-  Houston: [29.7604, -95.3698],
-  Chicago: [41.8781, -87.6298],
   "Phnom Penh": [11.5564, 104.9282],
-  "Seam Reap": [13.3671, 103.8446],
-  "Siem Reap": [13.3671, 103.8446],
+  "Banteay Meanchey": [13.7531, 103.0884],
+  Battambang: [13.0957, 103.2022],
+  "Kampong Cham": [11.9924, 105.4643],
+  "Kampong Chhnang": [12.25, 104.6667],
+  "Kampong Speu": [11.6154, 104.8929],
+  "Kampong Thom": [12.7064, 104.8883],
   Kampot: [10.6104, 104.1815],
+  Kandal: [11.4833, 105.0333],
+  Kep: [10.5363, 104.3175],
+  "Koh Kong": [11.6155, 102.9817],
+  "Kratié": [12.4881, 106.0187],
+  Mondulkiri: [12.784, 107.0265],
+  "Oddar Meanchey": [14.181, 103.5172],
+  Pailin: [12.8474, 102.6089],
+  "Preah Sihanouk": [10.6253, 103.5234],
   Sihanoukville: [10.6093, 103.5296],
+  "Preah Vihear": [13.8179, 104.9718],
+  "Prey Veng": [11.4868, 105.3253],
+  Pursat: [12.5383, 103.9256],
+  Ratanakiri: [13.7292, 106.9872],
+  "Siem Reap": [13.3671, 103.8446],
+  "Stung Treng": [13.5241, 105.9683],
+  "Svay Rieng": [11.0875, 105.8162],
+  "Takéo": [10.983, 104.7843],
+  "Tboung Khmum": [11.7579, 105.9386],
 };
 
-const GALLERY_IMAGES = [
-  assets.car_image1,
-  assets.car_image2,
-  assets.car_image3,
-  assets.car_image4,
-  assets.main_car,
-  assets.banner_car_image,
-];
+// Builds a small gallery from a vehicle's own primary image by varying the
+// Unsplash crop settings, so the detail view can never show a different car.
+const buildGallery = (primary) => {
+  if (!primary) return [];
+  const gallery = [primary];
+  if (primary.includes("unsplash.com")) {
+    const base = primary.split("?")[0];
+    const crops = [
+      { fit: "crop", crop: "faces", w: 800, h: 600, q: 80 },
+      { fit: "crop", crop: "entropy", w: 900, h: 500, q: 80 },
+      { fit: "crop", w: 1000, h: 400, q: 80 },
+      { fit: "crop", crop: "faces", w: 600, h: 800, q: 80 },
+    ];
+    for (let i = 0; i < crops.length; i++) {
+      const p = new URLSearchParams(
+        Object.entries(crops[i]).map(([k, v]) => [k, String(v)])
+      );
+      p.set("auto", "format");
+      gallery.push(`${base}?${p.toString()}`);
+    }
+  }
+  return gallery.slice(0, 6);
+};
 
 // Derived performance profile per body-category. The mock fleet has no engine
 // figures, so we stamp believable specs onto each vehicle deterministically.
@@ -173,6 +231,50 @@ const FEATURE_POOL = [
   "Wireless Charging",
 ];
 
+const DELIVERY_FEES = {
+  Supercar: 20,
+  Truck: 20,
+  "Luxury SUV": 15,
+  "Sports Car": 15,
+  SUV: 12,
+  Electric: 12,
+  Sedan: 10,
+  Hatchback: 8,
+  Motorcycle: 8,
+  Bicycle: 5,
+};
+
+const DELIVERY_CITIES = ["Phnom Penh", "Siem Reap"];
+
+const DELIVERY_DISTRICTS = {
+  "Phnom Penh": [
+    "Chamkar Mon",
+    "Daun Penh",
+    "Toul Kork",
+    "Mean Chey",
+    "Sen Sok",
+    "Russey Keo",
+    "Dangkao",
+    "Porsenchey",
+  ],
+  "Siem Reap": [
+    "Svay Dangkum",
+    "Salakomroeuk",
+    "Sla Kram",
+    "Kouk Chak",
+    "Nokor Thum",
+    "Prasat Bakong",
+    "Kralanh",
+  ],
+};
+
+const pickDeliveryCity = (preferred) => {
+  const normalized = String(preferred || "").toLowerCase();
+  if (normalized === "phnom penh") return "Phnom Penh";
+  if (normalized === "siem reap" || normalized === "seam reap") return "Siem Reap";
+  return "Phnom Penh";
+};
+
 const formatDate = (iso) => {
   if (!iso) return "";
   const date = new Date(`${iso}T00:00:00`);
@@ -207,10 +309,27 @@ const deriveFeatures = (vehicle, count = 7) => {
   return rotated.slice(0, count);
 };
 
+const buildDescription = (vehicle, derived, features) => {
+  if (!vehicle || !derived) return "";
+  const primary = (features && features.slice(0, 3)) || [];
+  const list = primary.map((f) => f.toLowerCase()).join(", ");
+  const name = `${vehicle.brand} ${vehicle.model}`;
+  if (isBicycle(vehicle)) {
+    return `The ${name} is a ${(vehicle.category || "bike").toLowerCase()} built for effortless rides around ${vehicle.location} — a ${derived.frame ?? "durable"} frame, ${derived.gears ?? "smooth"} gearing and a ${derived.topSpeed ?? 18} km/h top speed make it the perfect companion for quick errands and full-day explorations alike.${list ? ` Expect ${list} across every ride.` : ""}`;
+  }
+  if (isMotorbike(vehicle)) {
+    return `The ${name} is a ${(vehicle.category || "motorcycle").toLowerCase()} that channels ${derived.horsepower ?? 15} hp from its ${derived.displacementCc ?? 125}cc engine, returning roughly ${derived.fuelEfficiency ?? 45} km/l while topping out near ${derived.topSpeed ?? 110} km/h. Light, nimble and ready for ${vehicle.location} traffic, it pairs everyday practicality with real riding fun.${list ? ` Gear up with ${list} included.` : ""}`;
+  }
+  return `The ${name} is a ${vehicle.year ?? 2024} ${(vehicle.category || "vehicle").toLowerCase()} that delivers a genuinely memorable drive. A ${derived.engine ?? "high-torque"} engine channels ${derived.horsepower ?? 200} hp through a ${(derived.drive ?? "responsive").toLowerCase()} drivetrain, sprinting to ${derived.topSpeed ?? 220} km/h while staying planted and composed. With seats for ${vehicle.seating_capacity ?? 4}${list ? `, kitchen-sink comforts like ${list}` : ""} and 24/7 support on call, it is as effortless to live with as it is thrilling to drive.`;
+};
+
 const VehicleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { formatPrice } = usePreferences();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { formatPrice, formatAmount } = usePreferences();
+  const { isAuthenticated, user, openAuth } = useAuth();
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -220,11 +339,24 @@ const VehicleDetail = () => {
   const [spinning, setSpinning] = useState(true);
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
+  const [pickupLocation, setPickupLocation] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState("pickup");
+  const [deliveryCity, setDeliveryCity] = useState("Phnom Penh");
+  const [deliveryDistrict, setDeliveryDistrict] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [addOns, setAddOns] = useState({
     insurance: false,
     driver: false,
     seat: false,
   });
+  const [paymentMethod, setPaymentMethod] = useState("visa");
+  const [reviews, setReviews] = useState(REVIEWS);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const bookingRef = useRef(null);
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
@@ -235,9 +367,21 @@ const VehicleDetail = () => {
     setViewMode("photo");
     setActiveImg(0);
     setFrameIndex(0);
-    setPickupDate("");
-    setReturnDate("");
+    setPickupDate(searchParams.get("pickup") || "");
+    setReturnDate(searchParams.get("return") || "");
+    setPickupLocation(searchParams.get("location") || "");
+    setDeliveryMethod("pickup");
+    setDeliveryCity("Phnom Penh");
+    setDeliveryDistrict("");
+    setDeliveryAddress("");
     setAddOns({ insurance: false, driver: false, seat: false });
+    setPaymentMethod("visa");
+    setReviews(REVIEWS);
+    setReviewOpen(false);
+    setReviewRating(0);
+    setReviewHover(0);
+    setReviewText("");
+    setShowStickyBar(false);
     getVehicleById(id)
       .then((data) => {
         setVehicle(data);
@@ -254,12 +398,12 @@ const VehicleDetail = () => {
         }
         setLoading(false);
       });
-  }, [id]);
+  }, [id, searchParams]);
 
   const images = useMemo(() => {
     if (!vehicle) return [];
     if (vehicle.images?.length) return vehicle.images;
-    return [vehicle.image, ...GALLERY_IMAGES.filter((img) => img !== vehicle.image)];
+    return buildGallery(vehicle.image);
   }, [vehicle]);
 
   const derived = useMemo(
@@ -288,18 +432,56 @@ const VehicleDetail = () => {
   const hasValidDates = Boolean(pickupDate && returnDate && returnMs >= pickupMs);
   const days = hasValidDates
     ? Math.max(1, Math.round((returnMs - pickupMs) / 86400000))
-    : 0;
-  const rentalFee = vehicle ? Math.round(vehicle.price_per_day * days) : 0;
-  const serviceFee = vehicle ? Math.round(rentalFee * 0.05) : 0;
+    : 1;
+  const rentalFee = vehicle ? vehicle.price_per_day * days : 0;
+  const serviceFee = 5;
   const activeAddOns = ADDONS.filter((addon) => addOns[addon.key]);
   const addOnTotal = activeAddOns.reduce(
     (sum, addon) => sum + addon.rate * days,
     0
   );
-  const totalPrice = rentalFee + serviceFee + addOnTotal;
+  const usingDelivery = deliveryMethod === "delivery";
+  const deliveryFee = vehicle
+    ? usingDelivery
+      ? (DELIVERY_FEES[vehicle.category] ?? 10) * days
+      : 0
+    : 0;
+  const deliverySummary = usingDelivery
+    ? [deliveryDistrict, deliveryCity, deliveryAddress]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+  const totalPrice =
+    rentalFee + serviceFee + addOnTotal + deliveryFee;
+
+  const reviewCount = reviews.length;
+  const reviewAverage = reviewCount
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviewCount
+    : 0;
 
   const toggleAddOn = (key) =>
     setAddOns((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const submitReview = () => {
+    if (!user || reviewRating < 1) return;
+    const name = (user.name || "Guest Renter").trim();
+    setReviews((prev) => [
+      {
+        id: `r_${Date.now().toString(36)}`,
+        name,
+        date: "Just now",
+        rating: reviewRating,
+        text: reviewText.trim() || "Shared by this renter.",
+        initials: getInitials(name),
+        color: AVATAR_COLORS[prev.length % AVATAR_COLORS.length],
+      },
+      ...prev,
+    ]);
+    setReviewOpen(false);
+    setReviewRating(0);
+    setReviewHover(0);
+    setReviewText("");
+  };
 
   const similarVehicles = useMemo(() => {
     if (!vehicle) return [];
@@ -317,6 +499,17 @@ const VehicleDetail = () => {
     return [...inCategory, ...others].slice(0, 3);
   }, [vehicle]);
 
+  useEffect(() => {
+    const widget = bookingRef.current;
+    if (!widget) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { rootMargin: "0px 0px -15% 0px", threshold: 0 }
+    );
+    observer.observe(widget);
+    return () => observer.disconnect();
+  }, [vehicle]);
+
   const handleBook = (method) => {
     if (!vehicle || !hasValidDates) return;
     const booking = {
@@ -325,7 +518,14 @@ const VehicleDetail = () => {
       image: vehicle.image,
       startDate: formatDate(pickupDate),
       endDate: formatDate(returnDate),
-      pickupLocation: vehicle.location,
+      pickupLocation: usingDelivery
+        ? deliverySummary
+        : pickupLocation || vehicle.location,
+      deliveryMethod: usingDelivery ? "delivery" : "pickup",
+      deliveryFee,
+      deliveryCity: usingDelivery ? deliveryCity : null,
+      deliveryDistrict: usingDelivery ? deliveryDistrict || null : null,
+      deliveryAddress: usingDelivery ? deliveryAddress || null : null,
       pricePerDay: vehicle.price_per_day,
       rentalFee,
       serviceFee,
@@ -340,14 +540,14 @@ const VehicleDetail = () => {
       status: "confirmed",
       paymentStatus: "unpaid",
     };
-    navigate(method === "visa" ? "/payment/visa" : "/payment/khqr", {
-      state: { booking },
+    navigate("/checkout", {
+      state: { booking, method, from: `/vehicles/${vehicle.id}` },
     });
   };
 
   if (loading) {
     return (
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8 text-sm text-slate-500">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8 text-sm text-slate-500 dark:text-slate-400">
         Loading {`vehicle${id ? ` #${id}` : ""}`}...
       </div>
     );
@@ -357,13 +557,13 @@ const VehicleDetail = () => {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Link
-          to="/cars"
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+          to={`/cars${location.search}`}
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
         >
           <LuArrowLeft size={18} />
           Back to Cars
         </Link>
-        <div className="mt-6 bg-white border border-borderColor rounded-2xl p-10 text-center text-sm text-slate-500">
+        <div className="mt-6 bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-10 text-center text-sm text-slate-500 dark:text-slate-400">
           {error || "Vehicle not found."}
         </div>
       </div>
@@ -472,44 +672,36 @@ const VehicleDetail = () => {
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <Link
-        to="/cars"
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+        to={`/cars${location.search}`}
+        className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
       >
         <LuArrowLeft size={18} />
         Back to Cars
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-primary">
-            {vehicle.category}
-          </p>
-          <h1 className="mt-0.5 text-2xl font-bold text-slate-900 sm:text-3xl">
-            {vehicle.brand} {vehicle.model}
-          </h1>
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <LuMapPin size={14} className="text-primary" />
-              {vehicle.location}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <LuCalendarDays size={14} className="text-primary" />
-              Year {vehicle.year}
-            </span>
-          </p>
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="text-2xl font-bold text-slate-900">
-            {formatPrice(vehicle.price_per_day)}
-          </p>
-          <p className="text-xs text-slate-500">per day</p>
-        </div>
+      <div className="mt-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-primary">
+          {vehicle.category}
+        </p>
+        <h1 className="mt-0.5 text-2xl font-bold text-slate-900 dark:text-slate-100 sm:text-3xl">
+          {vehicle.brand} {vehicle.model}
+        </h1>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+          <span className="inline-flex items-center gap-1.5">
+            <LuMapPin size={14} className="text-primary" />
+            {vehicle.location}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <LuCalendarDays size={14} className="text-primary" />
+            Year {vehicle.year}
+          </span>
+        </p>
       </div>
 
       <div className="mt-5 grid lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.9fr)] gap-5">
         <div className="min-w-0 space-y-5">
           {/* Gallery / 360 viewer */}
-          <section className="bg-white border border-borderColor rounded-2xl overflow-hidden shadow-sm">
+          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
             <div className="relative bg-slate-900">
               {viewMode === "photo" ? (
                 <div className="group relative h-72 overflow-hidden sm:h-[480px] md:h-[520px]">
@@ -588,8 +780,8 @@ const VehicleDetail = () => {
                       onClick={() => setViewMode(tab.key)}
                       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors ${
                         isActive
-                          ? "bg-white text-slate-900"
-                          : "bg-white/70 text-slate-600 hover:bg-white"
+                          ? "bg-white text-slate-900 dark:text-slate-100"
+                          : "bg-white/70 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800"
                       }`}
                     >
                       {tab.icon && <tab.icon size={13} />}
@@ -611,7 +803,7 @@ const VehicleDetail = () => {
                     className={`h-16 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-colors cursor-pointer ${
                       index === activeImg
                         ? "border-primary"
-                        : "border-transparent hover:border-borderColor"
+                        : "border-transparent hover:border-borderColor dark:border-slate-700"
                     }`}
                   >
                     <img
@@ -626,30 +818,39 @@ const VehicleDetail = () => {
           </section>
 
           {/* Description */}
-          <section className="bg-white border border-borderColor rounded-2xl p-5 sm:p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">About this vehicle</h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Description</h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               {vehicle.description}
             </p>
+            <div className="mt-4 rounded-xl border border-blue-100 dark:border-blue-500/30 bg-gradient-to-br from-blue-50/70 dark:from-blue-500/10 via-slate-50 dark:via-slate-800 to-indigo-50/60 dark:to-indigo-500/10 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <LuZap size={13} className="text-primary" />
+                The {vehicle.brand} {vehicle.model} experience
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                {buildDescription(vehicle, derived, features)}
+              </p>
+            </div>
           </section>
 
           {/* Full specs */}
-          <section className="bg-white border border-borderColor rounded-2xl p-5 sm:p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">
+          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               Full Specifications
             </h2>
             <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
               {specItems.map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
-                  className="group rounded-2xl bg-gradient-to-br from-blue-500/40 via-slate-200/50 to-indigo-500/40 p-px shadow-sm transition-shadow duration-200 group-hover:shadow-lg group-hover:shadow-primary/10"
+                  className="group rounded-2xl bg-gradient-to-br from-blue-500/40 via-slate-200/50 dark:via-slate-600/40 to-indigo-500/40 p-px shadow-sm transition-shadow duration-200 group-hover:shadow-lg group-hover:shadow-primary/10"
                 >
-                  <div className="flex h-full flex-col items-center rounded-[15px] bg-white p-3 text-center">
+                  <div className="flex h-full flex-col items-center rounded-[15px] bg-white dark:bg-slate-800 p-3 text-center">
                     <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm transition-transform duration-200 group-hover:scale-110">
                       <Icon size={17} />
                     </span>
-                    <p className="mt-2 text-xs text-slate-500">{label}</p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-900">
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{label}</p>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {value}
                     </p>
                   </div>
@@ -659,8 +860,8 @@ const VehicleDetail = () => {
           </section>
 
           {/* Features checklist */}
-          <section className="bg-white border border-borderColor rounded-2xl p-5 sm:p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">
+          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               Features &amp; Amenities
             </h2>
             <div className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
@@ -669,7 +870,7 @@ const VehicleDetail = () => {
                   key={feature}
                   className="group rounded-xl bg-gradient-to-br from-emerald-500/40 to-teal-500/30 p-px"
                 >
-                  <div className="flex w-full items-center gap-2 rounded-[11px] bg-white px-3 py-2 text-sm text-slate-700 transition-colors duration-200 group-hover:bg-slate-50">
+                  <div className="flex w-full items-center gap-2 rounded-[11px] bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 transition-colors duration-200 group-hover:bg-slate-50 dark:hover:bg-slate-700">
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm transition-transform duration-200 group-hover:scale-125">
                       <LuCheck size={13} strokeWidth={3} />
                     </span>
@@ -680,14 +881,56 @@ const VehicleDetail = () => {
             </div>
           </section>
 
+          {/* Rental requirements */}
+          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              Rental Requirements
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Essentials you'll need to pick up this{" "}
+              {vehicle.category.toLowerCase()} in {vehicle.location}.
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="group rounded-2xl bg-gradient-to-br from-blue-500/50 via-slate-400/40 to-indigo-500/50 p-px shadow-sm transition-shadow duration-200 group-hover:shadow-lg group-hover:shadow-primary/10">
+                <div className="flex h-full flex-col rounded-[15px] bg-white/70 dark:bg-slate-800/80 p-4 backdrop-blur-md transition-colors duration-200 group-hover:bg-white/85 dark:group-hover:bg-slate-800/90">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                    <LuIdCard size={18} />
+                  </span>
+                  <p className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Valid ID Required
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    Government-issued identification or passport.
+                  </p>
+                </div>
+              </div>
+              <div className="group rounded-2xl bg-gradient-to-br from-emerald-500/50 via-slate-400/40 to-teal-500/50 p-px shadow-sm transition-shadow duration-200 group-hover:shadow-lg group-hover:shadow-emerald-500/10">
+                <div className="flex h-full flex-col rounded-[15px] bg-white/70 dark:bg-slate-800/80 p-4 backdrop-blur-md transition-colors duration-200 group-hover:bg-white/85 dark:group-hover:bg-slate-800/90">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
+                    <LuShieldCheck size={18} />
+                  </span>
+                  <p className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Security Deposit
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    A refundable deposit of{" "}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">$200.00</span>{" "}
+                    is required.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Pickup location */}
-          <section className="bg-white border border-borderColor rounded-2xl p-5 sm:p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">Pickup Location</h2>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Location</h2>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pickup location</p>
+            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
               <LuMapPin size={15} className="text-primary" />
               {vehicle.location}
             </p>
-            <div className="mt-4 overflow-hidden rounded-xl border border-borderColor bg-slate-100">
+            <div className="mt-4 overflow-hidden rounded-xl border border-borderColor dark:border-slate-700 bg-slate-100 dark:bg-slate-700/60">
               <iframe
                 title={`Map showing ${vehicle.location}`}
                 src={mapUrl}
@@ -695,24 +938,24 @@ const VehicleDetail = () => {
                 loading="lazy"
               />
             </div>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {vehicle.location} | Lat: {lat.toFixed(4)}, Long: {lon.toFixed(4)}
             </p>
           </section>
 
           {similarVehicles.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 Similar Vehicles You Might Like
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 More {vehicle.category.toLowerCase()} options near {vehicle.location}
               </p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {similarVehicles.map((similar) => (
                   <article
                     key={similar.id}
-                    className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10"
+                    className="group flex flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10"
                   >
                     <div className="h-32 overflow-hidden">
                       <img
@@ -722,10 +965,10 @@ const VehicleDetail = () => {
                       />
                     </div>
                     <div className="flex flex-1 flex-col p-3.5">
-                      <p className="text-sm font-semibold text-slate-900">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {similar.brand} {similar.model}
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                         {similar.category} · {similar.location}
                       </p>
                       <div className="mt-3 flex items-center justify-between gap-2">
@@ -736,7 +979,7 @@ const VehicleDetail = () => {
                           </span>
                         </p>
                         <Link
-                          to={`/vehicles/${similar.id}`}
+                          to={`/vehicles/${similar.id}${location.search}`}
                           className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary"
                         >
                           View Details
@@ -752,26 +995,81 @@ const VehicleDetail = () => {
         </div>
 
         {/* Booking widget */}
-        <aside className="sticky top-6 space-y-6 self-start">
-          <section className="bg-white border border-borderColor rounded-2xl p-5 sm:p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Book This Vehicle
-                </h2>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  {vehicle.brand} {vehicle.model}
+        <aside
+          id="booking-widget"
+          ref={bookingRef}
+          className="sticky top-6 space-y-4 self-start"
+        >
+          <section className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-4 sm:p-5 shadow-sm">
+            <div className="relative -mx-4 -mt-4 overflow-hidden rounded-t-2xl bg-slate-900 px-5 py-4 sm:-mx-5 sm:-mt-5 sm:px-6">
+              <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-blue-600/30 blur-2xl" />
+              <div className="pointer-events-none absolute -bottom-14 -left-8 h-28 w-28 rounded-full bg-indigo-500/25 blur-2xl" />
+              <div className="relative flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300">
+                    Reserve Your Ride
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-bold text-white">
+                    Reserve Vehicle
+                  </h2>
+                  <p className="mt-0.5 text-xs text-slate-300 dark:text-slate-500">
+                    {vehicle.brand} {vehicle.model}
+                  </p>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-400/30">
+                  <LuZap size={11} strokeWidth={2.5} />
+                  Instant Confirmation
+                </span>
+              </div>
+              <div className="relative mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
+                <p className="text-xl font-extrabold text-white">
+                  {formatPrice(vehicle.price_per_day)}
+                  <span className="ml-1 text-xs font-normal text-slate-400">
+                    /day
+                  </span>
+                </p>
+                <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <LuShieldCheck size={13} className="text-emerald-400" />
+                  Free cancellation · 24h
                 </p>
               </div>
-              <p className="text-right text-lg font-bold text-slate-900">
-                {formatPrice(vehicle.price_per_day)}
-                <span className="block text-xs font-normal text-slate-500">
-                  /day
-                </span>
-              </p>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-3 space-y-3.5">
+              <div>
+                <label htmlFor="detail-location" className={labelClass}>
+{usingDelivery ? "Drop-off City" : "Pickup Location"}
+                </label>
+                <div className="relative">
+                  <LuMapPin
+                    size={16}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <select
+                    id="detail-location"
+                    value={pickupLocation || vehicle.location}
+                    onChange={(e) => setPickupLocation(e.target.value)}
+                    className={`${inputClass} appearance-none pl-10 pr-9 cursor-pointer`}
+                  >
+                    {[
+                      vehicle.location,
+                      pickupLocation,
+                      ...CAMBODIA_LOCATIONS,
+                    ]
+                      .filter(Boolean)
+                      .filter((city, index, all) => all.indexOf(city) === index)
+                      .map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                  </select>
+                  <LuChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                </div>
+              </div>
               <div>
                 <label htmlFor="detail-pickup" className={labelClass}>
                   Pick-up Date
@@ -798,10 +1096,139 @@ const VehicleDetail = () => {
                   className={inputClass}
                 />
               </div>
+
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Pick-up method
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={!usingDelivery}
+                    onClick={() => {
+                      setDeliveryMethod("pickup");
+                      setDeliveryDistrict("");
+                    }}
+                    className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
+                      !usingDelivery
+                        ? "border-primary/40 bg-primary/5 text-primary"
+                        : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    <LuMapPin size={16} />
+                    Self Pickup
+                    <span className="text-[10px] font-normal text-slate-400">
+                      Free — at {vehicle.location}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={usingDelivery}
+                    onClick={() => {
+                      setDeliveryMethod("delivery");
+                      setDeliveryCity(
+                        pickDeliveryCity(pickupLocation || vehicle.location)
+                      );
+                    }}
+                    className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
+                      usingDelivery
+                        ? "border-primary/40 bg-primary/5 text-primary"
+                        : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    <LuTruck size={16} />
+                    Vehicle Delivery
+                    <span className="text-[10px] font-normal text-slate-400">
+                      From {formatPrice(DELIVERY_FEES[vehicle.category] ?? 10)}/day
+                    </span>
+                  </button>
+                </div>
+
+                {usingDelivery && (
+                  <div className="mt-3 space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3.5">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        Delivery city
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {DELIVERY_CITIES.map((city) => (
+                          <button
+                            key={city}
+                            type="button"
+                            aria-pressed={deliveryCity === city}
+                            onClick={() => {
+                              setDeliveryCity(city);
+                              setDeliveryDistrict("");
+                            }}
+                            className={`cursor-pointer rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                              deliveryCity === city
+                                ? "bg-primary text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-borderColor dark:ring-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            }`}
+                          >
+                            {city}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        District
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {(DELIVERY_DISTRICTS[deliveryCity] ??
+                          DELIVERY_DISTRICTS["Phnom Penh"]).map((district) => (
+                          <button
+                            key={district}
+                            type="button"
+                            aria-pressed={deliveryDistrict === district}
+                            onClick={() => setDeliveryDistrict(district)}
+                            className={`cursor-pointer rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                              deliveryDistrict === district
+                                ? "bg-primary text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-borderColor dark:ring-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            }`}
+                          >
+                            {district}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="detail-delivery-address"
+                        className="mb-1 block text-xs font-semibold text-slate-800 dark:text-slate-200"
+                      >
+                        Delivery address
+                      </label>
+                      <input
+                        id="detail-delivery-address"
+                        type="text"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Street, building, landmark…"
+                        className={inputClass}
+                      />
+                    </div>
+
+                    <p className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <LuClock3 size={12} />
+                      Same-day delivery within {deliveryCity} ·
+                      {formatPrice(
+                        (DELIVERY_FEES[vehicle.category] ?? 10) * days
+                      )}{" "}
+                      total
+                    </p>
+                  </div>
+                )}
+              </div>
+
             </div>
 
-            <div className="mt-5 border-t border-borderColor pt-4">
-              <p className="text-sm font-medium text-slate-700">
+            <div className="mt-3 border-t border-borderColor dark:border-slate-700 pt-3">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                 Optional add-ons
               </p>
               <div className="mt-3 space-y-2">
@@ -823,7 +1250,7 @@ const VehicleDetail = () => {
                       className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-all duration-200 cursor-pointer ${
                         active
                           ? "border-primary/40 bg-primary/5 shadow-sm"
-                          : "border-borderColor bg-white hover:bg-slate-50"
+                          : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"
                       }`}
                     >
                       <span className="flex items-center gap-2.5">
@@ -831,20 +1258,20 @@ const VehicleDetail = () => {
                           className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors ${
                             active
                               ? "bg-primary/10 text-primary"
-                              : "bg-slate-100 text-slate-500"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
                           }`}
                         >
                           <AddOnIcon size={15} />
                         </span>
-                        <span className="text-slate-700">{addon.label}</span>
+                        <span className="text-slate-700 dark:text-slate-200">{addon.label}</span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        <span className="text-xs font-medium text-slate-500">
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           +{formatPrice(addon.rate)}/day
                         </span>
                         <span
                           className={`relative h-5 w-9 rounded-full transition-colors duration-200 ${
-                            active ? "bg-primary" : "bg-slate-300"
+                            active ? "bg-primary" : "bg-slate-300 dark:bg-slate-600"
                           }`}
                         >
                           <span
@@ -860,48 +1287,129 @@ const VehicleDetail = () => {
               </div>
             </div>
 
-            <div className="mt-5 space-y-2 border-t border-borderColor pt-4 text-sm">
-              <div className="flex justify-between gap-4 text-slate-600">
-                <span>Duration</span>
-                <span className="flex items-center gap-1.5">
-                  <LuClock3 size={15} />
-                  {days > 0 ? `${days} ${days === 1 ? "day" : "days"}` : "Select dates"}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4 text-slate-600">
-                <span>Rental fee</span>
-                <span>{formatPrice(rentalFee)}</span>
-              </div>
-              <div className="flex justify-between gap-4 text-slate-600">
-                <span>Service fee (5%)</span>
-                <span>{formatPrice(serviceFee)}</span>
-              </div>
-              {activeAddOns.map((addon) => (
-                <div
-                  key={addon.key}
-                  className="flex justify-between gap-4 text-slate-600"
-                >
-                  <span className="flex items-center gap-1.5 text-emerald-600">
-                    <LuCheck size={14} strokeWidth={3} />
-                    {addon.label}
+            <div className="mt-3 rounded-xl border border-borderColor dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/50 p-4">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                <LuCalendarCheck size={15} className="text-primary" />
+                Price Summary
+              </h3>
+              <div className="mt-3 space-y-2.5 text-sm">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Base rental
+                    <span className="block text-[11px] text-slate-400">
+                      {formatPrice(vehicle.price_per_day)} × {days}{" "}
+                      {days === 1 ? "day" : "days"}
+                    </span>
                   </span>
-                  <span>+{formatPrice(addon.rate * days)}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    {formatPrice(rentalFee)}
+                  </span>
                 </div>
-              ))}
-              <div className="mt-2 flex justify-between gap-4 border-t border-borderColor pt-3 font-bold text-slate-900">
-                <span>Total</span>
-                <span className="text-primary">{formatPrice(totalPrice)}</span>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-slate-600 dark:text-slate-300">Service fee</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    {formatAmount(serviceFee)}
+                  </span>
+                </div>
+                {activeAddOns.map((addon) => (
+                  <div
+                    key={addon.key}
+                    className="flex items-baseline justify-between gap-3"
+                  >
+                    <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                      <LuCheck size={13} strokeWidth={3} />
+                      {addon.label}
+                    </span>
+                    <span className="font-semibold text-emerald-700">
+                      +{formatPrice(addon.rate * days)}
+                    </span>
+                  </div>
+                ))}
+                {usingDelivery && (
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-primary">
+                      <LuTruck size={13} />
+                      Delivery fee
+                    </span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      +{formatPrice(deliveryFee)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-baseline justify-between gap-3 border-t border-borderColor dark:border-slate-700 pt-3">
+                  <span className="font-bold text-slate-900 dark:text-slate-100">Grand Total</span>
+                  <span className="text-lg font-extrabold text-primary">
+                    {formatPrice(totalPrice)}
+                  </span>
+                </div>
               </div>
             </div>
 
+            <div className="mt-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 p-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                What's included
+              </h3>
+              <ul className="mt-3 space-y-2">
+                {[
+                  "Free Cancellation (up to 24h before pick-up)",
+                  "Basic Collision Damage Waiver (CDW) included",
+                  "Unlimited mileage",
+                  "24/7 Roadside Assistance",
+                ].map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 text-xs leading-5 text-slate-600 dark:text-slate-300"
+                  >
+                    <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                      <LuCheck size={10} strokeWidth={3} />
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             {!hasValidDates && (
-              <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
+              <p className="mt-3 rounded-lg bg-slate-100 dark:bg-slate-700/60 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
                 Select a pick-up and return date to continue.
               </p>
             )}
 
-            <div className="mt-4 flex flex-col gap-2">
-              <div className="relative">
+            <div className="mt-3">
+              <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                Choose payment method
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-pressed={paymentMethod === "visa"}
+                  onClick={() => setPaymentMethod("visa")}
+                  className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                    paymentMethod === "visa"
+                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                      : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  <span className="grid h-4 w-6 place-items-center rounded-sm bg-white text-[8px] font-extrabold italic text-blue-700">
+                    VISA
+                  </span>
+                  Visa
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={paymentMethod === "khqr"}
+                  onClick={() => setPaymentMethod("khqr")}
+                  className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                    paymentMethod === "khqr"
+                      ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                      : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  <LuQrCode size={13} strokeWidth={2.5} />
+                  Bakong KHQR
+                </button>
+              </div>
+              <div className="relative mt-2.5">
                 <span
                   aria-hidden="true"
                   className={`animate-pulse-glow pointer-events-none absolute -inset-0.5 rounded-xl ${
@@ -910,128 +1418,81 @@ const VehicleDetail = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => handleBook("visa")}
+                  onClick={() => handleBook(paymentMethod)}
                   disabled={!hasValidDates}
-                  className="relative inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 cursor-pointer"
+                  className="relative inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
-                  <span className="grid h-5 w-7 place-items-center rounded-sm bg-white text-[9px] font-extrabold italic text-blue-700 shadow-inner">
-                    VISA
-                  </span>
-                  Pay with VISA
+                  <LuLock size={16} strokeWidth={2.5} />
+                  Confirm & Pay Now
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handleBook("khqr")}
-                disabled={!hasValidDates}
-                className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 cursor-pointer"
-              >
-                <span className="grid h-5 w-7 place-items-center rounded-sm bg-amber-400 text-slate-900 shadow-inner">
-                  <LuQrCode size={14} strokeWidth={2.5} />
-                </span>
-                Pay with Bakong KHQR
-              </button>
-            </div>
-
-            <div className="mt-4 border-t border-borderColor pt-4">
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-slate-900">
-                  What's included
-                </h3>
-                <ul className="mt-3 space-y-2">
-                  {[
-                    "Free Cancellation (up to 24h before pick-up)",
-                    "Basic Collision Damage Waiver (CDW) included",
-                    "Unlimited mileage",
-                    "24/7 Roadside Assistance",
-                  ].map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-start gap-2 text-xs leading-5 text-slate-600"
-                    >
-                      <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-600">
-                        <LuCheck size={10} strokeWidth={3} />
-                      </span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
-              <h3 className="text-sm font-semibold text-slate-900">
-                Driver requirements
-              </h3>
-              <ul className="mt-3 space-y-2">
-                <li className="flex items-start gap-2 text-xs leading-5 text-slate-600">
-                  <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-blue-100 text-blue-600">
-                    <LuCalendarCheck size={10} strokeWidth={2.5} />
-                  </span>
-                  Minimum age: 21+ years old
-                </li>
-                <li className="flex items-start gap-2 text-xs leading-5 text-slate-600">
-                  <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-blue-100 text-blue-600">
-                    <LuIdCard size={10} strokeWidth={2.5} />
-                  </span>
-                  Valid Driver's License &amp; Passport / National ID required
-                  at pickup
-                </li>
-              </ul>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-                <LuHeadset size={16} className="text-primary" />
-                Need help?
-              </h3>
-              <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-slate-600">
-                <LuPhone size={13} className="mt-0.5 shrink-0 text-primary" />
-                Have questions about this vehicle? Call us at{" "}
-                <a
-                  href="tel:+85512345678"
-                  className="font-semibold whitespace-nowrap text-primary hover:underline"
-                >
-                  +855 12 345 678
-                </a>{" "}
-                or chat with instant support.
-              </p>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-borderColor bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">
+          <section className="rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Renter Feedback &amp; Ratings
             </h3>
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
-              <p className="text-3xl font-extrabold text-slate-900">4.9</p>
-              <div>
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <LuStar
-                      key={star}
-                      size={14}
-                      className="text-amber-400"
-                      fill="currentColor"
-                    />
-                  ))}
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  Based on 28 verified reviews
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 p-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <p className="shrink-0 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+                  {reviewAverage ? reviewAverage.toFixed(1) : "—"}
                 </p>
+                <div>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <LuStar
+                        key={star}
+                        size={14}
+                        className={
+                          star <= Math.round(reviewAverage)
+                            ? "text-amber-400"
+                            : "text-slate-300 dark:text-slate-600"
+                        }
+                        fill={
+                          star <= Math.round(reviewAverage)
+                            ? "currentColor"
+                            : "none"
+                        }
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Based on {reviewCount} verified reviews
+                  </p>
+                </div>
               </div>
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => setReviewOpen(true)}
+                  className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm shadow-blue-600/25 transition-all hover:-translate-y-0.5 hover:bg-blue-700"
+                >
+                  <LuPenLine size={13} />
+                  Leave a Review
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openAuth("login")}
+                  className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 transition-colors hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                >
+                  <LuPenLine size={13} />
+                  Log in to review
+                </button>
+              )}
             </div>
 
             <ul className="mt-4 space-y-3">
               {RATING_BARS.map((bar) => (
                 <li key={bar.label}>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-600">{bar.label}</span>
-                    <span className="font-semibold text-slate-900">
+                    <span className="text-slate-600 dark:text-slate-300">{bar.label}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
                       {bar.value.toFixed(1)}
                     </span>
                   </div>
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/60">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500"
                       style={{ width: `${bar.value * 20}%` }}
@@ -1041,9 +1502,9 @@ const VehicleDetail = () => {
               ))}
             </ul>
 
-            <div className="mt-5 space-y-4 border-t border-borderColor pt-4">
-              {REVIEWS.map((review) => (
-                <article key={review.name}>
+            <div className="mt-5 space-y-4 border-t border-borderColor dark:border-slate-700 pt-4">
+              {reviews.map((review) => (
+                <article key={review.id}>
                   <div className="flex items-center gap-2.5">
                     <span
                       className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${review.color} text-xs font-bold text-white`}
@@ -1051,9 +1512,9 @@ const VehicleDetail = () => {
                       {review.initials}
                     </span>
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                      <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {review.name}
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-semibold text-blue-600">
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-blue-600 dark:text-blue-400">
                           <LuCheck size={9} strokeWidth={3.5} />
                           Verified
                         </span>
@@ -1073,7 +1534,7 @@ const VehicleDetail = () => {
                       ))}
                     </div>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                  <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
                     "{review.text}"
                   </p>
                 </article>
@@ -1082,6 +1543,140 @@ const VehicleDetail = () => {
           </section>
         </aside>
       </div>
+
+      {/* Leave a review modal */}
+      {reviewOpen && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto p-4"
+          onClick={() => setReviewOpen(false)}
+        >
+          <div className="absolute inset-0 animate-fade-in bg-slate-900/60 backdrop-blur-sm" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md animate-rise rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <LuPenLine size={18} className="text-primary" />
+                  Leave a Review
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  {vehicle.brand} {vehicle.model} · {user?.name || "Renter"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewOpen(false)}
+                aria-label="Close review form"
+                className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200"
+              >
+                <LuX size={18} />
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                Your rating
+              </p>
+              <div
+                className="mt-2 flex items-center gap-1.5"
+                onMouseLeave={() => setReviewHover(0)}
+              >
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const lit = star <= (reviewHover || reviewRating);
+                  return (
+                    <button
+                      key={star}
+                      type="button"
+                      onMouseEnter={() => setReviewHover(star)}
+                      onClick={() => setReviewRating(star)}
+                      aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                      className={`cursor-pointer transition-transform duration-150 hover:scale-110 ${
+                        star <= reviewRating ? "drop-shadow-sm" : ""
+                      }`}
+                    >
+                      <LuStar
+                        size={30}
+                        className={`transition-colors ${
+                          lit ? "text-amber-400" : "text-slate-200"
+                        }`}
+                        fill={lit ? "currentColor" : "transparent"}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-[11px] text-slate-400">
+                {reviewRating
+                  ? `You selected ${reviewRating} star${reviewRating > 1 ? "s" : ""}`
+                  : "Tap the stars to rate your experience"}
+              </p>
+            </div>
+
+            <div className="mt-5">
+              <label htmlFor="detail-review-text" className={labelClass}>
+                Your feedback
+              </label>
+              <textarea
+                id="detail-review-text"
+                rows={4}
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                placeholder="Share what stood out — pickup, condition, value…"
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setReviewOpen(false)}
+                className="cursor-pointer rounded-xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitReview}
+                disabled={reviewRating < 1}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/25 transition-all hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                <LuCheck size={15} strokeWidth={3} />
+                Submit Review
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStickyBar && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-borderColor dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur">
+          <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                {vehicle.brand} {vehicle.model}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {formatPrice(vehicle.price_per_day)} /day
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                bookingRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+              }
+              className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:scale-95"
+            >
+              <LuCalendarCheck size={16} strokeWidth={2.5} />
+              Reserve Now
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,11 +2,17 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { LuColumns2, LuX } from "react-icons/lu";
-import { mockVehicles } from "../services/vehicleServices";
+import {
+  ALL_MOCK_VEHICLES,
+  isBicycle,
+  isMotorbike,
+} from "../services/vehicleServices";
 import { usePreferences } from "./PreferencesContext";
+import { useToast } from "./ToastContext";
 
 const MAX_COMPARE = 3;
 
@@ -21,8 +27,95 @@ export const useCompare = () => {
   return context;
 };
 
-const formatSpecRow = (vehicles, getter) =>
-  vehicles.map((vehicle) => getter(vehicle));
+const getVehicleType = (vehicle) =>
+  isBicycle(vehicle)
+    ? "bicycle"
+    : isMotorbike(vehicle)
+      ? "motorbike"
+      : "car";
+
+const SPEC_ROW_BUILDERS = {
+  car: [
+    "price_per_day",
+    "horsepower",
+    "acceleration",
+    "drivetrain",
+    "seats",
+    "location",
+  ],
+  motorbike: [
+    "price_per_day",
+    "engine_cc",
+    "transmission",
+    "fuel_efficiency",
+    "top_speed",
+    "location",
+  ],
+  bicycle: [
+    "price_per_day",
+    "frame",
+    "gears",
+    "wheel_size",
+    "vehicle_type",
+    "location",
+  ],
+};
+
+const getSpecCell = (label, vehicle, type, formatPrice, t) => {
+  if (!SPEC_ROW_BUILDERS[type].includes(label)) return "—";
+  const specs = vehicle.specs ?? {};
+  switch (label) {
+    case "price_per_day":
+      return formatPrice(vehicle.price_per_day);
+    case "horsepower":
+      return `${specs.horsepower ?? vehicle.horsepower ?? 15} HP`;
+    case "acceleration":
+      return `${specs.acceleration ?? 8.6} s`;
+    case "drivetrain":
+      return specs.drive ?? "—";
+    case "seats":
+      return `${vehicle.seating_capacity ?? 1} ${t("seats").toLowerCase()}`;
+    case "engine_cc":
+      return `${specs.displacementCc ?? vehicle.engine_cc ?? 125} cc`;
+    case "transmission":
+      return specs.transmission ?? vehicle.transmission ?? "Automatic";
+    case "fuel_efficiency":
+      return `${specs.fuelEfficiency ?? vehicle.fuel_efficiency ?? 45} km/l`;
+    case "top_speed":
+      return `${specs.topSpeed ?? vehicle.top_speed ?? 18} km/h`;
+    case "frame":
+      return specs.frame ?? vehicle.frame_material ?? "Aluminum";
+    case "gears":
+      return specs.gears ?? vehicle.gears ?? "Single-Speed";
+    case "wheel_size":
+      return specs.wheelSize ?? vehicle.wheel_size ?? "26 inch";
+    case "vehicle_type":
+      return specs.driveType ?? vehicle.fuel_type ?? "Manual";
+    case "location":
+      return vehicle.location;
+    default:
+      return "—";
+  }
+};
+
+const buildSpecRows = (vehicles, formatPrice, t) => {
+  if (!vehicles.length) return [];
+  const primary = SPEC_ROW_BUILDERS[getVehicleType(vehicles[0])];
+  const labels = [...primary];
+  vehicles.forEach((vehicle) => {
+    const type = getVehicleType(vehicle);
+    SPEC_ROW_BUILDERS[type].forEach((label) => {
+      if (!labels.includes(label)) labels.push(label);
+    });
+  });
+
+  return labels.map((label) => ({
+    label: label === "location" ? t("location") : t(label),
+    cells: vehicles.map((vehicle) =>
+      getSpecCell(label, vehicle, getVehicleType(vehicle), formatPrice, t)
+    ),
+  }));
+};
 
 const CompareModal = ({
   vehicles,
@@ -43,16 +136,10 @@ const CompareModal = ({
     };
   }, [onClose]);
 
-  const rows = [
-    { label: t("price_per_day"), cells: formatSpecRow(vehicles, (v) => formatPrice(v.price_per_day)) },
-    { label: t("seats"), cells: formatSpecRow(vehicles, (v) => `${v.seating_capacity} ${t("seats").toLowerCase()}`) },
-    { label: t("transmission"), cells: formatSpecRow(vehicles, (v) => v.transmission) },
-    { label: t("fuel"), cells: formatSpecRow(vehicles, (v) => v.fuel_type) },
-    {
-      label: "Location",
-      cells: formatSpecRow(vehicles, (v) => v.location),
-    },
-  ];
+  const rows = useMemo(
+    () => buildSpecRows(vehicles, formatPrice, t),
+    [vehicles, formatPrice, t]
+  );
 
   return (
     <div
@@ -221,19 +308,33 @@ export const CompareProvider = ({ children }) => {
   const [compareIds, setCompareIds] = useState([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const { formatPrice, t } = usePreferences();
+  const toast = useToast();
 
   const compareVehicles = compareIds
-    .map((id) => mockVehicles.find((vehicle) => vehicle.id === id))
+    .map((id) => ALL_MOCK_VEHICLES.find((vehicle) => vehicle.id === id))
     .filter(Boolean);
 
-  const toggleCompare = (id) =>
-    setCompareIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((item) => item !== id)
-        : prev.length >= MAX_COMPARE
-          ? prev
-          : [...prev, id]
+  const toggleCompare = (id) => {
+    if (compareIds.includes(id)) {
+      setCompareIds((prev) => prev.filter((item) => item !== id));
+      return;
+    }
+    if (compareIds.length >= MAX_COMPARE) {
+      toast.error(
+        "Compare limit reached",
+        "You can compare up to 3 vehicles at a time."
+      );
+      return;
+    }
+    const vehicle = ALL_MOCK_VEHICLES.find((item) => item.id === id);
+    toast.success(
+      `Added ${vehicle?.brand ?? ""} ${vehicle?.model ?? ""} to compare`,
+      `${compareIds.length + 1} of ${MAX_COMPARE} vehicles selected`
     );
+    setCompareIds((prev) =>
+      prev.includes(id) ? prev : [...prev, id]
+    );
+  };
 
   const removeCompare = (id) =>
     setCompareIds((prev) => prev.filter((item) => item !== id));

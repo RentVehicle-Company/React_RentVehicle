@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   LuArrowRight,
   LuCheck,
@@ -20,6 +20,7 @@ import { useWishlist } from "../../hooks/useWishlist";
 
 const CarCard = ({ car = dummyCarData[0] }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showQuickView, setShowQuickView] = useState(false);
   const { isCompared, toggleCompare } = useCompare();
   const { formatPrice, t } = usePreferences();
@@ -30,11 +31,11 @@ const CarCard = ({ car = dummyCarData[0] }) => {
 
   return (
     <article
-      className={`group w-full max-w-[280px] overflow-hidden rounded-xl border bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/15 ${
-        compared ? "border-primary ring-2 ring-primary/20" : "border-borderColor"
+      className={`group w-full max-w-[280px] overflow-hidden rounded-xl border bg-white dark:bg-slate-800 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/15 ${
+        compared ? "border-primary ring-2 ring-primary/20" : "border-borderColor dark:border-slate-700"
       }`}
     >
-      <div className="relative flex items-center justify-center overflow-hidden bg-slate-100">
+      <div className="relative flex items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-700">
         <img
           src={car.image || assets.car_image1}
           alt={`${car.brand} ${car.model}`}
@@ -96,33 +97,33 @@ const CarCard = ({ car = dummyCarData[0] }) => {
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
               {car.brand} {car.model}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">{car.category}</p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{car.category}</p>
           </div>
-          <p className="text-right text-xs font-semibold text-slate-900">
+          <p className="text-right text-xs font-semibold text-slate-900 dark:text-white">
             {formatPrice(car.price_per_day)}
-            <span className="block text-xs font-normal text-slate-500">
+            <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
               {t("per_day")}
             </span>
           </p>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-x-2 gap-y-2 border-t border-slate-100 pt-3 text-[11px] text-slate-600">
+        <div className="mt-4 grid grid-cols-2 gap-x-2 gap-y-2 border-t border-slate-100 dark:border-slate-700 pt-3 text-[11px] text-slate-600 dark:text-slate-300">
           <span className="inline-flex min-w-0 items-center gap-2">
-            <LuUsers size={13} className="shrink-0 text-slate-500" />
+            <LuUsers size={13} className="shrink-0 text-slate-500 dark:text-slate-400" />
             <span className="truncate">{car.seating_capacity} {t("seats").toLowerCase()}</span>
           </span>
           <span className="inline-flex min-w-0 items-center gap-2">
-            <LuFuel size={13} className="shrink-0 text-slate-500" />
+            <LuFuel size={13} className="shrink-0 text-slate-500 dark:text-slate-400" />
             <span className="truncate">{car.fuel_type}</span>
           </span>
           <span className="inline-flex min-w-0 items-center gap-2">
-            <LuSettings2 size={13} className="shrink-0 text-slate-500" />
+            <LuSettings2 size={13} className="shrink-0 text-slate-500 dark:text-slate-400" />
             <span className="truncate">{car.transmission}</span>
           </span>
           <span className="inline-flex min-w-0 items-center gap-2">
-            <LuMapPin size={13} className="shrink-0 text-slate-500" />
+            <LuMapPin size={13} className="shrink-0 text-slate-500 dark:text-slate-400" />
             <span className="truncate">{car.location}</span>
           </span>
         </div>
@@ -130,14 +131,14 @@ const CarCard = ({ car = dummyCarData[0] }) => {
           <button
             type="button"
             onClick={() => setShowQuickView(true)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-center text-xs font-semibold text-slate-700 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary active:scale-95 cursor-pointer"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-center text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary active:scale-95 cursor-pointer"
           >
             <LuEye size={14} className="shrink-0 text-primary" />
             {t("quick_view")}
           </button>
           <button
             type="button"
-            onClick={() => navigate(`/vehicles/${car.id}`)}
+            onClick={() => navigate(`/vehicles/${car.id}${location.search}`)}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-black px-3 py-2.5 text-center text-xs font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-slate-800 active:scale-95 cursor-pointer"
           >
             {t("view_vehicle")}
@@ -151,7 +152,7 @@ const CarCard = ({ car = dummyCarData[0] }) => {
           className={`mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-center text-xs font-medium transition-all duration-200 ease-out active:scale-95 ${
             compared
               ? "border-primary/40 bg-primary/10 text-primary"
-              : "border-dashed border-borderColor text-slate-600 hover:border-slate-400 hover:text-slate-900"
+              : "border-dashed border-borderColor dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-900 dark:hover:text-white"
           }`}
         >
           {compared ? (
@@ -167,7 +168,7 @@ const CarCard = ({ car = dummyCarData[0] }) => {
           )}
         </button>
         <p className="mt-1.5 text-center text-[10px] text-slate-400">
-          {t("add_to_compare_hint")}
+          {t("add_to_compare_hint", { category: "cars" })}
         </p>
       </div>
       {showQuickView && (

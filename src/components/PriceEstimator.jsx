@@ -8,18 +8,19 @@ import {
   LuZap,
 } from "react-icons/lu";
 import Title from "./Title";
+import { usePreferences } from "../context/PreferencesContext";
 
-function AnimatedNumber({ value }) {
-  const [display, setDisplay] = useState(value);
+function AnimatedNumber({ value, format = (n) => n }) {
+  const [display, setDisplay] = useState(() => format(value));
 
   useEffect(() => {
     const controls = animate(0, value, {
       duration: 0.8,
       ease: "easeOut",
-      onUpdate: (v) => setDisplay(Math.round(v)),
+      onUpdate: (v) => setDisplay(format(Math.round(v))),
     });
     return () => controls.stop();
-  }, [value]);
+  }, [value, format]);
 
   return <>{display}</>;
 }
@@ -63,6 +64,7 @@ const PriceEstimator = ({ vehicle = null }) => {
   const [duration, setDuration] = useState(3);
   const [tier, setTier] = useState("Sports");
   const [addOns, setAddOns] = useState({ insurance: false, protection: true });
+  const { formatPrice } = usePreferences();
 
   useEffect(() => {
     // eslint-disable-next-line react/set-state-in-effect
@@ -165,7 +167,7 @@ const PriceEstimator = ({ vehicle = null }) => {
                         isActive ? "text-slate-300" : "text-slate-400"
                       }`}
                     >
-                      ${TIER_RATES[key]}/day
+                      {formatPrice(TIER_RATES[key])}/day
                     </span>
                   </motion.button>
                 );
@@ -205,7 +207,7 @@ const PriceEstimator = ({ vehicle = null }) => {
                         {label}
                       </span>
                       <span className="block text-xs text-slate-400">
-                        {hint} · ${rate}/day
+                        {hint} · {formatPrice(rate)}/day
                       </span>
                     </span>
                   </span>
@@ -244,13 +246,13 @@ const PriceEstimator = ({ vehicle = null }) => {
                 <span className="text-slate-400">
                   {TIER_RATES[tier]} × {duration} {duration === 1 ? "day" : "days"}
                 </span>
-                <span className="font-medium tabular-nums">${baseTotal}</span>
+                <span className="font-medium tabular-nums">{formatPrice(baseTotal)}</span>
               </div>
               {ADD_ONS.filter((addOn) => addOns[addOn.key]).map((addOn) => (
                 <div key={addOn.key} className="flex justify-between">
                   <span className="text-slate-400">{addOn.label}</span>
                   <span className="font-medium tabular-nums">
-                    +${addOn.rate * duration}
+                    +{formatPrice(addOn.rate * duration)}
                   </span>
                 </div>
               ))}
@@ -261,7 +263,7 @@ const PriceEstimator = ({ vehicle = null }) => {
                   className="text-3xl font-bold tabular-nums text-white"
                   aria-live="polite"
                 >
-                  ${<AnimatedNumber value={total} />}
+                  <AnimatedNumber value={total} format={formatPrice} />
                 </span>
               </div>
               <p className="text-xs text-slate-500">
