@@ -475,6 +475,10 @@ export const isMotorbike = (vehicle) => MOTO_CATEGORIES.includes(vehicle?.catego
 export const isBicycle = (vehicle) => BIKE_CATEGORIES.includes(vehicle?.category);
 export const isAutomobile = (vehicle) => !isMotorbike(vehicle) && !isBicycle(vehicle);
 
+// ➕ បន្ថែមថ្មី — ប្រើសម្រាប់ data ដែលមកពី backend ពិត (មាន categorySlug)
+export const isMotorbikeBySlug = (vehicle) => vehicle?.categorySlug === "motorbikes";
+export const isBicycleBySlug = (vehicle) => vehicle?.categorySlug === "bicycles";
+
 // Two-wheelers use metadata-verified Wikimedia Commons photos matched to each
 // exact model (never automobile photos, and never a shared pool), so every
 // ride's card and gallery depict the correct machine via buildGalleryFromImage.
@@ -912,13 +916,89 @@ const unwrapList = (data) => {
   return [];
 };
 
+// ➕ បន្ថែមថ្មីទាំងអស់នេះ
+const buildLookupMap = (list, valueKey = "name") =>
+  Object.fromEntries(list.map((item) => [item.id, item[valueKey]]));
+
+const buildCategoryMaps = (categories) => ({
+  nameMap: Object.fromEntries(categories.map((c) => [c.id, c.name])),
+  slugMap: Object.fromEntries(categories.map((c) => [c.id, c.slug])),
+});
+
+const PLACEHOLDER_IMAGE =
+  "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23334155'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='20' fill='%2394a3b8' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
+
+const adaptApiVehicle = (v, categoryMaps, locationMap, imageData = {}) => ({
+  id: v.id,
+  brand: v.brand,
+  model: v.model,
+  image: imageData.image || PLACEHOLDER_IMAGE,   // ✅ ប្រើពី Cloudinary
+  images: imageData.images?.length ? imageData.images : [],
+  year: v.modelYear,
+  category: categoryMaps.nameMap[v.categoryId] ?? "Uncategorized",
+  categorySlug: categoryMaps.slugMap[v.categoryId] ?? null,
+  categoryId: v.categoryId,
+  seating_capacity: v.seatingCapacity,
+  fuel_type: v.fuelType,
+  transmission: v.transmission,
+  price_per_day: v.pricePerDay,
+  location: locationMap[v.locationId] ?? "Unknown",
+  description: v.description,
+  is_available: v.isAvailable,
+  engine_cc: v.engineCc,
+  fuel_efficiency: v.fuelEfficiency,
+  top_speed: v.topSpeed,
+  gears: v.speeds,
+  frame_material: v.material,
+  wheel_size: v.wheelSize,
+});
+
+const fetchVehicleImages = async (vehicleId) => {
+  try {
+    const data = await request(API_ENDPOINTS.productImages(vehicleId));
+    const list = unwrapList(data);
+    if (list.length === 0) return { image: null, images: [] };
+
+    // ជ្រើសរើសរូបភាពដែល isPrimary=true ជាមុន បើគ្មាន ប្រើរូបទីមួយ
+    const primary = list.find((img) => img.isPrimary) || list[0];
+    return {
+      image: primary.imageUrl,
+      images: list.map((img) => img.imageUrl),
+    };
+  } catch {
+    return { image: null, images: [] };
+  }
+};
+
 export const getVehicles = async () => {
   try {
-    const data = await request(API_ENDPOINTS.vehicles);
-    if (!data) throw new Error("Backend offline");
-    return unwrapList(data);
-  } catch {
-    // Backend offline -> mock fallback so the UI keeps working.
+    const [vehicleData, categoryData, locationData] = await Promise.all([
+      request(API_ENDPOINTS.vehicles),
+      request(API_ENDPOINTS.categories),
+      request(API_ENDPOINTS.locations),
+    ]);
+    if (!vehicleData) throw new Error("Backend offline");
+
+    const categoryMaps = buildCategoryMaps(unwrapList(categoryData));
+    const locationMap = buildLookupMap(unwrapList(locationData), "city");
+    const vehicleList = unwrapList(vehicleData);
+
+    // ➕ Fetch images សម្រាប់ vehicle ទាំងអស់ ស្របគ្នា
+    const imageResults = await Promise.all(
+      vehicleList.map((v) => fetchVehicleImages(v.id))
+    );
+
+    const adapted = vehicleList.map((v, i) =>
+      adaptApiVehicle(v, categoryMaps, locationMap, imageResults[i])
+    );
+
+    return adapted.map((v) => {
+      if (v.categorySlug === "motorbikes") return enrichMotorbike(v);
+      if (v.categorySlug === "bicycles") return enrichBicycle(v);
+      return enrichVehicle(v);
+    });
+  } catch (err) {
+    console.error("getVehicles fallback triggered:", err);
     await delay(400);
     return mockVehicles.map((car) => ({ ...car }));
   }

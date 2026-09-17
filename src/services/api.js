@@ -58,8 +58,9 @@ export const buildAuthHeaders = (headers = new Headers()) => {
 };
 
 export const API_ENDPOINTS = {
-  vehicles: `${API_BASE_URL}/vehicles`,
-  vehicleById: (id) => `${API_BASE_URL}/vehicles/${id}`,
+  vehicles: `${API_BASE_URL}/products`,              // ✅ ប្តូរ path តែប៉ុណ្ណោះ
+  vehicleById: (id) => `${API_BASE_URL}/products/${id}`, // ✅ ប្តូរ path តែប៉ុណ្ណោះ
+  categories: `${API_BASE_URL}/categories`,   
   motorbikes: `${API_BASE_URL}/motorbikes`,
   bicycles: `${API_BASE_URL}/bicycles`,
   visaPayment: `${API_BASE_URL}/payments/visa`,

@@ -60,12 +60,13 @@ const Cars = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  useEffect(() => {
-    getVehicles().then((data) => {
-      setVehicles(data);
-      setLoading(false);
-    });
-  }, []);
+useEffect(() => {
+  getVehicles().then((data) => {
+    const carsOnly = data.filter((v) => v.categorySlug === "car");
+    setVehicles(carsOnly);
+    setLoading(false);
+  });
+}, []);
 
   const locations = CAMBODIA_LOCATIONS;
 

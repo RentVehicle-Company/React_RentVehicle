@@ -8,7 +8,7 @@ import {
   LuSlidersHorizontal,
   LuX,
 } from "react-icons/lu";
-import { getMotorbikes, MOTO_CATEGORIES } from "../../services/vehicleServices";
+import { getVehicles, MOTO_CATEGORIES } from "../../services/vehicleServices";
 import { CAMBODIA_LOCATIONS } from "../../assets/assets";
 import MotoCard from "../../components/vehicles/MotoCard";
 import { usePreferences } from "../../context/PreferencesContext";
@@ -58,11 +58,12 @@ const MotorBikes = () => {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
-    getMotorbikes().then((data) => {
-      setMotorbikes(data);
-      setLoading(false);
-    });
-  }, []);
+  getVehicles().then((data) => {
+    const motorbikesOnly = data.filter((v) => v.categorySlug === "motorbikes");
+    setMotorbikes(motorbikesOnly);   // ✅ ត្រូវប្រើ setMotorbikes
+    setLoading(false);
+  });
+}, []);
 
   const locations = CAMBODIA_LOCATIONS;
 

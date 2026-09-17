@@ -16,8 +16,8 @@ import {
 import AddVehicle from "./AddVehicle";
 
 const classify = (vehicle) => {
-  if (vehicle.type === "bicycle" || isBicycle(vehicle)) return "bicycle";
-  if (vehicle.type === "motorbike" || isMotorbike(vehicle)) return "motorbike";
+  if (vehicle.categorySlug === "bicycles" || isBicycle(vehicle)) return "bicycle";
+  if (vehicle.categorySlug === "motorbikes" || isMotorbike(vehicle)) return "motorbike";
   return "car";
 };
 

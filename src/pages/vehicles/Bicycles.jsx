@@ -8,7 +8,7 @@ import {
   LuSlidersHorizontal,
   LuX,
 } from "react-icons/lu";
-import { getBicycles, BIKE_CATEGORIES } from "../../services/vehicleServices";
+import { getVehicles, BIKE_CATEGORIES } from "../../services/vehicleServices";
 import { CAMBODIA_LOCATIONS } from "../../assets/assets";
 import BikeCard from "../../components/vehicles/BikeCard";
 import { usePreferences } from "../../context/PreferencesContext";
@@ -55,8 +55,9 @@ const Bicycles = () => {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
-    getBicycles().then((data) => {
-      setBicycles(data);
+    getVehicles().then((data) => {
+      const bicycleOnly = data.filter((v) => v.categorySlug === "bicycles");
+      setBicycles(bicycleOnly);
       setLoading(false);
     });
   }, []);

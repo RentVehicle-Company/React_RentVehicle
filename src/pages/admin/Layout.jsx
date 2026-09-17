@@ -1,25 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { LuArrowLeft, LuCar, LuChartPie, LuLayoutDashboard, LuShieldCheck, LuChartColumn } from "react-icons/lu";
 import { Link } from "react-router-dom";
-import { ALL_MOCK_VEHICLES } from "../../services/vehicleServices";
+import { ALL_MOCK_VEHICLES, getVehicles } from "../../services/vehicleServices";
 import Dashboard from "./Dashboard";
 import ManageVehicle from "./ManageVehicle";
 import Analytics from "./Analytics";
 
 const STORAGE_KEY = "rental_admin_vehicles";
 
-const readVehicles = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) return parsed;
-    }
-  } catch {
-    // ignore storage failures
-  }
-  return ALL_MOCK_VEHICLES.map((vehicle) => ({ ...vehicle }));
-};
+
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: LuLayoutDashboard },
@@ -29,7 +18,24 @@ const NAV_ITEMS = [
 
 const Layout = () => {
   const [activeTab, setActiveTab] = useState("vehicles");
-  const [vehicles, setVehicles] = useState(readVehicles);
+  const [vehicles, setVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // ➕ បន្ថែម useEffect ថ្មីនេះ — fetch ពី backend ពេល component mount
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getVehicles()
+      .then((data) => {
+        if (!cancelled) setVehicles(data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     try {
