@@ -8,15 +8,13 @@ import {
   LuX,
 } from "react-icons/lu";
 import { usePreferences } from "../../context/PreferencesContext";
+import CustomDatePicker from "../common/CustomDatePicker";
 
 const DAY_MS = 86400000;
 const DISCOUNT_DAYS = 3;
 const DISCOUNT_PCT = 0.1;
 
 const toISODate = (date) => date.toISOString().split("T")[0];
-
-const inputClass =
-  "w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const VehiclePricingModal = ({ vehicle, onClose }) => {
   const location = useLocation();
@@ -105,32 +103,30 @@ const VehiclePricingModal = ({ vehicle, onClose }) => {
             )}
           </p>
 
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                {t("pickup")}
-              </span>
-              <input
-                type="date"
-                value={pickupDate}
-                min={toISODate(new Date())}
-                onChange={(e) => setPickupDate(e.target.value)}
-                className={inputClass}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                {t("return")}
-              </span>
-              <input
-                type="date"
-                value={returnDate}
-                min={pickupDate}
-                onChange={(e) => setReturnDate(e.target.value)}
-                className={inputClass}
-              />
-            </label>
-          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {t("pickup")}
+                </span>
+                <CustomDatePicker
+                  value={pickupDate}
+                  min={toISODate(new Date())}
+                  onChange={setPickupDate}
+                  placeholder={t("pickup")}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {t("return")}
+                </span>
+                <CustomDatePicker
+                  value={returnDate}
+                  min={pickupDate}
+                  onChange={setReturnDate}
+                  placeholder={t("return")}
+                />
+              </label>
+            </div>
 
           <div className="mt-4 space-y-2 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 p-4 text-sm">
             <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">

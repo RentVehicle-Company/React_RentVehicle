@@ -54,7 +54,7 @@ const StatItem = ({ icon: Icon, value, suffix, label, inView, index }) => {
       <span className="text-3xl font-bold tabular-nums text-white sm:text-4xl">
         {display}
       </span>
-      <span className="text-sm text-slate-400">{label}</span>
+      <span className="text-sm text-slate-300">{label}</span>
     </motion.div>
   );
 };

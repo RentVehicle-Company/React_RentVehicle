@@ -383,7 +383,7 @@ const PaymentKHQR = () => {
                   width={250}
                   height={250}
                   onError={() => setQrFailed(true)}
-                  className="h-[250px] w-[250px]"
+                  className="h-auto w-full max-w-[250px]"
                 />
               )}
               <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] font-medium text-slate-500">
@@ -499,7 +499,7 @@ const PaymentKHQR = () => {
               type="button"
               onClick={handleVerify}
               disabled={verifying}
-              className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl text-base font-bold text-white bg-primary hover:bg-primary-dull shadow-lg shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary-dull shadow-lg shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               <LuScanLine size={18} />
               {verifying ? "Confirming Payment..." : "I have paid — Confirm Payment"}

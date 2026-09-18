@@ -495,7 +495,7 @@ const Login = ({ initialMode = "login" }) => {
                     inputMode="numeric"
                     maxLength="1"
                     aria-label={`Verification digit ${index + 1}`}
-                    className="h-11 w-10 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-semibold text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    className="h-11 w-10 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-semibold text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-slate-400 dark:focus:ring-slate-500/30"
                   />
                 ))}
               </div>

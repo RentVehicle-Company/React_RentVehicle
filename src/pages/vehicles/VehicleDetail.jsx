@@ -51,6 +51,7 @@ import {
 import { CAMBODIA_LOCATIONS } from "../../assets/assets";
 import { usePreferences } from "../../context/PreferencesContext";
 import { useAuth } from "../../context/AuthContext";
+import CustomDatePicker from "../../components/common/CustomDatePicker";
 
 const inputClass =
   "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -1111,26 +1112,24 @@ const VehicleDetail = () => {
                 <label htmlFor="detail-pickup" className={labelClass}>
                   Pick-up Date
                 </label>
-                <input
+                <CustomDatePicker
                   id="detail-pickup"
-                  type="date"
-                  min={today}
                   value={pickupDate}
-                  onChange={(e) => setPickupDate(e.target.value)}
-                  className={inputClass}
+                  min={today}
+                  onChange={setPickupDate}
+                  placeholder="Select pick-up date"
                 />
               </div>
               <div>
                 <label htmlFor="detail-return" className={labelClass}>
                   Return Date
                 </label>
-                <input
+                <CustomDatePicker
                   id="detail-return"
-                  type="date"
-                  min={pickupDate || today}
                   value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                  className={inputClass}
+                  min={pickupDate || today}
+                  onChange={setReturnDate}
+                  placeholder="Select return date"
                 />
               </div>
 
@@ -1712,7 +1711,7 @@ const VehicleDetail = () => {
                   block: "start",
                 })
               }
-              className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:scale-95"
+              className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:scale-95 sm:px-6"
             >
               <LuCalendarCheck size={16} strokeWidth={2.5} />
               Reserve Now

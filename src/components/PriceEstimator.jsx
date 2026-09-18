@@ -138,7 +138,7 @@ const PriceEstimator = ({ vehicle = null }) => {
               <LuTimer size={16} className="text-primary" />
               Vehicle Tier
             </span>
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {Object.keys(TIER_RATES).map((key) => {
                 const isActive = tier === key;
                 return (

@@ -379,7 +379,7 @@ const Analytics = ({ vehicles: allVehicles = [] }) => {
             const h = (val / max) * 140;
             return (
               <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="hidden text-[10px] font-semibold text-slate-500 dark:text-slate-400 sm:block">
                   {val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
                 </span>
                 <div

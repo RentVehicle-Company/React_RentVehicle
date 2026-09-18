@@ -11,6 +11,7 @@ import {
   LuMapPin,
 } from "react-icons/lu";
 import HeroCarViewer from "./HeroCarViewer";
+import CustomDatePicker from "./common/CustomDatePicker";
 import { usePreferences } from "../context/PreferencesContext";
 
 const CAR_SWATCH_COLORS = [
@@ -278,153 +279,169 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           initial={{ opacity: 0, y: 30, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-          className="relative flex w-full max-w-4xl flex-col md:flex-row items-start md:items-center justify-between gap-3 rounded-full border border-slate-200 dark:border-slate-700 bg-white p-2 pr-3 shadow-xl shadow-slate-200/50 dark:bg-slate-800 dark:shadow-none"
+          className="relative flex w-full max-w-4xl flex-col items-stretch justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none md:flex-row md:items-center md:gap-0 md:rounded-full md:p-2 md:pl-5 md:pr-3"
         >
-          <div className="grid w-full grid-cols-1 gap-4 text-left sm:grid-cols-3 md:ml-4 md:gap-6">
-            <div className="relative flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => setIsLocationOpen((open) => !open)}
-                aria-haspopup="listbox"
-                aria-expanded={isLocationOpen}
-                className="flex w-full cursor-pointer items-center justify-between gap-2 text-sm"
+          <div className="flex w-full flex-col items-stretch gap-3 md:flex-1 md:flex-row md:items-center md:gap-5">
+            <div className="flex flex-1 flex-col gap-1 text-left">
+              <label
+                htmlFor="pickup-location"
+                className="px-1 text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm md:text-slate-700 md:dark:text-slate-300"
               >
-                <span
-                  className={
-                    selectedLocation
-                      ? "font-medium text-slate-900 dark:text-white"
-                      : "text-slate-400"
-                  }
+                {t("pickup_location")}
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  id="pickup-location"
+                  onClick={() => setIsLocationOpen((open) => !open)}
+                  aria-haspopup="listbox"
+                  aria-expanded={isLocationOpen}
+                  className={`flex h-12 w-full cursor-pointer items-center justify-between gap-2 rounded-xl border px-3 text-sm transition-colors ${
+                    isLocationOpen
+                      ? "border-primary bg-slate-50 dark:border-primary dark:bg-slate-700/60"
+                      : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700/60"
+                  }`}
                 >
-                  {selectedLocation || t("pickup_location")}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <LuMapPin
-                    size={16}
-                    className={selectedLocation ? "text-primary" : "text-slate-400"}
-                  />
+                  <span className="flex min-w-0 items-center gap-2">
+                    <LuMapPin
+                      size={16}
+                      className={
+                        selectedLocation
+                          ? "shrink-0 text-primary"
+                          : "shrink-0 text-slate-400"
+                      }
+                    />
+                    <span
+                      className={
+                        selectedLocation
+                          ? "truncate font-medium text-slate-900 dark:text-white"
+                          : "truncate text-slate-500 dark:text-slate-400"
+                      }
+                    >
+                      {selectedLocation || t("pickup_location")}
+                    </span>
+                  </span>
                   <LuChevronDown
                     size={14}
-                    className={`text-slate-400 transition-transform duration-200 ${
+                    className={`shrink-0 text-slate-400 transition-transform duration-200 ${
                       isLocationOpen ? "rotate-180" : ""
                     }`}
                   />
-                </span>
-              </button>
-              <p className="px-1 text-xs text-gray-500 dark:text-slate-400">
-                {selectedLocation
-                  ? `Pickup: ${selectedLocation}`
-                  : "Select your pickup city"}
-              </p>
+                </button>
 
-              {isLocationOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsLocationOpen(false)}
-                    aria-hidden="true"
-                  />
-                  <div
-                    role="listbox"
-                    aria-label="Pickup location"
-                    className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-2xl dark:border-slate-700 dark:bg-slate-800"
-                  >
-                    <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:border-slate-700">
-                      Choose pickup city
-                    </p>
-                    <ul className="max-h-64 overflow-y-auto p-1.5">
-                      {CITY_OPTIONS.map((city) => {
-                        const isSelected = selectedLocation === city;
-                        return (
-                          <li key={city}>
-                            <button
-                              type="button"
-                              role="option"
-                              aria-selected={isSelected}
-                              onClick={() => {
-                                setSelectedLocation(city);
-                                setIsLocationOpen(false);
-                              }}
-                              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                                isSelected
-                                  ? "bg-primary/10 font-medium text-primary"
-                                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
-                              }`}
-                            >
-                              <LuMapPin
-                                size={15}
-                                className={
-                                  isSelected ? "text-primary" : "text-slate-400"
-                                }
-                              />
-                              <span className="flex-1">{city}</span>
-                              {isSelected && (
-                                <LuCheck size={15} className="text-primary" />
-                              )}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {selectedLocation && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedLocation("");
-                          setIsLocationOpen(false);
-                        }}
-                        className="w-full cursor-pointer border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
-                      >
-                        Clear location
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
+                {isLocationOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsLocationOpen(false)}
+                      aria-hidden="true"
+                    />
+                    <div
+                      role="listbox"
+                      aria-label="Pickup location"
+                      className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-2xl dark:border-slate-700 dark:bg-slate-800"
+                    >
+                      <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:border-slate-700">
+                        Choose pickup city
+                      </p>
+                      <ul className="max-h-64 overflow-y-auto p-1.5">
+                        {CITY_OPTIONS.map((city) => {
+                          const isSelected = selectedLocation === city;
+                          return (
+                            <li key={city}>
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => {
+                                  setSelectedLocation(city);
+                                  setIsLocationOpen(false);
+                                }}
+                                className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                                  isSelected
+                                    ? "bg-primary/10 font-medium text-primary"
+                                    : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                                }`}
+                              >
+                                <LuMapPin
+                                  size={15}
+                                  className={
+                                    isSelected ? "text-primary" : "text-slate-400"
+                                  }
+                                />
+                                <span className="flex-1">{city}</span>
+                                {isSelected && (
+                                  <LuCheck size={15} className="text-primary" />
+                                )}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {selectedLocation && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedLocation("");
+                            setIsLocationOpen(false);
+                          }}
+                          className="w-full cursor-pointer border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                        >
+                          Clear location
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-col text-start gap-2">
-              <label htmlFor="pickup-date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <div className="flex flex-1 flex-col gap-1 text-left">
+              <label
+                htmlFor="pickup-date"
+                className="px-1 text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm md:text-slate-700 md:dark:text-slate-300"
+              >
                 Pick-up Date
               </label>
-              <input
-                type="date"
+              <CustomDatePicker
                 id="pickup-date"
                 name="pickup-date"
-                min={today}
                 value={pickupDate}
-                onChange={(e) => setPickupDate(e.target.value)}
-                className="w-full rounded-lg px-2 py-1.5 text-sm text-gray-500 outline-none transition focus:ring-2 focus:ring-primary/30 dark:text-slate-300"
+                min={today}
+                onChange={setPickupDate}
+                placeholder="Pick-up date"
               />
             </div>
 
-            <div className="flex flex-col text-start gap-2">
-              <label htmlFor="return-date" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <div className="flex flex-1 flex-col gap-1 text-left">
+              <label
+                htmlFor="return-date"
+                className="px-1 text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm md:text-slate-700 md:dark:text-slate-300"
+              >
                 Return Date
               </label>
-              <input
-                type="date"
+              <CustomDatePicker
                 id="return-date"
                 name="return-date"
-                min={pickupDate || today}
                 value={returnDate}
-                onChange={(e) => setReturnDate(e.target.value)}
-                className="w-full rounded-lg px-2 py-1.5 text-sm text-gray-500 outline-none transition focus:ring-2 focus:ring-primary/30 dark:text-slate-300"
+                min={pickupDate || today}
+                onChange={setReturnDate}
+                placeholder="Return date"
               />
             </div>
           </div>
 
-          <div className="flex w-full flex-col md:w-auto">
+          <div className="flex w-full flex-col gap-3 md:w-auto">
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-1 rounded-full bg-slate-900 px-7 py-3 text-sm text-white transition-all duration-200 hover:bg-slate-800 active:scale-95 cursor-pointer md:w-auto dark:bg-primary dark:hover:bg-primary-dull"
+              className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-900 px-7 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 active:scale-95 md:w-auto dark:bg-primary dark:hover:bg-primary-dull"
             >
               <IoSearch />
               Search
             </button>
 
             {totalDays > 0 && selectedLocation && (
-              <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary md:hidden">
+              <div className="flex items-center justify-center gap-1.5 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary md:hidden">
                 <LuCalendarDays size={14} />
                 {totalDays} {totalDays === 1 ? "day" : "days"} ·{" "}
                 {formatPrice(totalDays * AVG_DAILY_RATE)}

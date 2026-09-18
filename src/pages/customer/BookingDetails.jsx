@@ -115,7 +115,7 @@ const BookingDetails = () => {
             {status.label}
           </span>
           <div className="grid sm:grid-cols-[minmax(180px,0.8fr)_minmax(0,1.2fr)] min-h-[210px]">
-            <div className="relative flex min-h-74 items-center justify-center overflow-hidden bg-slate-800">
+            <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-slate-800 sm:aspect-auto sm:min-h-74">
               <img
                 src={booking.image}
                 alt={booking.vehicleName}
