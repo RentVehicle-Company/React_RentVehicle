@@ -26,6 +26,7 @@ import { createBooking } from "../../services/bookingService";
 import {
   generateKhqrPayment,
   MERCHANT_NAME,
+  paymentStatusLabel,
   processVisaPayment,
   verifyKhqrPayment,
 } from "../../services/paymentService";
@@ -441,24 +442,56 @@ const Checkout = () => {
     fuel_type: booking.fuel_type || "Petrol",
   };
 
+  // The real QR is rendered from the backend qrString (a KHQR data payload),
+  // falling back to the generated mock pattern while offline.
+  const qrPayload = khqr?.qrString || khqr?.qrData || "";
+  const qrImageUrl = qrPayload
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+        qrPayload
+      )}`
+    : QR_IMAGE_URL;
+
   useEffect(() => {
     let mounted = true;
-    generateKhqrPayment({ booking }).then((payment) => {
-      if (!mounted) return;
-      setKhqr(payment);
-      const expiresAt = payment.expiresAt
-        ? new Date(payment.expiresAt).getTime()
-        : null;
-      setSecondsLeft(
-        expiresAt
-          ? Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
-          : QR_EXPIRY_SECONDS
-      );
-    });
+    generateKhqrPayment({ booking })
+      .then((payment) => {
+        if (!mounted) return;
+        setKhqr(payment);
+        const expiresAt = payment.expiresAt
+          ? new Date(payment.expiresAt).getTime()
+          : null;
+        setSecondsLeft(
+          expiresAt
+            ? Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+            : QR_EXPIRY_SECONDS
+        );
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(getErrorMessage(err));
+      });
     return () => {
       mounted = false;
     };
   }, [booking]);
+
+  // Generates (or regenerates) the Bakong KHQR payment. Calling this when the
+  // payment is missing or expired means the "Check Payment Status" action can
+  // always fall back to a fresh QR instead of dead-ending on a stale one.
+  const ensureQrPayment = async () => {
+    if (khqr && secondsLeft > 0) return khqr;
+    const payment = await generateKhqrPayment({ booking });
+    setKhqr(payment);
+    const expiresAt = payment.expiresAt
+      ? new Date(payment.expiresAt).getTime()
+      : null;
+    setSecondsLeft(
+      expiresAt
+        ? Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+        : QR_EXPIRY_SECONDS
+    );
+    return payment;
+  };
 
   useEffect(() => {
     if (!khqr || !khqr.expiresAt) return;
@@ -560,17 +593,46 @@ const Checkout = () => {
     setVerifying(true);
     setError(null);
     try {
+      // Always work from a live payment: if generation hasn't happened yet or
+      // the QR already expired, create a fresh one before verifying.
+      const payment = await ensureQrPayment();
       const result = await verifyKhqrPayment({
-        transactionId: khqr?.transactionId,
+        paymentId: payment?.paymentId || payment?.id,
+        transactionId: payment?.transactionId,
         booking,
       });
-      const created = await createBooking(buildBookingPayload("Bakong KHQR"));
+      const status = String(
+        result.paymentStatus || result.status || ""
+      ).toUpperCase();
+
+      // Only a verified PAID payment confirms the booking. FAILED / EXPIRED
+      // (or any other terminal state) must fail the checkout so the user is
+      // never told to wait on an unsettled payment.
+      if (status !== "PAID") {
+        const reason =
+          (status === "FAILED" &&
+            (result.failureReason || "The payment was declined.")) ||
+          (status === "EXPIRED" &&
+            "The payment link expired before it was settled. Please retry.") ||
+          `Payment status: ${paymentStatusLabel(status)}`;
+        throw new Error(reason);
+      }
+
+      // When the booking was already persisted by the backend (booking form
+      // POST /api/bookings), don't create a duplicate local record.
+      const created = booking.backendBookingId
+        ? { ...booking, id: booking.backendBookingId }
+        : await createBooking(buildBookingPayload("Bakong KHQR"));
+
       setSuccess({
         booking: created,
         transaction: {
-          transactionId: result.transactionId || khqr?.transactionId,
-          method: result.method || "Bakong KHQR",
-          amount: amount.total,
+          transactionId:
+            result.transactionId ||
+            payment.transactionId ||
+            result.paymentReference,
+          method: "Bakong KHQR",
+          amount: Number(result.amount) || amount.total,
         },
       });
       toast.success(
@@ -698,6 +760,23 @@ const Checkout = () => {
                     label="KHQR (Bakong)"
                   />
                 </div>
+
+                {booking.local && !success && (
+                  <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
+                    <LuShieldCheck
+                      size={16}
+                      className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400"
+                    />
+                    <div>
+                      <p className="font-bold">Development mode</p>
+                      <p className="mt-0.5 leading-snug">
+                        The backend booking could not be confirmed, so you're
+                        continuing with a local demo booking. The Bakong KHQR
+                        payment screen below still works — settle it to finish.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {method === "card" ? (
                   <form onSubmit={handleCardSubmit} className="mt-5 space-y-4">
@@ -844,16 +923,41 @@ const Checkout = () => {
                     <div className="rounded-2xl border-2 border-borderColor dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
                       <div className="flex justify-center">
                         {!khqr ? (
-                          <div className="flex h-[250px] w-[250px] items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-xs text-slate-400 dark:text-slate-500">
-                            Generating QR code...
+                          <div className="flex h-[250px] w-[250px] flex-col items-center justify-center gap-3 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs text-slate-400 dark:text-slate-500">
+                            {error ? (
+                              <>
+                                <LuShieldCheck
+                                  size={28}
+                                  className="text-amber-400"
+                                />
+                                <span className="px-6 text-center">
+                                  QR generation failed. Retry to display your
+                                  Bakong code.
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setError(null);
+                                    await ensureQrPayment().catch((err) =>
+                                      setError(getErrorMessage(err))
+                                    );
+                                  }}
+                                  className="cursor-pointer rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-dull"
+                                >
+                                  Retry
+                                </button>
+                              </>
+                            ) : (
+                              "Generating QR code..."
+                            )}
                           </div>
-                        ) : qrFailed ? (
+                        ) : qrFailed || !qrPayload ? (
                           <QrCodeMock
-                            seed={khqr.qrData || "KHQR_SAMPLE_PAYMENT"}
+                            seed={qrPayload || "KHQR_SAMPLE_PAYMENT"}
                           />
                         ) : (
                           <img
-                            src={QR_IMAGE_URL}
+                            src={qrImageUrl}
                             alt="Bakong KHQR payment code"
                             width={250}
                             height={250}
@@ -905,7 +1009,7 @@ const Checkout = () => {
                     <button
                       type="button"
                       onClick={handleKhqrVerify}
-                      disabled={verifying || secondsLeft === 0}
+                      disabled={verifying}
                       className="inline-flex items-center justify-center gap-2 w-full px-5 py-3 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-dull disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       <LuScanLine size={17} />

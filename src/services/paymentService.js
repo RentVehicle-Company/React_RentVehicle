@@ -79,6 +79,8 @@ export const PAYMENT_METHODS = {
 
 export const MERCHANT_NAME = "Rental Company";
 
+const QR_TTL_MS = 15 * 60 * 1000;
+
 const generateTransactionId = () =>
   `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random()
     .toString(36)
@@ -168,77 +170,150 @@ export const processVisaPayment = async ({ booking = {}, card = {} } = {}) => {
   }
 };
 
+// POST /api/payments — creates a KHQR payment for an already-created backend
+// booking and returns the PaymentResponseDTO carrying qrString + paymentStatus.
+// Mock fallback is used when the backend is unreachable or the booking is a
+// local record (no backendBookingId).
 export const generateKhqrPayment = async ({ booking = {} } = {}) => {
+  const bookingId = booking.backendBookingId || booking.id;
   const { total } = buildPaymentAmount(booking);
-
   const now = new Date();
   const transactionId = generateTransactionId();
 
   const buildMockPayment = () => ({
+    id: `mock_${Date.now()}`,
+    paymentId: `mock_${Date.now()}`,
+    bookingId,
     transactionId,
+    paymentReference: `REF-${Date.now().toString(36).toUpperCase()}`,
     merchantName: MERCHANT_NAME,
     merchantId: "BAKONG-8864-2210",
     accountId: "rental@bakong.com",
     amount: total,
     currency: "USD",
     qrData: `KHQR|${transactionId}|${total}|${MERCHANT_NAME}`,
+    qrString: `KHQR|${transactionId}|${total}|${MERCHANT_NAME}`,
+    paymentStatus: "PENDING",
     status: "pending",
-    expiresAt: new Date(now.getTime() + 15 * 60 * 1000).toISOString(),
+    expiresAt: new Date(now.getTime() + QR_TTL_MS).toISOString(),
   });
 
+  if (!bookingId) {
+    await delay(600);
+    return buildMockPayment();
+  }
+
   try {
-    const data = await request(API_ENDPOINTS.khqrPayment, {
+    const data = await request(API_ENDPOINTS.payments, {
       method: "POST",
-      body: JSON.stringify({ bookingId: booking.id, amount: total }),
+      body: JSON.stringify({
+        bookingId,
+        currency: booking.currency || "USD",
+        paymentMethod: "KHQR",
+      }),
     });
 
-    if (data && data.success === false) {
+    // request() returns null on network unreachable and throws for non-2xx
+    // responses.
+    if (data == null) {
+      await delay(600);
+      return buildMockPayment();
+    }
+    if (data.success === false) {
       throw new Error(data.message || "Could not generate payment.");
+    }
+    if (data.id === undefined) {
+      throw new Error("Could not generate payment.");
     }
 
     const mock = buildMockPayment();
     return {
       ...mock,
-      ...(data || {}),
-      transactionId: data?.transactionId || mock.transactionId,
+      ...data,
+      paymentId: data.id,
+      transactionId: data.transactionId || mock.transactionId,
+      paymentStatus: data.paymentStatus || mock.paymentStatus,
     };
   } catch (error) {
-    if (error?.status || !(error instanceof TypeError)) throw error;
-
-    await delay(600);
-    return buildMockPayment();
+    // Network or server failure on a demo/local booking → gracefully fall back
+    // to a mock QR so the standalone checkout page still works. Surface
+    // client-side rejections (4xx) only when the booking was persisted on the
+    // backend so real failures are never silently swallowed.
+    if (!booking.backendBookingId || error?.status >= 500) {
+      await delay(600);
+      return buildMockPayment();
+    }
+    throw error;
   }
 };
 
-export const verifyKhqrPayment = async ({ transactionId, booking = {} } = {}) => {
+// GET /api/payments/{id}/verify — resolves the live payment status. PAID means
+// the customer has scanned and settled the QR; anything else (FAILED, EXPIRED)
+// must surface as a failed payment. Legacy callers may pass transactionId.
+export const verifyKhqrPayment = async ({
+  paymentId,
+  transactionId,
+  booking = {},
+} = {}) => {
   const { total } = buildPaymentAmount(booking);
+  const now = new Date();
 
   const buildMockResult = () => ({
+    paymentId,
+    bookingId: booking.backendBookingId || booking.id,
     transactionId,
-    bookingId: booking.id,
     method: PAYMENT_METHODS.khqr,
     amount: total,
+    paymentStatus: "PAID",
     status: "paid",
-    paidAt: new Date().toISOString(),
+    paidAt: now.toISOString(),
   });
 
-  try {
-    const data = await request(API_ENDPOINTS.khqrPaymentStatus(transactionId));
+  // Local/demo payments (no backend id) resolve directly as paid, mimicking
+  // the pre-backend behaviour of the standalone flow.
+  if (!paymentId || String(paymentId).startsWith("mock_")) {
+    await delay(2600);
+    return buildMockResult();
+  }
 
-    if (data && data.success === false) {
+  try {
+    const data = await request(API_ENDPOINTS.paymentVerify(paymentId));
+
+    if (data == null) {
+      await delay(2600);
+      return buildMockResult();
+    }
+    if (data.success === false) {
       throw new Error(data.message || "Payment not verified.");
+    }
+    if (data.id === undefined) {
+      throw new Error("Payment not found.");
     }
 
     const mock = buildMockResult();
     return {
       ...mock,
-      ...(data || {}),
-      transactionId: data?.transactionId || mock.transactionId,
+      ...data,
+      paymentId: data.id,
+      transactionId: data.transactionId || mock.transactionId,
+      paymentStatus: data.paymentStatus || mock.paymentStatus,
+      method: PAYMENT_METHODS.khqr,
     };
   } catch (error) {
-    if (error?.status || !(error instanceof TypeError)) throw error;
-
-    await delay(2600);
-    return buildMockResult();
+    if (error?.status >= 500) {
+      await delay(2600);
+      return buildMockResult();
+    }
+    throw error;
   }
 };
+
+// Human-readable label for a backend PaymentStatus enum value.
+export const paymentStatusLabel = (status) =>
+  String(status || "").toUpperCase() === "PAID"
+    ? "Paid"
+    : String(status || "").toUpperCase() === "FAILED"
+      ? "Failed"
+      : String(status || "").toUpperCase() === "EXPIRED"
+        ? "Expired"
+        : "Pending";

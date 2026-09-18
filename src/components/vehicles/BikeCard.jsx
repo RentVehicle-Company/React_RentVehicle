@@ -13,6 +13,7 @@ import {
   LuSettings2,
 } from "react-icons/lu";
 import VehicleQuickViewModal from "../VehicleQuickViewModal";
+import SafeImage from "../common/SafeImage";
 import { useCompare } from "../../context/CompareContext";
 import { usePreferences } from "../../context/PreferencesContext";
 import { useWishlist } from "../../hooks/useWishlist";
@@ -43,7 +44,7 @@ const BikeCard = ({ bike }) => {
       }`}
     >
       <div className="relative flex items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-700">
-        <img
+        <SafeImage
           src={bike.image}
           alt={`${bike.brand} ${bike.model}`}
           className="h-[150px] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"

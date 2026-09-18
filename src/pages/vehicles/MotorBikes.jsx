@@ -8,18 +8,47 @@ import {
   LuSlidersHorizontal,
   LuX,
 } from "react-icons/lu";
-import { getMotorbikes, MOTO_CATEGORIES } from "../../services/vehicleServices";
-import { CAMBODIA_LOCATIONS } from "../../assets/assets";
+import {
+  getCatalogCategories,
+  getCatalogLocations,
+  getCatalogVehicles,
+} from "../../services/vehicleServices";
 import MotoCard from "../../components/vehicles/MotoCard";
 import { usePreferences } from "../../context/PreferencesContext";
 
 const PAGE_SIZE = 6;
 
-const MOTO_OPTIONS = MOTO_CATEGORIES;
+// Loose name matching used when the client has to match a selected backend
+// category against a product's category label (multi-select, offline fallback).
+const categoryMatches = (backendName, vehicleCategory) => {
+  const name = String(backendName).toLowerCase();
+  const value = String(vehicleCategory).toLowerCase();
+  return (
+    value === name ||
+    value === `${name}s` ||
+    value === `${name}es` ||
+    value.includes(name)
+  );
+};
 
-const FILTERS_BY = Object.fromEntries(
-  MOTO_CATEGORIES.map((category) => [category, [category]])
-);
+// Resolves the ?location= query value into a backend id + display name.
+// Accepts either a numeric location id (this page's sidebar) or a city name
+// (landing-page search bar) against the loaded location options.
+const resolveLocationPair = (location, locationOptions) => {
+  if (!location) return { id: undefined, name: "" };
+  if (/^\d+$/.test(String(location).trim())) {
+    const id = Number(location);
+    const entry = locationOptions.find((loc) => loc.id === id);
+    return { id, name: entry?.name || String(location) };
+  }
+  const lowered = String(location).trim().toLowerCase();
+  const entry = locationOptions.find(
+    (loc) =>
+      String(loc.name ?? "").toLowerCase() === lowered ||
+      String(loc.city ?? "").toLowerCase() === lowered
+  );
+  return { id: entry?.id, name: entry?.name || String(location) };
+};
 
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual"];
 
@@ -37,7 +66,7 @@ const MotorBikes = () => {
   const [motorbikes, setMotorbikes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [location, setLocation] = useState(
+  const [location, setLocation] = useState(() =>
     searchParams.get("location") || ""
   );
   const [pickupDate, setPickupDate] = useState(
@@ -46,9 +75,10 @@ const MotorBikes = () => {
   const [returnDate, setReturnDate] = useState(
     searchParams.get("return") || ""
   );
+  // Selected category ids (numbers, resolved from GET /api/categories).
   const [categories, setCategories] = useState(() => {
-    const cat = searchParams.get("category");
-    return cat ? [cat] : [];
+    const known = Number(searchParams.get("categoryId"));
+    return known ? [known] : [];
   });
   const [maxPrice, setMaxPrice] = useState(PRICE_MAX);
   const [transmission, setTransmission] = useState("all");
@@ -57,19 +87,113 @@ const MotorBikes = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  // Backend reference data: motorbike categories + pickup locations.
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [locationOptions, setLocationOptions] = useState([]);
+
   useEffect(() => {
-    getMotorbikes().then((data) => {
+    let alive = true;
+    getCatalogCategories({ vehicleType: "moto" }).then((list) => {
+      if (!alive) return;
+      setCategoryOptions(list);
+      const legacy = searchParams.get("category");
+      if (legacy) {
+        const match = list.find((cat) =>
+          categoryMatches(cat.name, legacy)
+        );
+        if (match) setCategories([match.id]);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    getCatalogLocations().then((list) => {
+      if (!alive) return;
+      setLocationOptions(list);
+      const raw = searchParams.get("location");
+      if (!raw) return;
+      // Accept either a numeric id (this page's sidebar) or a city name
+      // (landing-page search bar) and normalize to the matching id.
+      if (/^\d+$/.test(String(raw).trim())) return;
+      const lowered = String(raw).trim().toLowerCase();
+      const match = list.find(
+        (loc) =>
+          String(loc.name ?? "").toLowerCase() === lowered ||
+          String(loc.city ?? "").toLowerCase() === lowered
+      );
+      if (match) setLocation(match.id);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Forward a single categoryId / locationId; otherwise filter client-side.
+  const appliedCategoryId =
+    categories.length === 1 ? categories[0] : undefined;
+
+  const appliedLocationId = location
+    ? resolveLocationPair(location, locationOptions).id
+    : undefined;
+
+  const categoryNameFor = (id) =>
+    categoryOptions.find((cat) => cat.id === Number(id))?.name;
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    getCatalogVehicles({
+      categoryId: appliedCategoryId,
+      locationId: appliedLocationId,
+      isAvailable: true,
+      vehicleType: "moto",
+    }).then((data) => {
+      if (!alive) return;
       setMotorbikes(data);
       setLoading(false);
     });
-  }, []);
-
-  const locations = CAMBODIA_LOCATIONS;
+    return () => {
+      alive = false;
+    };
+  }, [appliedCategoryId, appliedLocationId]);
 
   const filtered = useMemo(() => {
     let list = motorbikes;
+    if (categories.length > 0) {
+      const wantedIds = categories.map((id) => Number(id));
+      const names = categories
+        .map(
+          (id) => categoryOptions.find((cat) => cat.id === Number(id))?.name
+        )
+        .filter(Boolean);
+      list = list.filter((moto) => {
+        if (
+          moto.categoryId != null &&
+          wantedIds.includes(Number(moto.categoryId))
+        ) {
+          return true;
+        }
+        return names.length > 0 && names.some((name) => categoryMatches(name, moto.category));
+      });
+    }
     if (location) {
-      list = list.filter((moto) => moto.location === location);
+      const locPair = resolveLocationPair(location, locationOptions);
+      const locId = locPair.id;
+      const locName = locPair.name.toLowerCase();
+      list = list.filter((moto) => {
+        if (locId != null && moto.locationId != null) {
+          return Number(moto.locationId) === Number(locId);
+        }
+        return locName
+          ? String(moto.location || "").toLowerCase().includes(locName)
+          : true;
+      });
     }
     if (pickupDate || returnDate) {
       const start = pickupDate
@@ -90,10 +214,6 @@ const MotorBikes = () => {
           return t >= start && t <= end;
         });
       });
-    }
-    if (categories.length > 0) {
-      const allowed = categories.flatMap((c) => FILTERS_BY[c] || []);
-      list = list.filter((moto) => allowed.includes(moto.category));
     }
     if (maxPrice < PRICE_MAX) {
       list = list.filter((moto) => moto.price_per_day <= maxPrice);
@@ -125,10 +245,12 @@ const MotorBikes = () => {
     return list;
   }, [
     motorbikes,
+    categories,
+    categoryOptions,
     location,
+    locationOptions,
     pickupDate,
     returnDate,
-    categories,
     maxPrice,
     transmission,
     query,
@@ -155,11 +277,11 @@ const MotorBikes = () => {
     return items;
   }, [totalPages, currentPage]);
 
-  const toggleCategory = (label) => {
+  const toggleCategory = (id) => {
     setCategories((prev) =>
-      prev.includes(label)
-        ? prev.filter((item) => item !== label)
-        : [...prev, label]
+      prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id]
     );
     setPage(1);
   };
@@ -178,7 +300,7 @@ const MotorBikes = () => {
   if (location) {
     badges.push({
       key: "location",
-      label: `Location: ${location}`,
+      label: `Location: ${resolveLocationPair(location, locationOptions).name || `#${location}`}`,
       clear: () => {
         setLocation("");
         setPage(1);
@@ -205,11 +327,11 @@ const MotorBikes = () => {
       },
     });
   }
-  categories.forEach((cat) =>
+  categories.forEach((id) =>
     badges.push({
-      key: `category-${cat}`,
-      label: `Category: ${cat}`,
-      clear: () => toggleCategory(cat),
+      key: `category-${id}`,
+      label: `Category: ${categoryNameFor(id) || `#${id}`}`,
+      clear: () => toggleCategory(id),
     })
   );
   if (transmission !== "all") {
@@ -274,18 +396,18 @@ const MotorBikes = () => {
       <div>
         <label className={labelClass}>Category</label>
         <div className="space-y-2">
-          {MOTO_OPTIONS.map((option) => (
+          {categoryOptions.map((option) => (
             <label
-              key={option}
+              key={option.id}
               className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200"
             >
               <input
                 type="checkbox"
-                checked={categories.includes(option)}
-                onChange={() => toggleCategory(option)}
+                checked={categories.includes(option.id)}
+                onChange={() => toggleCategory(option.id)}
                 className="h-4 w-4 rounded border-borderColor dark:border-slate-700 accent-primary cursor-pointer"
               />
-              {option}
+              {option.name}
             </label>
           ))}
         </div>
@@ -348,17 +470,17 @@ const MotorBikes = () => {
         </label>
         <select
           id="moto-location"
-          value={location}
+          value={appliedLocationId ?? ""}
           onChange={(e) => {
-            setLocation(e.target.value);
+            setLocation(e.target.value ? Number(e.target.value) : "");
             setPage(1);
           }}
           className={inputClass}
         >
           <option value="">All Locations</option>
-          {locations.map((city) => (
-            <option key={city} value={city}>
-              {city}
+          {locationOptions.map((loc) => (
+            <option key={loc.id} value={loc.id}>
+              {loc.name}
             </option>
           ))}
         </select>

@@ -1,6 +1,8 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "https://spring-rentvehicle.onrender.com/api";
 
+export { API_BASE_URL };
+
 // Canonical localStorage keys — every auth/service module must read and
 // write through this object so sessions never get mismatched or wiped.
 // The token is mirrored under "token"/"authToken" too, so any component
@@ -79,10 +81,14 @@ export const API_ENDPOINTS = {
   products: `${API_BASE_URL}/products`,
   productById: (id) => `${API_BASE_URL}/products/${id}`,
   productImages: (productId) => `${API_BASE_URL}/products/${productId}/images`,
+  categories: `${API_BASE_URL}/categories`,
   locations: `${API_BASE_URL}/locations`,
   bookings: `${API_BASE_URL}/bookings`,
   bookingById: (id) => `${API_BASE_URL}/bookings/${id}`,
   payments: `${API_BASE_URL}/payments`,
+  paymentById: (id) => `${API_BASE_URL}/payments/${id}`,
+  paymentQr: (id) => `${API_BASE_URL}/payments/${id}/qr`,
+  paymentVerify: (id) => `${API_BASE_URL}/payments/${id}/verify`,
   paymentsByBooking: (bookingId) =>
     `${API_BASE_URL}/bookings/${bookingId}/payments`,
 };

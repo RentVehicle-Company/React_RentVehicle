@@ -144,7 +144,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [carColor, setCarColor] = useState("#FFD700");
-  const [cameraView, setCameraView] = useState("three-quarter");
+  const [cameraView, setCameraView] = useState("auto");
   const [headlightsOn, setHeadlightsOn] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState(() => {

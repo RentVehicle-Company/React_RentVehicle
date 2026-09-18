@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -8,20 +8,42 @@ import {
   LuSlidersHorizontal,
   LuX,
 } from "react-icons/lu";
-import { getVehicles } from "../../services/vehicleServices";
-import { CAMBODIA_LOCATIONS } from "../../assets/assets";
+import {
+  getCatalogCategories,
+  getCatalogLocations,
+  getCatalogVehicles,
+} from "../../services/vehicleServices";
 import CarCard from "../../components/vehicles/CarCard";
 import { usePreferences } from "../../context/PreferencesContext";
 
 const PAGE_SIZE = 6;
 
-const CATEGORY_OPTIONS = ["Sports Cars", "Luxury", "SUVs", "Sedans"];
+// Tolerated name variants used when the client has to match a selected backend
+// category against a product's category label (multi-select, offline fallback).
+const CATEGORY_NAME_MATCH = {
+  Sedan: ["sedan", "sedans"],
+  SUV: ["suv", "suvs"],
+  "Sports Car": ["sports car", "sports cars", "supercar", "sports"],
+  "Luxury SUV": ["luxury suv", "luxury", "luxury suvs"],
+};
 
-const CATEGORY_FILTERS = {
-  "Sports Cars": ["Sports Car", "Supercar"],
-  Luxury: ["Luxury", "Luxury SUV"],
-  SUVs: ["SUV"],
-  Sedans: ["Sedan"],
+// Resolves the ?location= query value into a backend id + display name.
+// Accepts either a numeric location id (this page's sidebar) or a city name
+// (landing-page search bar) against the loaded location options.
+const resolveLocationPair = (location, locationOptions) => {
+  if (!location) return { id: undefined, name: "" };
+  if (/^\d+$/.test(String(location).trim())) {
+    const id = Number(location);
+    const entry = locationOptions.find((loc) => loc.id === id);
+    return { id, name: entry?.name || String(location) };
+  }
+  const lowered = String(location).trim().toLowerCase();
+  const entry = locationOptions.find(
+    (loc) =>
+      String(loc.name ?? "").toLowerCase() === lowered ||
+      String(loc.city ?? "").toLowerCase() === lowered
+  );
+  return { id: entry?.id, name: entry?.name || String(location) };
 };
 
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual", "Semi-Automatic"];
@@ -40,7 +62,7 @@ const Cars = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [location, setLocation] = useState(
+  const [location, setLocation] = useState(() =>
     searchParams.get("location") || ""
   );
   const [pickupDate, setPickupDate] = useState(
@@ -49,9 +71,11 @@ const Cars = () => {
   const [returnDate, setReturnDate] = useState(
     searchParams.get("return") || ""
   );
+  // Selected category ids (numbers, resolved from GET /api/categories).
   const [categories, setCategories] = useState(() => {
     const cat = searchParams.get("category");
-    return cat ? [cat] : [];
+    const known = Number(searchParams.get("categoryId"));
+    return known ? [known] : cat ? [] : [];
   });
   const [maxPrice, setMaxPrice] = useState(PRICE_MAX);
   const [transmission, setTransmission] = useState("all");
@@ -60,19 +84,142 @@ const Cars = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  // Backend reference data: car categories + pickup locations (with cache so
+  // the dropdown labels stay populated after the first visit).
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [locationOptions, setLocationOptions] = useState([]);
+
   useEffect(() => {
-    getVehicles().then((data) => {
-      setVehicles(data);
-      setLoading(false);
+    let alive = true;
+    getCatalogCategories({ vehicleType: "car" }).then((list) => {
+      if (!alive) return;
+      setCategoryOptions(list);
+      // Resolve a legacy ?category=name group into its backend category id.
+      const legacy = searchParams.get("category");
+      if (legacy) {
+        const match = list.find(
+          (cat) =>
+            cat.name.toLowerCase() === legacy.toLowerCase() ||
+            (CATEGORY_NAME_MATCH[cat.name] || []).includes(
+              legacy.toLowerCase()
+            )
+        );
+        if (match) setCategories([match.id]);
+      }
     });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const locations = CAMBODIA_LOCATIONS;
+  useEffect(() => {
+    let alive = true;
+    getCatalogLocations().then((list) => {
+      if (!alive) return;
+      setLocationOptions(list);
+      const raw = searchParams.get("location");
+      if (!raw) return;
+      // Accept either a numeric id (this page's sidebar) or a city name
+      // (landing-page search bar) and normalize to the matching id.
+      if (/^\d+$/.test(String(raw).trim())) return;
+      const lowered = String(raw).trim().toLowerCase();
+      const match = list.find(
+        (loc) =>
+          String(loc.name ?? "").toLowerCase() === lowered ||
+          String(loc.city ?? "").toLowerCase() === lowered
+      );
+      if (match) setLocation(match.id);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The backend filters by a single categoryId (Long). When exactly one
+  // backend-backed category is selected we forward that id, otherwise the
+  // category names are applied client-side below.
+  const appliedCategoryId =
+    categories.length === 1 ? categories[0] : undefined;
+
+  const categoryNameFor = (id) =>
+    categoryOptions.find((cat) => cat.id === Number(id))?.name;
+
+  const appliedLocationId = location
+    ? resolveLocationPair(location, locationOptions).id
+    : undefined;
+
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    const requestId = ++requestIdRef.current;
+    const controller = new AbortController();
+    setLoading(true);
+    getCatalogVehicles(
+      {
+        categoryId: appliedCategoryId,
+        locationId: appliedLocationId,
+        isAvailable: true,
+        vehicleType: "car",
+      },
+      { signal: controller.signal }
+    )
+      .then((data) => {
+        if (requestIdRef.current !== requestId) return;
+        setVehicles(data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (requestIdRef.current !== requestId) return;
+        if (error && error.name === "AbortError") return;
+        setVehicles([]);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [appliedCategoryId, appliedLocationId]);
 
   const filtered = useMemo(() => {
     let list = vehicles;
+    // Client-side category matching. Real products carry categoryId so we match
+    // those when present; name-based matching only kicks in for offline mocks
+    // and legacy string categories.
+    if (categories.length > 0) {
+      const wantedIds = categories.map((id) => Number(id));
+      const wantedNames = categories
+        .map(
+          (id) => categoryOptions.find((cat) => cat.id === Number(id))?.name
+        )
+        .filter(Boolean)
+        .flatMap((name) => [
+          name.toLowerCase(),
+          ...(CATEGORY_NAME_MATCH[name] || []),
+        ]);
+      list = list.filter((vehicle) => {
+        if (
+          vehicle.categoryId != null &&
+          wantedIds.includes(Number(vehicle.categoryId))
+        ) {
+          return true;
+        }
+        return (
+          wantedNames.length > 0 &&
+          wantedNames.includes(String(vehicle.category).toLowerCase())
+        );
+      });
+    }
     if (location) {
-      list = list.filter((vehicle) => vehicle.location === location);
+      const locPair = resolveLocationPair(location, locationOptions);
+      const locId = locPair.id;
+      const locName = locPair.name.toLowerCase();
+      list = list.filter((vehicle) => {
+        if (locId != null && vehicle.locationId != null) {
+          return Number(vehicle.locationId) === Number(locId);
+        }
+        return locName
+          ? String(vehicle.location || "").toLowerCase().includes(locName)
+          : true;
+      });
     }
     if (pickupDate || returnDate) {
       const start = pickupDate
@@ -93,10 +240,6 @@ const Cars = () => {
           return t >= start && t <= end;
         });
       });
-    }
-    if (categories.length > 0) {
-      const allowed = categories.flatMap((c) => CATEGORY_FILTERS[c] || []);
-      list = list.filter((vehicle) => allowed.includes(vehicle.category));
     }
     if (maxPrice < PRICE_MAX) {
       list = list.filter((vehicle) => vehicle.price_per_day <= maxPrice);
@@ -124,10 +267,12 @@ const Cars = () => {
     return list;
   }, [
     vehicles,
+    categories,
+    categoryOptions,
     location,
+    locationOptions,
     pickupDate,
     returnDate,
-    categories,
     maxPrice,
     transmission,
     query,
@@ -154,11 +299,11 @@ const Cars = () => {
     return items;
   }, [totalPages, currentPage]);
 
-  const toggleCategory = (label) => {
+  const toggleCategory = (id) => {
     setCategories((prev) =>
-      prev.includes(label)
-        ? prev.filter((item) => item !== label)
-        : [...prev, label]
+      prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id]
     );
     setPage(1);
   };
@@ -177,7 +322,7 @@ const Cars = () => {
   if (location) {
     badges.push({
       key: "location",
-      label: `Location: ${location}`,
+      label: `Location: ${resolveLocationPair(location, locationOptions).name || `#${location}`}`,
       clear: () => {
         setLocation("");
         setPage(1);
@@ -204,11 +349,11 @@ const Cars = () => {
       },
     });
   }
-  categories.forEach((cat) =>
+  categories.forEach((id) =>
     badges.push({
-      key: `category-${cat}`,
-      label: `Category: ${cat}`,
-      clear: () => toggleCategory(cat),
+      key: `category-${id}`,
+      label: `Category: ${categoryNameFor(id) || `#${id}`}`,
+      clear: () => toggleCategory(id),
     })
   );
   if (transmission !== "all") {
@@ -273,18 +418,18 @@ const Cars = () => {
       <div>
         <label className={labelClass}>Category</label>
         <div className="space-y-2">
-          {CATEGORY_OPTIONS.map((option) => (
+          {categoryOptions.map((option) => (
             <label
-              key={option}
+              key={option.id}
               className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-700 dark:text-slate-200"
             >
               <input
                 type="checkbox"
-                checked={categories.includes(option)}
-                onChange={() => toggleCategory(option)}
+                checked={categories.includes(option.id)}
+                onChange={() => toggleCategory(option.id)}
                 className="h-4 w-4 rounded border-borderColor dark:border-slate-700 accent-primary cursor-pointer"
               />
-              {option}
+              {option.name}
             </label>
           ))}
         </div>
@@ -347,17 +492,17 @@ const Cars = () => {
         </label>
         <select
           id="car-location"
-          value={location}
+          value={appliedLocationId ?? ""}
           onChange={(e) => {
-            setLocation(e.target.value);
+            setLocation(e.target.value ? Number(e.target.value) : "");
             setPage(1);
           }}
           className={inputClass}
         >
           <option value="">All Locations</option>
-          {locations.map((city) => (
-            <option key={city} value={city}>
-              {city}
+          {locationOptions.map((loc) => (
+            <option key={loc.id} value={loc.id}>
+              {loc.name}
             </option>
           ))}
         </select>

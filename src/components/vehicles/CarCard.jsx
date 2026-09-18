@@ -14,6 +14,7 @@ import {
 } from "react-icons/lu";
 import { assets, dummyCarData } from "../../assets/assets";
 import VehicleQuickViewModal from "../VehicleQuickViewModal";
+import SafeImage from "../common/SafeImage";
 import { useCompare } from "../../context/CompareContext";
 import { usePreferences } from "../../context/PreferencesContext";
 import { useWishlist } from "../../hooks/useWishlist";
@@ -36,10 +37,17 @@ const CarCard = ({ car = dummyCarData[0] }) => {
       }`}
     >
       <div className="relative flex items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-700">
-        <img
-          src={car.image || assets.car_image1}
+        <SafeImage
+          src={car.image}
           alt={`${car.brand} ${car.model}`}
           className="h-[150px] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+          fallback={
+            <img
+              src={assets.car_image1}
+              alt={`${car.brand} ${car.model}`}
+              className="h-[150px] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+            />
+          }
         />
         {car.is_available && (
           <span className="absolute left-3 top-3 z-10 inline-flex max-w-[70%] items-center gap-1.5 rounded-full bg-emerald-600/90 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-sm">

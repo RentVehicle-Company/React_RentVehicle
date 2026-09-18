@@ -1,5 +1,5 @@
 import { assets, dummyCarData } from "../assets/assets.js";
-import { API_ENDPOINTS, request } from "./api.js";
+import { API_ENDPOINTS, buildAuthHeaders, request } from "./api.js";
 import { getCachedUser } from "./userService.js";
 
 // ---------------------------------------------------------------------------
@@ -501,6 +501,101 @@ const toDisplayLabel = (value) => {
     });
   }
   return value;
+};
+
+// Always produce a backend-friendly LocalDateTime. Standalone date values that
+// parse as UTC are kept as-is so no day-shift is introduced.
+const toIsoLocal = (value) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T00:00:00`;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+    date.getSeconds()
+  )}`;
+};
+
+// POST /api/bookings — submits the rental request as multipart form data,
+// including the renter's ID card and driving license photos (the backend binds
+// them via @RequestParam MultipartFile next to @ModelAttribute DTO). Returns
+// the created BookingResponseDTO. When the backend is unreachable, records the
+// booking locally so the demo flow can still finish.
+export const createBookingRequest = async ({
+  productId,
+  userId,
+  pickupDate,
+  returnDate,
+  contactPhone,
+  notes,
+  idCardImage,
+  drivingLicenseImage,
+}) => {
+  const form = new FormData();
+  form.append("productId", String(productId));
+  form.append("userId", String(userId));
+  if (toIsoLocal(pickupDate)) form.append("pickupDate", toIsoLocal(pickupDate));
+  if (toIsoLocal(returnDate)) form.append("returnDate", toIsoLocal(returnDate));
+  if (contactPhone) form.append("contactPhone", contactPhone);
+  if (notes) form.append("notes", notes);
+  // Files must be attached as real multipart parts with a filename — the
+  // backend binds them via @RequestParam MultipartFile. Anything that isn't a
+  // File/Blob (e.g. a stale string) is skipped instead of being serialised.
+  const appendFilePart = (name, file) => {
+    if (!file) return;
+    const isFile =
+      (typeof Blob !== "undefined" && file instanceof Blob) ||
+      (typeof File !== "undefined" && file instanceof File);
+    if (!isFile) return;
+    form.append(name, file, file.name || `${name}.jpg`);
+  };
+  appendFilePart("idCardImage", idCardImage);
+  appendFilePart("drivingLicenseImage", drivingLicenseImage);
+
+  let response;
+  try {
+    response = await fetch(API_ENDPOINTS.bookings, {
+      method: "POST",
+      headers: buildAuthHeaders(),
+      body: form,
+    });
+  } catch {
+    // Backend unreachable -> local mock record keeps the flow alive.
+    const local = await createBooking({
+      vehicleName: notes || "Rental",
+      pickupDate,
+      returnDate,
+      pickupLocation: "Phnom Penh",
+      totalPrice: 0,
+      rentalFee: 0,
+      serviceFee: 0,
+    });
+    return { ...local, backendBookingId: null, local: true };
+  }
+
+  const raw = await response.text().catch(() => null);
+  let data = null;
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = raw;
+    }
+  }
+
+  if (!response.ok) {
+    const message =
+      (data && (data.message || data.error)) ||
+      `Booking failed (HTTP ${response.status})`;
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+
+  const booking = data?.data ?? data;
+  return { ...booking, backendBookingId: booking.id };
 };
 
 // Creates a booking locally. Falls back to a mock record when the backend is

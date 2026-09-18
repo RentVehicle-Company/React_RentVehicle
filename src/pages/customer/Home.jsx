@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Hero from "../../components/Hero";
 import HowItWorks from "../../components/HowItWorks";
 import FeaturedSection from "../../components/FeaturedSection";
@@ -10,16 +10,44 @@ import Testimonial from "../../components/Testimonial";
 import NewsletterBanner from "../../components/NewsletterBanner";
 import Faq from "../../components/Faq";
 import RecommendedTrips from "../../components/RecommendedTrips";
-import { mockVehicles } from "../../services/vehicleServices";
+import {
+  getFeaturedVehicles,
+  mockVehicles,
+} from "../../services/vehicleServices";
 
 const Home = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedVehicle, setSelectedVehicle] = useState("bmw");
+  const [featuredVehicles, setFeaturedVehicles] = useState([]);
+
+  // Featured fleet comes from the backend (GET /api/products?isAvailable=true)
+  // and falls back to the local mock fleet when the API is unreachable.
+  useEffect(() => {
+    let alive = true;
+    getFeaturedVehicles()
+      .then((data) => {
+        if (alive) setFeaturedVehicles(data);
+      })
+      .catch(() => {
+        if (alive) setFeaturedVehicles(mockVehicles.slice());
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // As soon as real data arrives, drop the mock-only placeholder.
+  const baseVehicles =
+    featuredVehicles.length > 0 ? featuredVehicles : mockVehicles;
 
   const filteredVehicles =
     activeCategory === "All"
-      ? mockVehicles
-      : mockVehicles.filter((car) => car.category === activeCategory);
+      ? baseVehicles
+      : baseVehicles.filter(
+          (car) =>
+            String(car.category).toLowerCase() ===
+            activeCategory.toLowerCase()
+        );
 
   return (
     <>

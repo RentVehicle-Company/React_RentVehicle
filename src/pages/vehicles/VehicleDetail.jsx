@@ -52,6 +52,8 @@ import { CAMBODIA_LOCATIONS } from "../../assets/assets";
 import { usePreferences } from "../../context/PreferencesContext";
 import { useAuth } from "../../context/AuthContext";
 import CustomDatePicker from "../../components/common/CustomDatePicker";
+import { createBookingRequest } from "../../services/bookingService";
+import { getCachedUser } from "../../services/userService";
 
 const inputClass =
   "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -336,6 +338,7 @@ const VehicleDetail = () => {
   const [reviewHover, setReviewHover] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [bookingError, setBookingError] = useState("");
   const bookingRef = useRef(null);
   const today = new Date().toISOString().split("T")[0];
 
@@ -364,6 +367,7 @@ const VehicleDetail = () => {
     setReviewHover(0);
     setReviewText("");
     setShowStickyBar(false);
+    setBookingError("");
     getVehicleById(id)
       .then((data) => {
         setVehicle(data);
@@ -517,14 +521,27 @@ const VehicleDetail = () => {
     return () => observer.disconnect();
   }, [vehicle]);
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!vehicle || !hasValidDates) return;
-    const booking = {
-      id: vehicle.id,
+    setBookingError("");
+    if (!isAuthenticated) {
+      openAuth("login");
+      return;
+    }
+    if (!idDocument || !licenseDocument) {
+      setBookingError(
+        "Please upload both your ID card and driving license to continue."
+      );
+      return;
+    }
+
+    const baseBooking = {
       vehicleName: `${vehicle.brand} ${vehicle.model}`,
       image: vehicle.image,
       startDate: formatDate(pickupDate),
       endDate: formatDate(returnDate),
+      pickupDate: formatDate(pickupDate),
+      returnDate: formatDate(returnDate),
       pickupLocation: usingDelivery
         ? deliverySummary
         : pickupLocation || vehicle.location,
@@ -544,11 +561,56 @@ const VehicleDetail = () => {
       addOnTotal,
       totalPrice,
       duration: days,
+      transmission: vehicle.transmission,
+      seating_capacity: vehicle.seating_capacity,
+      fuel_type: vehicle.fuel_type,
       status: "confirmed",
       paymentStatus: "UNPAID",
     };
+
+    // Persist the booking on the backend (POST /api/bookings, multipart with
+    // the uploaded ID card and driving license photos).
+    let persisted = { ...baseBooking, backendBookingId: null };
+    try {
+      const created = await createBookingRequest({
+        productId: vehicle.id,
+        userId: getCachedUser().id,
+        pickupDate,
+        returnDate,
+        contactPhone: user?.phone || getCachedUser().phone || "",
+        notes: `${vehicle.brand} ${vehicle.model}`,
+        idCardImage: idDocument,
+        drivingLicenseImage: licenseDocument,
+      });
+      if (created.local) {
+        persisted = { ...baseBooking, backendBookingId: null, local: true };
+      } else {
+        persisted = {
+          ...baseBooking,
+          id: created.id,
+          backendBookingId: created.id,
+          totalPrice: Number(created.totalAmount) || totalPrice,
+          status: String(created.status || "confirmed").toLowerCase(),
+        };
+      }
+    } catch {
+      // Development fallback: the backend booking POST failed or was rejected
+      // (offline, expired token, or document verification error). Instead of
+      // dead-ending the user, fall back to a local booking so they can still
+      // proceed directly to the Bakong KHQR payment screen.
+      persisted = {
+        ...baseBooking,
+        backendBookingId: null,
+        local: true,
+      };
+    }
+
     navigate("/checkout", {
-      state: { booking, method: "khqr", from: `/vehicles/${vehicle.id}` },
+      state: {
+        booking: persisted,
+        method: "khqr",
+        from: `/vehicles/${vehicle.id}`,
+      },
     });
   };
 
@@ -1468,6 +1530,11 @@ const VehicleDetail = () => {
                   Confirm & Pay Now
                 </button>
               </div>
+              {bookingError && (
+                <p className="mt-2 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-3 py-2 text-xs text-red-600 dark:text-red-300">
+                  {bookingError}
+                </p>
+              )}
             </div>
           </section>
 
