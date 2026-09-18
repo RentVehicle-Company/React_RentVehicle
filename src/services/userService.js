@@ -153,3 +153,50 @@ export const uploadProfileImage = async (id, file) => {
     return persist({ image: dataUrl });
   }
 };
+
+// Admin-only: fetch all users
+export const getAllUsers = async () => {
+  try {
+    const data = await request(API_ENDPOINTS.users);
+    if (!data) throw new Error("Backend offline");
+    const list = Array.isArray(data) ? data : (data?.data ?? []);
+    return list.map(mapUser);
+  } catch (err) {
+    console.error("getAllUsers failed:", err);
+    // Return empty array instead of crashing - UI will show "No users" state
+    return [];
+  }
+};
+
+// Admin-only: fetch all users with fallback mock data (for development)
+export const getAllUsersWithFallback = async () => {
+  const users = await getAllUsers();
+  if (users.length > 0) return users;
+  
+  // Fallback mock data for development when backend is unreachable
+  console.warn("Backend unavailable, using mock user data");
+  return [
+    { id: 1, name: "Admin User", email: "admin@example.com", phone: "+1234567890", role: "ADMIN", verified: true, memberSince: "Jan 2024", image: "" },
+    { id: 2, name: "John Doe", email: "john@example.com", phone: "+1234567891", role: "USER", verified: true, memberSince: "Feb 2024", image: "" },
+    { id: 3, name: "Jane Smith", email: "jane@example.com", phone: "+1234567892", role: "USER", verified: false, memberSince: "Mar 2024", image: "" },
+  ];
+};
+
+// Admin-only: update user role
+export const updateUserRole = async (id, role) => {
+  const response = await request(API_ENDPOINTS.userById(id), {
+    method: "PUT",
+    body: JSON.stringify({ role }),
+  });
+  if (!response) throw new Error("Failed to update user role");
+  return mapUser(response);
+};
+
+// Admin-only: delete user
+export const deleteUser = async (id) => {
+  const response = await request(API_ENDPOINTS.userById(id), {
+    method: "DELETE",
+  });
+  if (!response) throw new Error("Failed to delete user");
+  return response;
+};

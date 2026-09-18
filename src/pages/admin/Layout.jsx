@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { LuArrowLeft, LuCar, LuChartPie, LuLayoutDashboard, LuShieldCheck, LuChartColumn } from "react-icons/lu";
+import { LuArrowLeft, LuCar, LuChartPie, LuLayoutDashboard, LuShieldCheck, LuChartColumn, LuTag, LuUsers, LuMapPin } from "react-icons/lu";
 import { Link } from "react-router-dom";
-import { ALL_MOCK_VEHICLES, getVehicles } from "../../services/vehicleServices";
+import { getVehicles } from "../../services/vehicleServices";
 import Dashboard from "./Dashboard";
 import ManageVehicle from "./ManageVehicle";
+import ManageCategories from "./ManageCategories";
+import ManageUsers from "./ManageUsers";
+import ManageLocations from "./ManageLocations";
 import Analytics from "./Analytics";
 
 const STORAGE_KEY = "rental_admin_vehicles";
 
-
-
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: LuLayoutDashboard },
   { key: "vehicles", label: "Manage Vehicles", icon: LuCar },
+  { key: "categories", label: "Categories", icon: LuTag },
+  { key: "users", label: "Manage Users", icon: LuUsers },
+  { key: "locations", label: "Locations", icon: LuMapPin },
   { key: "analytics", label: "Analytics", icon: LuChartColumn },
 ];
 
@@ -130,7 +134,13 @@ const Layout = () => {
                   ? "Dashboard"
                   : activeTab === "analytics"
                     ? "Analytics"
-                    : "Vehicle Management"}
+                    : activeTab === "categories"
+                      ? "Categories"
+                      : activeTab === "users"
+                        ? "User Management"
+                        : activeTab === "locations"
+                          ? "Locations"
+                          : "Vehicle Management"}
               </h2>
             </div>
             <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-200 sm:inline-flex">
@@ -143,6 +153,12 @@ const Layout = () => {
             <Dashboard vehicles={vehicles} />
           ) : activeTab === "analytics" ? (
             <Analytics vehicles={vehicles} />
+          ) : activeTab === "categories" ? (
+            <ManageCategories />
+          ) : activeTab === "users" ? (
+            <ManageUsers />
+          ) : activeTab === "locations" ? (
+            <ManageLocations />
           ) : (
             <ManageVehicle vehicles={vehicles} onChange={setVehicles} />
           )}

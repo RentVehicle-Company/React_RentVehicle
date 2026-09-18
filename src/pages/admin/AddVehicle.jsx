@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   LuChevronDown,
@@ -6,57 +6,40 @@ import {
   LuMapPin,
   LuTag,
   LuX,
+  LuLoader,
+  LuTriangleAlert,
+  LuCircleCheck,
 } from "react-icons/lu";
-import { assets, CAMBODIA_LOCATIONS } from "../../assets/assets";
+import { assets } from "../../assets/assets";
+import { getCategories, getLocations, createVehicle } from "../../services/vehicleServices";
+import { toBackendVehicleType } from "../../utils/vehicleTypeMap";
 
 const inputClass =
   "w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-borderColor dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 const labelClass = "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
 
-const CAR_CATEGORIES = [
-  "Sports Car",
-  "Supercar",
-  "Luxury SUV",
-  "SUV",
-  "Sedan",
-  "Hatchback",
-  "Electric",
-  "Truck",
-];
-
 const VEHICLE_TYPES = {
   car: {
     label: "Car",
-    categories: CAR_CATEGORIES,
     fuel: "Petrol",
     defaultImage: assets.car_image1,
+    apiVehicleType: "car",
   },
   motorbike: {
     label: "Motorbike",
-    categories: [
-      "Scooter",
-      "Underbone",
-      "Touring",
-      "Sportbike",
-      "Cruiser",
-    ],
     fuel: "Petrol",
     defaultImage: assets.main_car,
+    apiVehicleType: "motorbike",
   },
   bicycle: {
     label: "Bicycle",
-    categories: [
-      "Mountain Bike",
-      "Road Bike",
-      "Hybrid / City Bike",
-      "E-Bike / Electric",
-    ],
     fuel: "Manual",
     defaultImage: assets.banner_car_image,
+    apiVehicleType: "bicycle",
   },
 };
 
-const CITIES = CAMBODIA_LOCATIONS;
+const TRANSMISSION_OPTIONS = ["Automatic", "Manual", "Semi-Automatic", "CVT"];
 
 const deriveType = (vehicle) => {
   if (!vehicle) return "car";
@@ -64,7 +47,7 @@ const deriveType = (vehicle) => {
   const cat = String(vehicle.category || "").toLowerCase();
   if (cat.includes("bike") || cat.includes("e-bike")) return "bicycle";
   if (
-    [ "scooter", "underbone", "touring", "sportbike", "cruiser" ].some((c) =>
+    ["scooter", "underbone", "touring", "sportbike", "cruiser"].some((c) =>
       cat.includes(c)
     ) ||
     /cc|kawasaki|ducati|honda|yamaha/i.test(`${vehicle.brand || ""}`)
@@ -76,72 +59,195 @@ const deriveType = (vehicle) => {
 
 const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
   const [type, setType] = useState(() => deriveType(vehicle));
-  const [category, setCategory] = useState(vehicle?.category || CAR_CATEGORIES[0]);
+  const [category, setCategory] = useState(vehicle?.category || "");
   const [brand, setBrand] = useState(vehicle?.brand || "");
   const [model, setModel] = useState(vehicle?.model || "");
   const [price, setPrice] = useState(vehicle?.price_per_day ?? "");
-  const [year, setYear] = useState(vehicle?.year ?? 2025);
+  const [year, setYear] = useState(vehicle?.modelYear ?? vehicle?.year ?? 2025);
   const [seats, setSeats] = useState(vehicle?.seating_capacity ?? 4);
   const [transmission, setTransmission] = useState(
     vehicle?.transmission || "Automatic"
   );
-  const [location, setLocation] = useState(vehicle?.location || "Phnom Penh");
-  const [engine, setEngine] = useState(vehicle?.specs?.engine || "");
+  const [location, setLocation] = useState(vehicle?.location || "");
+  const [engine, setEngine] = useState(vehicle?.engineCc ?? vehicle?.specs?.engine ?? "");
   const [horsepower, setHorsepower] = useState(
     vehicle?.specs?.horsepower ?? ""
   );
-  const [topSpeed, setTopSpeed] = useState(vehicle?.specs?.topSpeed ?? "");
+  const [topSpeed, setTopSpeed] = useState(vehicle?.topSpeed ?? vehicle?.specs?.topSpeed ?? "");
   const [imageUrl, setImageUrl] = useState(vehicle?.image || "");
   const [description, setDescription] = useState(vehicle?.description || "");
   const [available, setAvailable] = useState(
-    vehicle ? Boolean(vehicle.is_available) : true
+    vehicle ? Boolean(vehicle.isAvailable ?? vehicle.is_available) : true
   );
 
+  const [categories, setCategories] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
   const typeInfo = VEHICLE_TYPES[type];
-  const normalizedCategory = typeInfo.categories.includes(category)
-    ? category
-    : typeInfo.categories[0];
+  const previewImage = imageUrl.trim() || typeInfo.defaultImage;
 
-  const previewImage =
-    imageUrl.trim() || typeInfo.defaultImage;
+  const fetchCategories = useCallback(async () => {
+    setCategoriesLoading(true);
+    try {
+      const data = await getCategories(toBackendVehicleType(typeInfo.apiVehicleType));
+      setCategories(data);
+      if (data.length > 0 && !category) {
+        setCategory(data[0].name);
+      }
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, [type]);
 
-  const categoryOptions = useMemo(() => typeInfo.categories, [typeInfo]);
+  const fetchLocations = useCallback(async () => {
+    setLocationsLoading(true);
+    try {
+      const data = await getLocations();
+      setLocations(data);
+      if (data.length > 0 && !location) {
+        setLocation(data[0].city || data[0].name || data[0]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch locations:", err);
+      setLocations([]);
+    } finally {
+      setLocationsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!categoryOptions.includes(category)) {
-      setCategory(categoryOptions[0]);
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    fetchLocations();
+  }, [fetchLocations]);
+
+  useEffect(() => {
+    if (categories.length > 0 && !categories.some((c) => c.name === category)) {
+      setCategory(categories[0]?.name || "");
     }
-  }, [category, categoryOptions]);
+  }, [categories]);
 
-  const fuelType = vehicle?.fuel_type || typeInfo.fuel;
+  const fuelType = vehicle?.fuelType ?? vehicle?.fuel_type ?? typeInfo.fuel;
 
-  const handleSubmit = (event) => {
+  const adaptBackendVehicle = (v) => {
+    const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
+    const categorySlugMap = Object.fromEntries(categories.map((c) => [c.id, c.slug]));
+    const locationMap = Object.fromEntries(locations.map((l) => [l.id, l.city || l.name]));
+    const PLACEHOLDER_IMAGE =
+      "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23334155'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='20' fill='%2394a3b8' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
+
+    return {
+      id: v.id,
+      brand: v.brand,
+      model: v.model,
+      image: v.image || PLACEHOLDER_IMAGE,
+      images: v.images?.length ? v.images : [],
+      year: v.modelYear,
+      category: categoryMap[v.categoryId] ?? "Uncategorized",
+      categorySlug: categorySlugMap[v.categoryId] ?? null,
+      categoryId: v.categoryId,
+      seating_capacity: v.seatingCapacity,
+      fuel_type: v.fuelType,
+      transmission: v.transmission,
+      price_per_day: v.pricePerDay,
+      location: locationMap[v.locationId] ?? "Unknown",
+      description: v.description,
+      is_available: v.isAvailable,
+      engine_cc: v.engineCc,
+      fuel_efficiency: v.fuelEfficiency,
+      top_speed: v.topSpeed,
+      gears: v.speeds,
+      frame_material: v.material,
+      wheel_size: v.wheelSize,
+    };
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!brand.trim() || !model.trim()) return;
+    setError("");
+    setSuccess(false);
+
+    if (!brand.trim() || !model.trim()) {
+      setError("Brand and Model are required");
+      return;
+    }
+    if (!category) {
+      setError("Please select a category");
+      return;
+    }
+    if (!location) {
+      setError("Please select a location");
+      return;
+    }
+
+    const selectedCategory = categories.find((c) => c.name === category);
+    const selectedLocation = locations.find(
+      (l) => l.city === location || l.name === location || l.id === location
+    );
+
+    if (!selectedCategory) {
+      setError("Invalid category selected");
+      return;
+    }
+    if (!selectedLocation) {
+      setError("Invalid location selected");
+      return;
+    }
+
+    setSubmitting(true);
+
     const payload = {
-      type,
+      name: `${brand.trim()} ${model.trim()}`,
       brand: brand.trim(),
       model: model.trim(),
-      category: normalizedCategory,
-      price_per_day: Math.max(0, Number(price) || 0),
-      year: Math.max(1990, Number(year) || 2025),
-      seating_capacity: Math.max(1, Number(seats) || 1),
-      fuel_type: fuelType,
+      modelYear: Math.max(1990, Number(year) || 2025),
+      licensePlate: "",
       transmission,
-      location,
-      description: description.trim() || `No description provided.`,
-      image: previewImage,
-      specs: {
-        engine:
-          engine.trim() ||
-          (type === "bicycle" ? "Aluminum Frame" : "In-line Engine"),
-        horsepower: Number(horsepower) || (type === "bicycle" ? 0.3 : 150),
-        topSpeed: Number(topSpeed) || (type === "bicycle" ? 18 : 160),
-        ...(type === "bicycle" ? { frame: "Aluminum", gears: "21-Speed" } : {}),
-      },
-      is_available: available,
+      fuelType,
+      seatingCapacity: Math.max(1, Number(seats) || 1),
+      material: engine.trim() || (type === "bicycle" ? "Aluminum Frame" : ""),
+      speeds: type === "bicycle" ? "21-Speed" : "",
+      wheelSize: "",
+      engineCc: type !== "bicycle" ? engine.trim() : "",
+      fuelEfficiency: "",
+      topSpeed: Number(topSpeed) || "",
+      pricePerDay: Math.max(0, Number(price) || 0),
+      description: description.trim() || "No description provided.",
+      isAvailable: available,
+      categoryId: selectedCategory.id,
+      locationId: selectedLocation.id,
     };
-    onSave(payload);
+
+    try {
+      const createdVehicle = await createVehicle(payload);
+      setSuccess(true);
+      setTimeout(() => {
+        onSave(adaptBackendVehicle(createdVehicle));
+      }, 500);
+    } catch (err) {
+      console.error("Failed to create vehicle:", err);
+      if (err.status === 401 || err.status === 403) {
+        setError("Unauthorized: Please log in again as admin");
+      } else if (err.status === 400) {
+        setError(err.message || "Invalid input. Please check all fields.");
+      } else if (err.status === 422) {
+        setError(err.message || "Validation failed. Please check your input.");
+      } else {
+        setError(err.message || "Failed to create vehicle. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -175,13 +281,36 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-white"
+            disabled={submitting}
+            className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LuX size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto px-6 py-5">
+        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto px-6 py-5 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-500 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb:hover]:bg-slate-400 dark:[&::-webkit-scrollbar-thumb:hover]:bg-slate-500">
+          {(error || success) && (
+            <div
+              className={`mb-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm ${
+                success
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                  : "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+              }`}
+            >
+              {success ? (
+                <>
+                  <LuCircleCheck size={18} />
+                  Vehicle created successfully!
+                </>
+              ) : (
+                <>
+                  <LuTriangleAlert size={18} />
+                  {error}
+                </>
+              )}
+            </div>
+          )}
+
           <div className="space-y-5">
             {/* Vehicle type */}
             <div>
@@ -193,7 +322,8 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                     type="button"
                     aria-pressed={type === key}
                     onClick={() => setType(key)}
-                    className={`cursor-pointer rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                    disabled={submitting}
+                    className={`cursor-pointer rounded-xl border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
                       type === key
                         ? "border-primary/40 bg-primary/5 text-primary"
                         : "border-borderColor dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600"
@@ -212,22 +342,35 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   Category
                 </label>
                 <div className="relative">
-                  <select
-                    id="addv-category"
-                    value={normalizedCategory}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className={`${inputClass} appearance-none pr-9 cursor-pointer`}
-                  >
-                    {categoryOptions.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                  <LuChevronDown
-                    size={15}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
+                  {categoriesLoading ? (
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <LuLoader className="animate-spin" size={16} />
+                      Loading categories...
+                    </div>
+                  ) : categories.length === 0 ? (
+                    <div className="text-slate-400 text-sm">No categories found</div>
+                  ) : (
+                    <>
+                      <select
+                        id="addv-category"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        disabled={submitting}
+                        className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+                        required
+                      >
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.name}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                      <LuChevronDown
+                        size={15}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
               <div>
@@ -238,9 +381,10 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   id="addv-transmission"
                   value={transmission}
                   onChange={(e) => setTransmission(e.target.value)}
+                  disabled={submitting}
                   className={`${inputClass} appearance-none pr-9 cursor-pointer`}
                 >
-                  {["Automatic", "Manual", "Semi-Automatic", "CVT"].map((t) => (
+                  {TRANSMISSION_OPTIONS.map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
@@ -262,6 +406,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   placeholder="e.g. Toyota"
                   className={inputClass}
                   required
+                  disabled={submitting}
                 />
               </div>
               <div>
@@ -276,6 +421,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   placeholder={`e.g. ${typeInfo.label === "Bicycle" ? "Marlin 7" : "Camry"}`}
                   className={inputClass}
                   required
+                  disabled={submitting}
                 />
               </div>
             </div>
@@ -300,6 +446,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                     placeholder="0.00"
                     className={`${inputClass} pl-8`}
                     required
+                    disabled={submitting}
                   />
                 </div>
               </div>
@@ -315,6 +462,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                   className={inputClass}
+                  disabled={submitting}
                 />
               </div>
               <div>
@@ -329,6 +477,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   value={seats}
                   onChange={(e) => setSeats(e.target.value)}
                   className={inputClass}
+                  disabled={submitting}
                 />
               </div>
               <div>
@@ -336,26 +485,39 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   Location
                 </label>
                 <div className="relative">
-                  <LuMapPin
-                    size={14}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <select
-                    id="addv-location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className={`${inputClass} appearance-none pl-9 pr-8 cursor-pointer`}
-                  >
-                    {CITIES.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
-                  <LuChevronDown
-                    size={14}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
+                  {locationsLoading ? (
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <LuLoader className="animate-spin" size={16} />
+                      Loading locations...
+                    </div>
+                  ) : locations.length === 0 ? (
+                    <div className="text-slate-400 text-sm">No locations found</div>
+                  ) : (
+                    <>
+                      <LuMapPin
+                        size={14}
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                      <select
+                        id="addv-location"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        disabled={submitting}
+                        className={`${inputClass} appearance-none pl-9 pr-8 cursor-pointer`}
+                        required
+                      >
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={loc.city || loc.name || loc.id}>
+                            {loc.city || loc.name}
+                          </option>
+                        ))}
+                      </select>
+                      <LuChevronDown
+                        size={14}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -380,6 +542,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                       type === "bicycle" ? "Aluminum Frame" : "e.g. 2.5L I4 / 125cc"
                     }
                     className={inputClass}
+                    disabled={submitting}
                   />
                 </div>
                 <div>
@@ -393,6 +556,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                     onChange={(e) => setHorsepower(e.target.value)}
                     placeholder="150"
                     className={inputClass}
+                    disabled={submitting}
                   />
                 </div>
               </div>
@@ -407,6 +571,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   onChange={(e) => setTopSpeed(e.target.value)}
                   placeholder="180"
                   className={inputClass}
+                  disabled={submitting}
                 />
               </div>
             </div>
@@ -429,6 +594,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="https://… or leave empty for a default image"
                     className={`${inputClass} pl-9`}
+                    disabled={submitting}
                   />
                 </div>
                 <img
@@ -454,6 +620,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Short summary of the vehicle experience…"
                 className={`${inputClass} resize-none`}
+                disabled={submitting}
               />
             </div>
 
@@ -463,7 +630,8 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
               role="switch"
               aria-checked={available}
               onClick={() => setAvailable((value) => !value)}
-              className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-borderColor dark:border-slate-600 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
+              disabled={submitting}
+              className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-borderColor dark:border-slate-600 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
             >
               <span>
                 <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -493,14 +661,17 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer rounded-xl border border-borderColor dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-600"
+              disabled={submitting}
+              className="cursor-pointer rounded-xl border border-borderColor dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="cursor-pointer rounded-xl bg-slate-900 dark:bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-black dark:hover:bg-primary-dull hover:shadow-md"
+              disabled={submitting}
+              className="cursor-pointer rounded-xl bg-slate-900 dark:bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-black dark:hover:bg-primary-dull hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              {submitting && <LuLoader size={16} className="animate-spin" />}
               {mode === "edit" ? "Save Changes" : "Add Vehicle"}
             </button>
           </div>

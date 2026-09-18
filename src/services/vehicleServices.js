@@ -2,6 +2,98 @@ import { API_ENDPOINTS, request } from "./api.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export const getCategories = async (vehicleType) => {
+  try {
+    const url = vehicleType
+      ? `${API_ENDPOINTS.categories}?vehicleType=${encodeURIComponent(vehicleType)}`
+      : API_ENDPOINTS.categories;
+    const data = await request(url);
+    if (!data) throw new Error("Backend offline");
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
+  } catch (err) {
+    console.error("getCategories fallback triggered:", err);
+    await delay(300);
+    return [];
+  }
+};
+
+export const getLocations = async () => {
+  try {
+    const data = await request(API_ENDPOINTS.locations);
+    if (!data) throw new Error("Backend offline");
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
+  } catch (err) {
+    console.error("getLocations fallback triggered:", err);
+    await delay(300);
+    return [];
+  }
+};
+
+export const createLocation = async (locationData) => {
+  const response = await request(API_ENDPOINTS.locations, {
+    method: "POST",
+    body: JSON.stringify(locationData),
+  });
+  if (!response) throw new Error("Failed to create location - no response from server");
+  return response;
+};
+
+export const updateLocation = async (id, locationData) => {
+  const response = await request(`${API_ENDPOINTS.locations}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(locationData),
+  });
+  if (!response) throw new Error("Failed to update location - no response from server");
+  return response;
+};
+
+export const deleteLocation = async (id) => {
+  const response = await request(`${API_ENDPOINTS.locations}/${id}`, {
+    method: "DELETE",
+  });
+  if (!response) throw new Error("Failed to delete location - no response from server");
+  return response;
+};
+
+export const createVehicle = async (vehicleData) => {
+  const response = await request(API_ENDPOINTS.products, {
+    method: "POST",
+    body: JSON.stringify(vehicleData),
+  });
+  if (!response) throw new Error("Failed to create vehicle - no response from server");
+  return response;
+};
+
+export const createCategory = async (categoryData) => {
+  const response = await request(API_ENDPOINTS.categories, {
+    method: "POST",
+    body: JSON.stringify(categoryData),
+  });
+  if (!response) throw new Error("Failed to create category - no response from server");
+  return response;
+};
+
+export const updateCategory = async (id, categoryData) => {
+  const response = await request(`${API_ENDPOINTS.categories}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(categoryData),
+  });
+  if (!response) throw new Error("Failed to update category - no response from server");
+  return response;
+};
+
+export const deleteCategory = async (id) => {
+  const response = await request(`${API_ENDPOINTS.categories}/${id}`, {
+    method: "DELETE",
+  });
+  if (!response) throw new Error("Failed to delete category - no response from server");
+  return response;
+};
+
 // ---------------------------------------------------------------------------
 // Gallery builder — generates crop/zoom variants from a single primary image
 // URL so every vehicle's gallery always matches its own card photo. No shared

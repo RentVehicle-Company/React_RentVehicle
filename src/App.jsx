@@ -20,6 +20,7 @@ import Analytics from "./pages/admin/Analytics";
 import Footer from "./components/common/Footer";
 import LiveChatButton from "./components/LiveChatButton";
 import RequireAuth from "./components/common/RequireAuth";
+import AdminRequireAuth from "./components/common/AdminRequireAuth";
 
 const App = () => {
   const location = useLocation();
@@ -75,8 +76,22 @@ const App = () => {
               </RequireAuth>
             }
           />
-          <Route path="/admin" element={<AdminLayout />} />
-          <Route path="/admin/analytics" element={<Analytics />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRequireAuth>
+                <AdminLayout />
+              </AdminRequireAuth>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <AdminRequireAuth>
+                <Analytics />
+              </AdminRequireAuth>
+            }
+          />
 
           {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
         </Routes>
