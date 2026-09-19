@@ -28,8 +28,8 @@ const FALLBACK_BOOKING = {
   pickupLocation: "Phnom Penh",
   pricePerDay: 85,
   rentalFee: 165,
-  serviceFee: 5,
-  totalPrice: 170,
+  serviceFee: 0,
+  totalPrice: 165,
   status: "confirmed",
   paymentStatus: "UNPAID",
 };
@@ -287,10 +287,12 @@ const PaymentVisa = () => {
                 <span>Rental fee</span>
                 <span>{formatAmount(amount.rentalFee)}</span>
               </div>
-              <div className="flex justify-between gap-4 text-slate-600">
-                <span>Service fee</span>
-                <span>{formatAmount(amount.serviceFee)}</span>
-              </div>
+              {amount.serviceFee > 0 && (
+                <div className="flex justify-between gap-4 text-slate-600">
+                  <span>Service fee</span>
+                  <span>{formatAmount(amount.serviceFee)}</span>
+                </div>
+              )}
               {booking.deliveryFee > 0 && (
                 <div className="flex justify-between gap-4 text-slate-600">
                   <span className="flex items-center gap-1.5">

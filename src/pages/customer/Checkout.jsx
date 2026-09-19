@@ -35,9 +35,25 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
 const KHR_RATE = 4100;
-const QR_EXPIRY_SECONDS = 15 * 60;
+const QR_EXPIRY_SECONDS = 7 * 60;
 const QR_IMAGE_URL =
   "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=KHQR_SAMPLE_PAYMENT";
+
+const getQrExpirySeconds = (expiresAt) => {
+  if (!expiresAt) return QR_EXPIRY_SECONDS;
+
+  const rawValue =
+    typeof expiresAt === "number" ? expiresAt : Date.parse(expiresAt);
+  const timestamp =
+    typeof rawValue === "number" && rawValue < 1e12
+      ? rawValue * 1000
+      : rawValue;
+  const remaining = Math.ceil((timestamp - Date.now()) / 1000);
+
+  return Number.isFinite(remaining) && remaining > 0
+    ? Math.min(remaining, QR_EXPIRY_SECONDS)
+    : QR_EXPIRY_SECONDS;
+};
 
 const FALLBACK_BOOKING = {
   id: 123,
@@ -64,7 +80,8 @@ const FALLBACK_BOOKING = {
 
 const inputClass =
   "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
+const labelClass =
+  "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
 
 const getErrorMessage = (err) =>
   err?.response?.data?.message ||
@@ -90,7 +107,7 @@ const formatUsd = (value) =>
 
 const formatCountdown = (seconds) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
-    seconds % 60
+    seconds % 60,
   ).padStart(2, "0")}`;
 
 const BakongLogo = ({ size = 40 }) => (
@@ -179,9 +196,11 @@ const BRAND_STYLES = {
 };
 
 const maskCardNumber = (number) => {
-  const digits = String(number || "").replace(/\D/g, "").slice(0, 16);
+  const digits = String(number || "")
+    .replace(/\D/g, "")
+    .slice(0, 16);
   const groups = Array.from({ length: 4 }, (_, i) =>
-    digits.slice(i * 4, i * 4 + 4).padEnd(4, "•")
+    digits.slice(i * 4, i * 4 + 4).padEnd(4, "•"),
   );
   return groups.join(" ");
 };
@@ -256,7 +275,11 @@ const PaymentTab = ({ active, onClick, icon, label, disabled }) => (
     aria-selected={active}
     disabled={disabled}
     onClick={onClick}
-    title={disabled ? "Visa payments are temporarily unavailable. Please use KHQR (Bakong)." : undefined}
+    title={
+      disabled
+        ? "Visa payments are temporarily unavailable. Please use KHQR (Bakong)."
+        : undefined
+    }
     className={`relative inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-semibold transition-colors duration-200 sm:gap-2 sm:px-3 sm:text-sm ${
       disabled
         ? "cursor-not-allowed text-slate-400 dark:text-slate-500 opacity-60"
@@ -283,9 +306,9 @@ const PaymentTab = ({ active, onClick, icon, label, disabled }) => (
 const SpecBadge = ({ icon, label }) => (
   <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700/60 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
     <span className="text-slate-400">{icon}</span>
-<span className="min-w-0 truncate">{label}</span>
-    </span>
-  );
+    <span className="min-w-0 truncate">{label}</span>
+  </span>
+);
 
 const TRUST_BADGES = [
   { icon: LuLock, label: "256-Bit SSL Encryption" },
@@ -431,8 +454,9 @@ const Checkout = () => {
 
   const subtitle =
     booking.subtitle ||
-    `${duration} day${duration > 1 ? "s" : ""} · ${booking.pickupLocation ||
-      "Phnom Penh"}`;
+    `${duration} day${duration > 1 ? "s" : ""} · ${
+      booking.pickupLocation || "Phnom Penh"
+    }`;
   const pickupLabel = booking.pickupDate || booking.startDate;
   const dropoffLabel = booking.returnDate || booking.endDate;
   const khrAmount = Math.round(amount.total * KHR_RATE);
@@ -447,7 +471,7 @@ const Checkout = () => {
   const qrPayload = khqr?.qrString || khqr?.qrData || "";
   const qrImageUrl = qrPayload
     ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-        qrPayload
+        qrPayload,
       )}`
     : QR_IMAGE_URL;
 
@@ -457,14 +481,7 @@ const Checkout = () => {
       .then((payment) => {
         if (!mounted) return;
         setKhqr(payment);
-        const expiresAt = payment.expiresAt
-          ? new Date(payment.expiresAt).getTime()
-          : null;
-        setSecondsLeft(
-          expiresAt
-            ? Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
-            : QR_EXPIRY_SECONDS
-        );
+        setSecondsLeft(getQrExpirySeconds(payment.expiresAt));
       })
       .catch((err) => {
         if (!mounted) return;
@@ -482,14 +499,7 @@ const Checkout = () => {
     if (khqr && secondsLeft > 0) return khqr;
     const payment = await generateKhqrPayment({ booking });
     setKhqr(payment);
-    const expiresAt = payment.expiresAt
-      ? new Date(payment.expiresAt).getTime()
-      : null;
-    setSecondsLeft(
-      expiresAt
-        ? Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
-        : QR_EXPIRY_SECONDS
-    );
+    setSecondsLeft(getQrExpirySeconds(payment.expiresAt));
     return payment;
   };
 
@@ -517,9 +527,7 @@ const Checkout = () => {
       const digits = value.replace(/\D/g, "").slice(0, 4);
       setCard((prev) => ({
         ...prev,
-        expiry: [digits.slice(0, 2), digits.slice(2)]
-          .filter(Boolean)
-          .join("/"),
+        expiry: [digits.slice(0, 2), digits.slice(2)].filter(Boolean).join("/"),
       }));
       return;
     }
@@ -580,7 +588,7 @@ const Checkout = () => {
       });
       toast.success(
         "Booking confirmed",
-        `${created.vehicleName} — find it under My Bookings.`
+        `${created.vehicleName} — find it under My Bookings.`,
       );
     } catch (err) {
       setError(getErrorMessage(err));
@@ -602,7 +610,7 @@ const Checkout = () => {
         booking,
       });
       const status = String(
-        result.paymentStatus || result.status || ""
+        result.paymentStatus || result.status || "",
       ).toUpperCase();
 
       // Only a verified PAID payment confirms the booking. FAILED / EXPIRED
@@ -637,7 +645,7 @@ const Checkout = () => {
       });
       toast.success(
         "Booking confirmed",
-        `${created.vehicleName} — find it under My Bookings.`
+        `${created.vehicleName} — find it under My Bookings.`,
       );
     } catch (err) {
       setError(getErrorMessage(err));
@@ -664,7 +672,9 @@ const Checkout = () => {
 
       <div className="mt-5 flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Checkout</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            Checkout
+          </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Complete your payment to confirm your booking.
           </p>
@@ -692,19 +702,25 @@ const Checkout = () => {
 
                 <div className="mt-6 w-full space-y-2 rounded-xl bg-slate-50 dark:bg-slate-700/60 p-4 text-sm">
                   <div className="flex justify-between gap-3">
-                    <span className="text-slate-500 dark:text-slate-400">Transaction ID</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Transaction ID
+                    </span>
                     <span className="truncate font-mono text-xs text-slate-900 dark:text-slate-100">
                       {success.transaction.transactionId}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-slate-500 dark:text-slate-400">Method</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Method
+                    </span>
                     <span className="font-medium text-slate-900 dark:text-slate-100">
                       {success.transaction.card || success.transaction.method}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-slate-500 dark:text-slate-400">Amount</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Amount
+                    </span>
                     <span className="font-semibold text-slate-900 dark:text-slate-100">
                       {formatUsd(success.transaction.amount)}
                     </span>
@@ -939,7 +955,7 @@ const Checkout = () => {
                                   onClick={async () => {
                                     setError(null);
                                     await ensureQrPayment().catch((err) =>
-                                      setError(getErrorMessage(err))
+                                      setError(getErrorMessage(err)),
                                     );
                                   }}
                                   className="cursor-pointer rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-dull"
@@ -1013,7 +1029,9 @@ const Checkout = () => {
                       className="inline-flex items-center justify-center gap-2 w-full px-5 py-3 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-dull disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       <LuScanLine size={17} />
-                      {verifying ? "Checking Payment Status..." : "Check Payment Status"}
+                      {verifying
+                        ? "Checking Payment Status..."
+                        : "Check Payment Status"}
                     </button>
 
                     <TrustBadges />
@@ -1063,7 +1081,9 @@ const Checkout = () => {
                   </div>
                   <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/60 px-3.5 py-2.5 text-sm">
                     <LuPhone size={15} className="shrink-0 text-slate-400" />
-                    <span className="text-slate-600 dark:text-slate-300">{customer.phone}</span>
+                    <span className="text-slate-600 dark:text-slate-300">
+                      {customer.phone}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1087,28 +1107,40 @@ const Checkout = () => {
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {booking.vehicleName}
               </h2>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                {subtitle}
+              </p>
 
               <div className="mt-3 grid grid-cols-3 gap-1.5">
-                <SpecBadge icon={<LuCog size={12} />} label={specs.transmission} />
+                <SpecBadge
+                  icon={<LuCog size={12} />}
+                  label={specs.transmission}
+                />
                 <SpecBadge
                   icon={<LuUsers size={12} />}
                   label={`${specs.seating_capacity} Seats`}
                 />
-                <SpecBadge icon={<LuFuel size={12} />} label={specs.fuel_type} />
+                <SpecBadge
+                  icon={<LuFuel size={12} />}
+                  label={specs.fuel_type}
+                />
               </div>
 
               <div className="mt-4 rounded-xl bg-slate-50 dark:bg-slate-700/60 p-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Pick-up</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Pick-up
+                    </p>
                     <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {pickupLabel}
                     </p>
                   </div>
                   <LuChevronRight className="shrink-0 text-slate-400" />
                   <div className="text-right">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Drop-off</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Drop-off
+                    </p>
                     <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {dropoffLabel}
                     </p>

@@ -47,7 +47,7 @@ export const getMyPayments = async () => {
   const context = await loadCatalog(myBookings);
   const bookingById = new Map(myBookings.map((b) => [String(b.id), b]));
   const enrichedById = new Map(
-    myBookings.map((b) => [String(b.id), mapBooking(b, context)])
+    myBookings.map((b) => [String(b.id), mapBooking(b, context)]),
   );
 
   return allPayments
@@ -79,7 +79,7 @@ export const PAYMENT_METHODS = {
 
 export const MERCHANT_NAME = "Rental Company";
 
-const QR_TTL_MS = 15 * 60 * 1000;
+const QR_TTL_MS = 7 * 60 * 1000;
 
 const generateTransactionId = () =>
   `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random()
@@ -150,7 +150,13 @@ export const processVisaPayment = async ({ booking = {}, card = {} } = {}) => {
       body: JSON.stringify({
         bookingId: booking.id,
         amount: total,
-        card: { name, number: digits, expiryMonth: month, expiryYear: year, cvv },
+        card: {
+          name,
+          number: digits,
+          expiryMonth: month,
+          expiryYear: year,
+          cvv,
+        },
       }),
     });
 

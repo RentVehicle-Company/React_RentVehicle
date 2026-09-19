@@ -178,10 +178,12 @@ const BookingDetails = () => {
               <span>Rental fee</span>
               <span>{formatAmount(rentalFee)}</span>
             </div>
-            <div className="flex justify-between gap-4 text-slate-300">
-              <span>Service fee</span>
-              <span>{formatAmount(serviceFee)}</span>
-            </div>
+            {serviceFee > 0 && (
+              <div className="flex justify-between gap-4 text-slate-300">
+                <span>Service fee</span>
+                <span>{formatAmount(serviceFee)}</span>
+              </div>
+            )}
             {usingDelivery && (
               <div className="flex justify-between gap-4 text-slate-300">
                 <span className="flex items-center gap-1.5">

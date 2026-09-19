@@ -924,12 +924,13 @@ export const getBicycles = async () => getCatalogVehicles({ vehicleType: "bicycl
 
 export const getVehicleById = async (id) => {
   try {
-    const data = await request(API_ENDPOINTS.vehicleById(id));
+    const data = await request(API_ENDPOINTS.productById(id));
     const vehicle = data?.data ?? data;
     if (!vehicle || vehicle.id === undefined) {
       throw new Error("Vehicle not found");
     }
-    return vehicle;
+    const refs = await buildCatalogRefs();
+    return mapProductToVehicle(vehicle, refs);
   } catch {
     // Any backend failure (offline, 404 for a mock-only id, malformed body)
     // falls back to the matching mock vehicle so the id always resolves.
@@ -1026,7 +1027,7 @@ const resolveImage = (value) => {
 const productImagesCache = new Map();
 const productImagesInflight = new Map();
 
-const getProductImages = async (productId) => {
+export const getProductImages = async (productId) => {
   const key = String(productId);
   if (productImagesCache.has(key)) return productImagesCache.get(key);
   if (productImagesInflight.has(key)) return productImagesInflight.get(key);
@@ -1090,6 +1091,9 @@ export const mapProductToVehicle = (raw, refs = {}) => {
     categoryId != null ? refs.categoryById?.get(String(categoryId)) : null;
   const locationRef =
     locationId != null ? refs.locationById?.get(String(locationId)) : null;
+
+  const latitude = valueOf(raw, ["latitude", "lat"], locationRef?.latitude);
+  const longitude = valueOf(raw, ["longitude", "lng", "lon"], locationRef?.longitude);
 
   const category =
     resolveName(raw.category) ||
@@ -1171,6 +1175,8 @@ export const mapProductToVehicle = (raw, refs = {}) => {
     wheel_size: valueOf(raw, ["wheelSize", "wheel_size"]),
     ...(raw.specs ? { specs: raw.specs } : {}),
     ...(raw.features ? { features: raw.features } : {}),
+    ...(latitude != null ? { latitude: Number(latitude) } : {}),
+    ...(longitude != null ? { longitude: Number(longitude) } : {}),
   };
 };
 

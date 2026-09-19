@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LuArrowLeft,
@@ -15,6 +15,7 @@ import { assets } from "../../assets/assets";
 import { createBooking } from "../../services/bookingService";
 import {
   buildPaymentAmount,
+  generateKhqrPayment,
   MERCHANT_NAME,
   verifyKhqrPayment,
 } from "../../services/paymentService";
@@ -23,6 +24,8 @@ import { usePreferences } from "../../context/PreferencesContext";
 
 const QR_IMAGE_URL =
   "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=KHQR_SAMPLE_PAYMENT";
+
+const QR_EXPIRY_SECONDS = 7 * 60;
 
 const FALLBACK_BOOKING = {
   id: 1,
@@ -33,8 +36,8 @@ const FALLBACK_BOOKING = {
   pickupLocation: "Phnom Penh",
   pricePerDay: 300,
   rentalFee: 885,
-  serviceFee: 15,
-  totalPrice: 900,
+  serviceFee: 0,
+  totalPrice: 885,
   status: "confirmed",
   paymentStatus: "UNPAID",
 };
@@ -163,7 +166,7 @@ const QrCodeMock = ({ seed, size = 250 }) => {
         width={scale * 0.94}
         height={scale * 0.94}
         rx={scale * 0.18}
-      />
+      />,
     );
   });
 
@@ -194,13 +197,53 @@ const PaymentKHQR = () => {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [qrFailed, setQrFailed] = useState(false);
+  const [khqr, setKhqr] = useState(null);
+  const [secondsLeft, setSecondsLeft] = useState(QR_EXPIRY_SECONDS);
+  const formatCountdown = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    generateKhqrPayment({ booking })
+      .then((paymentData) => {
+        if (!mounted) return;
+        setKhqr(paymentData);
+        const expiresAt = paymentData.expiresAt
+          ? new Date(paymentData.expiresAt).getTime()
+          : null;
+        setSecondsLeft(
+          expiresAt
+            ? Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+            : QR_EXPIRY_SECONDS,
+        );
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err.message || "Failed to generate QR code");
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [booking]);
+
+  useEffect(() => {
+    if (!khqr) return;
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [khqr]);
 
   const handleVerify = async () => {
     setVerifying(true);
     setError(null);
     try {
+      await ensureQrPayment();
       await verifyKhqrPayment({
-        transactionId: payment.transactionId,
+        transactionId: khqr?.transactionId || payment.transactionId,
         booking,
       });
       const { rentalFee, serviceFee, total } = buildPaymentAmount(booking);
@@ -226,7 +269,7 @@ const PaymentKHQR = () => {
       });
       toast.success(
         "Booking confirmed",
-        `${booking.vehicleName} — find it under My Bookings.`
+        `${booking.vehicleName} — find it under My Bookings.`,
       );
       navigate("/bookings");
     } catch {
@@ -235,9 +278,26 @@ const PaymentKHQR = () => {
     }
   };
 
+  const ensureQrPayment = async () => {
+    if (khqr && secondsLeft > 0) return khqr;
+    const paymentData = await generateKhqrPayment({ booking });
+    setKhqr(paymentData);
+    const expiresAt = paymentData.expiresAt
+      ? new Date(paymentData.expiresAt).getTime()
+      : null;
+    setSecondsLeft(
+      expiresAt
+        ? Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+        : QR_EXPIRY_SECONDS,
+    );
+    return paymentData;
+  };
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(payment.transactionId);
+      await navigator.clipboard.writeText(
+        khqr?.transactionId || payment.transactionId,
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -251,6 +311,11 @@ const PaymentKHQR = () => {
     ? Math.max(1, Math.round(amount.rentalFee / booking.pricePerDay))
     : 1;
   const statusBadge = STATUS_BADGE[booking.status] || STATUS_BADGE.confirmed;
+
+  const qrPayload = khqr?.qrString || khqr?.qrData || "";
+  const qrImageUrl = qrPayload
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrPayload)}`
+    : QR_IMAGE_URL;
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -295,7 +360,9 @@ const PaymentKHQR = () => {
                   ) : (
                     <LuMapPin size={15} />
                   )}
-                  {booking.pickupLocation || booking.deliveryCity || "Phnom Penh"}
+                  {booking.pickupLocation ||
+                    booking.deliveryCity ||
+                    "Phnom Penh"}
                 </p>
               </div>
               <div>
@@ -332,10 +399,12 @@ const PaymentKHQR = () => {
                   <span>Rental fee</span>
                   <span>{formatAmount(amount.rentalFee)}</span>
                 </div>
-                <div className="flex justify-between gap-4 text-slate-600">
-                  <span>Service fee</span>
-                  <span>{formatAmount(amount.serviceFee)}</span>
-                </div>
+                {amount.serviceFee > 0 && (
+                  <div className="flex justify-between gap-4 text-slate-600">
+                    <span>Service fee</span>
+                    <span>{formatAmount(amount.serviceFee)}</span>
+                  </div>
+                )}
                 {booking.deliveryFee > 0 && (
                   <div className="flex justify-between gap-4 text-slate-600">
                     <span className="flex items-center gap-1.5">
@@ -374,22 +443,56 @@ const PaymentKHQR = () => {
 
           <div className="mt-5 flex justify-center">
             <div className="rounded-2xl border-2 border-borderColor bg-white p-4">
-              {qrFailed ? (
-                <QrCodeMock seed="KHQR_SAMPLE_PAYMENT" />
+              {!khqr ? (
+                <div className="flex h-[250px] w-[250px] flex-col items-center justify-center gap-3 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs text-slate-400 dark:text-slate-500">
+                  {error ? (
+                    <>
+                      <LuShieldCheck size={28} className="text-amber-400" />
+                      <span className="px-6 text-center">
+                        QR generation failed. Retry to display your Bakong code.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setError(null);
+                          await ensureQrPayment().catch((err) =>
+                            setError(
+                              err.message || "Failed to generate QR code",
+                            ),
+                          );
+                        }}
+                        className="cursor-pointer rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-dull"
+                      >
+                        Retry
+                      </button>
+                    </>
+                  ) : (
+                    "Generating QR code..."
+                  )}
+                </div>
+              ) : qrFailed || !qrPayload ? (
+                <QrCodeMock seed={qrPayload || "KHQR_SAMPLE_PAYMENT"} />
               ) : (
                 <img
-                  src={QR_IMAGE_URL}
+                  src={qrImageUrl}
                   alt="Bakong KHQR payment code"
                   width={250}
                   height={250}
                   onError={() => setQrFailed(true)}
-                  className="h-auto w-full max-w-[250px]"
+                  className="h-[250px] w-[250px] rounded-lg"
                 />
               )}
-              <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] font-medium text-slate-500">
-                <LuQrCode size={13} className="text-primary" />
-                Bakong KHQR code — scan to pay
-              </p>
+              <div
+                className={`mt-4 flex items-center justify-center gap-2 text-sm font-medium ${
+                  secondsLeft <= 60
+                    ? "text-red-600"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+                aria-live="polite"
+              >
+                <LuClock3 size={15} />
+                QR expires in {formatCountdown(secondsLeft)}
+              </div>
             </div>
           </div>
 
@@ -397,7 +500,9 @@ const PaymentKHQR = () => {
             <p className="text-xs font-medium uppercase tracking-wider text-blue-200">
               Total Payment
             </p>
-            <p className="mt-1 text-3xl font-bold">{formatAmount(amount.total)}</p>
+            <p className="mt-1 text-3xl font-bold">
+              {formatAmount(amount.total)}
+            </p>
             <p className="mt-0.5 text-[11px] text-blue-200">
               Due via Bakong KHQR — VAT and fees included
             </p>
@@ -408,10 +513,12 @@ const PaymentKHQR = () => {
               <span>Rental fee</span>
               <span>{formatAmount(amount.rentalFee)}</span>
             </div>
-            <div className="flex justify-between gap-3 text-slate-600">
-              <span>Service fee</span>
-              <span>{formatAmount(amount.serviceFee)}</span>
-            </div>
+            {amount.serviceFee > 0 && (
+              <div className="flex justify-between gap-3 text-slate-600">
+                <span>Service fee</span>
+                <span>{formatAmount(amount.serviceFee)}</span>
+              </div>
+            )}
             {booking.deliveryFee > 0 && (
               <div className="flex justify-between gap-3 text-slate-600">
                 <span className="flex items-center gap-1.5">
@@ -483,10 +590,15 @@ const PaymentKHQR = () => {
             </div>
           </div>
 
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
+          <div
+            className={`mt-3 flex items-center justify-center gap-1.5 text-xs font-medium ${
+              secondsLeft <= 60 ? "text-red-600" : "text-slate-500"
+            }`}
+            aria-live="polite"
+          >
             <LuClock3 size={13} />
-            Code expires in 15 minutes after generation.
-          </p>
+            QR expires in {formatCountdown(secondsLeft)}
+          </div>
 
           {error && (
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -502,7 +614,9 @@ const PaymentKHQR = () => {
               className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary-dull shadow-lg shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               <LuScanLine size={18} />
-              {verifying ? "Confirming Payment..." : "I have paid — Confirm Payment"}
+              {verifying
+                ? "Confirming Payment..."
+                : "I have paid — Confirm Payment"}
             </button>
             <p className="mt-3 text-center text-xs text-slate-500">
               After authorising the transfer, confirm to finalise your booking.

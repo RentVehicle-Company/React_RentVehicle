@@ -24,7 +24,6 @@ import {
   LuIdCard,
   LuInfo,
   LuLayers,
-  LuLock,
   LuMapPin,
   LuPause,
   LuPenLine,
@@ -45,6 +44,7 @@ import {
 import {
   ALL_MOCK_VEHICLES,
   getVehicleById,
+  getProductImages,
   isBicycle,
   isMotorbike,
 } from "../../services/vehicleServices";
@@ -313,6 +313,7 @@ const VehicleDetail = () => {
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [productImages, setProductImages] = useState([]);
   const [viewMode, setViewMode] = useState("photo");
   const [activeImg, setActiveImg] = useState(0);
   const [frameIndex, setFrameIndex] = useState(0);
@@ -347,6 +348,7 @@ const VehicleDetail = () => {
     setLoading(true);
     setError(null);
     setVehicle(null);
+    setProductImages([]);
     setViewMode("photo");
     setActiveImg(0);
     setFrameIndex(0);
@@ -369,9 +371,13 @@ const VehicleDetail = () => {
     setShowStickyBar(false);
     setBookingError("");
     getVehicleById(id)
-      .then((data) => {
+      .then(async (data) => {
         setVehicle(data);
         setLoading(false);
+        if (data?.id) {
+          const images = await getProductImages(data.id);
+          if (images.length) setProductImages(images);
+        }
       })
       .catch(() => {
         const fallback = ALL_MOCK_VEHICLES.find(
@@ -388,9 +394,10 @@ const VehicleDetail = () => {
 
   const images = useMemo(() => {
     if (!vehicle) return [];
+    if (productImages.length) return productImages;
     if (vehicle.images?.length) return vehicle.images;
     return buildGallery(vehicle.image);
-  }, [vehicle]);
+  }, [vehicle, productImages]);
 
   const derived = useMemo(
     () => (vehicle ? (vehicle.specs ?? deriveSpecs(vehicle)) : null),
@@ -409,8 +416,8 @@ const VehicleDetail = () => {
     return () => clearInterval(timer);
   }, [viewMode, spinning, images.length]);
 
-  const coords = CITY_COORDS[vehicle?.location] || CITY_COORDS["Phnom Penh"];
-  const [lat, lon] = coords;
+  const lat = vehicle?.latitude ?? CITY_COORDS[vehicle?.location]?.[0] ?? CITY_COORDS["Phnom Penh"][0];
+  const lon = vehicle?.longitude ?? CITY_COORDS[vehicle?.location]?.[1] ?? CITY_COORDS["Phnom Penh"][1];
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.04}%2C${lat - 0.03}%2C${lon + 0.04}%2C${lat + 0.03}&layer=mapnik&marker=${lat}%2C${lon}`;
 
   const pickupMs = pickupDate
@@ -426,7 +433,7 @@ const VehicleDetail = () => {
     ? Math.max(1, Math.round((returnMs - pickupMs) / 86400000))
     : 1;
   const rentalFee = vehicle ? vehicle.price_per_day * days : 0;
-  const serviceFee = 5;
+  const serviceFee = 0;
   const activeAddOns = ADDONS.filter((addon) => addOns[addon.key]);
   const addOnTotal = activeAddOns.reduce(
     (sum, addon) => sum + addon.rate * days,
@@ -536,21 +543,21 @@ const VehicleDetail = () => {
     }
 
     const baseBooking = {
-      vehicleName: `${vehicle.brand} ${vehicle.model}`,
-      image: vehicle.image,
+      vehicleName: `${vehicle?.brand || "Vehicle"} ${vehicle?.model || ""}`,
+      image: vehicle?.image,
       startDate: formatDate(pickupDate),
       endDate: formatDate(returnDate),
       pickupDate: formatDate(pickupDate),
       returnDate: formatDate(returnDate),
       pickupLocation: usingDelivery
         ? deliverySummary
-        : pickupLocation || vehicle.location,
+        : pickupLocation || vehicle?.location || "Unknown",
       deliveryMethod: usingDelivery ? "delivery" : "pickup",
       deliveryFee,
       deliveryCity: usingDelivery ? deliveryCity : null,
       deliveryDistrict: usingDelivery ? deliveryDistrict || null : null,
       deliveryAddress: usingDelivery ? deliveryAddress || null : null,
-      pricePerDay: vehicle.price_per_day,
+      pricePerDay: vehicle?.price_per_day || 0,
       rentalFee,
       serviceFee,
       addOns: activeAddOns.map((addon) => ({
@@ -561,11 +568,12 @@ const VehicleDetail = () => {
       addOnTotal,
       totalPrice,
       duration: days,
-      transmission: vehicle.transmission,
-      seating_capacity: vehicle.seating_capacity,
-      fuel_type: vehicle.fuel_type,
+      transmission: vehicle?.transmission,
+      seating_capacity: vehicle?.seating_capacity,
+      fuel_type: vehicle?.fuel_type,
       status: "confirmed",
       paymentStatus: "UNPAID",
+      paymentMethod,
     };
 
     // Persist the booking on the backend (POST /api/bookings, multipart with
@@ -608,13 +616,13 @@ const VehicleDetail = () => {
     navigate("/checkout", {
       state: {
         booking: persisted,
-        method: "khqr",
-        from: `/vehicles/${vehicle.id}`,
+        method: paymentMethod,
+        from: `/vehicles/${vehicle?.id}`,
       },
     });
   };
 
-  if (loading) {
+  if (loading || !vehicle) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8 text-sm text-slate-500 dark:text-slate-400">
         Loading {`vehicle${id ? ` #${id}` : ""}`}...
@@ -622,7 +630,7 @@ const VehicleDetail = () => {
     );
   }
 
-  if (error || !vehicle) {
+  if (error) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Link
@@ -767,19 +775,19 @@ const VehicleDetail = () => {
 
       <div className="mt-4">
         <p className="text-xs font-medium uppercase tracking-wide text-primary">
-          {vehicle.category}
+          {vehicle?.category || "Vehicle"}
         </p>
         <h1 className="mt-0.5 text-2xl font-bold text-slate-900 dark:text-slate-100 sm:text-3xl">
-          {vehicle.brand} {vehicle.model}
+          {vehicle?.brand || "Unknown"} {vehicle?.model || "Model"}
         </h1>
         <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
           <span className="inline-flex items-center gap-1.5">
             <LuMapPin size={14} className="text-primary" />
-            {vehicle.location}
+            {vehicle?.location || "Unknown location"}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <LuCalendarDays size={14} className="text-primary" />
-            Year {vehicle.year}
+            Year {vehicle?.year || "N/A"}
           </span>
         </p>
       </div>
@@ -793,7 +801,7 @@ const VehicleDetail = () => {
                 <div className="group relative h-72 overflow-hidden sm:h-[480px] md:h-[520px]">
                   <img
                     src={images[activeImg]}
-                    alt={`${vehicle.brand} ${vehicle.model}`}
+                    alt={`${vehicle?.brand || "Vehicle"} ${vehicle?.model || ""}`}
                     className="h-full w-full cursor-zoom-in object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                   />
                 </div>
@@ -899,7 +907,7 @@ const VehicleDetail = () => {
                   >
                     <img
                       src={image}
-                      alt={`${vehicle.brand} ${vehicle.model} photo ${index + 1}`}
+                      alt={`${vehicle?.brand || "Vehicle"} ${vehicle?.model || ""} photo ${index + 1}`}
                       className="h-full w-full object-cover"
                     />
                   </button>
@@ -914,12 +922,12 @@ const VehicleDetail = () => {
               Description
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-              {vehicle.description}
+              {vehicle?.description || "No description available."}
             </p>
             <div className="mt-4 rounded-xl border border-blue-100 dark:border-blue-500/30 bg-gradient-to-br from-blue-50/70 dark:from-blue-500/10 via-slate-50 dark:via-slate-800 to-indigo-50/60 dark:to-indigo-500/10 p-4">
               <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
                 <LuZap size={13} className="text-primary" />
-                The {vehicle.brand} {vehicle.model} experience
+                The {vehicle?.brand || "Vehicle"} {vehicle?.model || ""} experience
               </p>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 {buildDescription(vehicle, derived, features)}
@@ -983,7 +991,7 @@ const VehicleDetail = () => {
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Essentials you'll need to pick up this{" "}
-              {vehicle.category.toLowerCase()} in {vehicle.location}.
+              {vehicle?.category?.toLowerCase() || "vehicle"} in {vehicle?.location || "unknown location"}.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="group rounded-2xl bg-gradient-to-br from-blue-500/50 via-slate-400/40 to-indigo-500/50 p-px shadow-sm transition-shadow duration-200 group-hover:shadow-lg group-hover:shadow-primary/10">
@@ -1029,18 +1037,18 @@ const VehicleDetail = () => {
             </p>
             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
               <LuMapPin size={15} className="text-primary" />
-              {vehicle.location}
+              {vehicle?.location || "Unknown location"}
             </p>
             <div className="mt-4 overflow-hidden rounded-xl border border-borderColor dark:border-slate-700 bg-slate-100 dark:bg-slate-700/60">
               <iframe
-                title={`Map showing ${vehicle.location}`}
+                title={`Map showing ${vehicle?.location || "Vehicle location"}`}
                 src={mapUrl}
                 className="h-[240px] w-full border-0"
                 loading="lazy"
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              {vehicle.location} | Lat: {lat.toFixed(4)}, Long: {lon.toFixed(4)}
+              {vehicle?.location || "Unknown"} | Lat: {lat.toFixed(4)}, Long: {lon.toFixed(4)}
             </p>
           </section>
 
@@ -1050,8 +1058,8 @@ const VehicleDetail = () => {
                 Similar Vehicles You Might Like
               </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                More {vehicle.category.toLowerCase()} options near{" "}
-                {vehicle.location}
+                More {vehicle?.category?.toLowerCase() || "vehicle"} options near{" "}
+                {vehicle?.location || "unknown location"}
               </p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {similarVehicles.map((similar) => (
@@ -1117,7 +1125,7 @@ const VehicleDetail = () => {
                     Reserve Vehicle
                   </h2>
                   <p className="mt-0.5 text-xs text-slate-300 dark:text-slate-500">
-                    {vehicle.brand} {vehicle.model}
+                    {vehicle?.brand || "Vehicle"} {vehicle?.model || ""}
                   </p>
                 </div>
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-400/30">
@@ -1127,7 +1135,7 @@ const VehicleDetail = () => {
               </div>
               <div className="relative mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
                 <p className="text-xl font-extrabold text-white">
-                  {formatPrice(vehicle.price_per_day)}
+                  {formatPrice(vehicle?.price_per_day || 0)}
                   <span className="ml-1 text-xs font-normal text-slate-400">
                     /day
                   </span>
@@ -1151,11 +1159,11 @@ const VehicleDetail = () => {
                   />
                   <select
                     id="detail-location"
-                    value={pickupLocation || vehicle.location}
+                    value={pickupLocation || vehicle?.location || ""}
                     onChange={(e) => setPickupLocation(e.target.value)}
                     className={`${inputClass} appearance-none pl-10 pr-9 cursor-pointer`}
                   >
-                    {[vehicle.location, pickupLocation, ...CAMBODIA_LOCATIONS]
+                    {[vehicle?.location, pickupLocation, ...CAMBODIA_LOCATIONS]
                       .filter(Boolean)
                       .filter((city, index, all) => all.indexOf(city) === index)
                       .map((city) => (
@@ -1399,20 +1407,12 @@ const VehicleDetail = () => {
                   <span className="text-slate-600 dark:text-slate-300">
                     Base rental
                     <span className="block text-[11px] text-slate-400">
-                      {formatPrice(vehicle.price_per_day)} × {days}{" "}
+                      {formatPrice(vehicle?.price_per_day || 0)} × {days}{" "}
                       {days === 1 ? "day" : "days"}
                     </span>
                   </span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100">
                     {formatPrice(rentalFee)}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-slate-600 dark:text-slate-300">
-                    Service fee
-                  </span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {formatAmount(serviceFee)}
                   </span>
                 </div>
                 {activeAddOns.map((addon) => (
@@ -1485,29 +1485,12 @@ const VehicleDetail = () => {
               <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                 Choose payment method
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <button
                   type="button"
+                  aria-pressed={true}
                   disabled
-                  aria-disabled="true"
-                  title="Visa payments are temporarily unavailable. Please use Bakong KHQR."
-                  className="inline-flex cursor-not-allowed items-center justify-center gap-1.5 rounded-lg border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 opacity-60"
-                >
-                  <span className="grid h-4 w-6 place-items-center rounded-sm bg-white text-[8px] font-extrabold italic text-blue-700">
-                    VISA
-                  </span>
-                  Visa
-                  <LuLock size={11} strokeWidth={2.5} />
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={paymentMethod === "khqr"}
-                  onClick={() => setPaymentMethod("khqr")}
-                  className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
-                    paymentMethod === "khqr"
-                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                      : "border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold border-blue-600 bg-blue-600 text-white shadow-sm"
                 >
                   <LuQrCode size={13} strokeWidth={2.5} />
                   Bakong KHQR
@@ -1526,7 +1509,6 @@ const VehicleDetail = () => {
                   disabled={!hasValidDates}
                   className="relative inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
-                  <LuLock size={16} strokeWidth={2.5} />
                   Confirm & Pay Now
                 </button>
               </div>
@@ -1671,7 +1653,7 @@ const VehicleDetail = () => {
                   Leave a Review
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  {vehicle.brand} {vehicle.model} · {user?.name || "Renter"}
+                  {vehicle?.brand || "Vehicle"} {vehicle?.model || ""} · {user?.name || "Renter"}
                 </p>
               </div>
               <button
@@ -1764,10 +1746,10 @@ const VehicleDetail = () => {
           <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
-                {vehicle.brand} {vehicle.model}
+                {vehicle?.brand || "Vehicle"} {vehicle?.model || ""}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {formatPrice(vehicle.price_per_day)} /day
+                {formatPrice(vehicle?.price_per_day || 0)} /day
               </p>
             </div>
             <button
