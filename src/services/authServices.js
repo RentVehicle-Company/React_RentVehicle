@@ -6,8 +6,10 @@ import {
   STORAGE_KEYS,
   apiRequest,
   clearAuthStorage,
+  readAuthToken,
 } from "./api";
 import { mapUser } from "./userService";
+import { decodeJwt, getJwtRole, getJwtUserId, isTokenExpired } from "./jwtUtils";
 
 // ---------------------------------------------------------------------------
 // Local session storage — always written/read through STORAGE_KEYS so the
@@ -197,4 +199,56 @@ export const signOut = async () => {
   }
   clearAuthStorage();
   notifyAuthChange();
+};
+
+// ---------------------------------------------------------------------------
+// Secure role/identity helpers — decode JWT instead of trusting localStorage
+// ---------------------------------------------------------------------------
+
+// Get the current access token from storage
+export const getAccessToken = () => readAuthToken();
+
+// Decode and return the JWT payload (for debugging/inspection)
+export const getJwtPayload = () => {
+  const token = getAccessToken();
+  return decodeJwt(token);
+};
+
+// Get the current user's role from the JWT (secure - from backend-issued token)
+export const getCurrentUserRole = () => {
+  const token = getAccessToken();
+  return getJwtRole(token);
+};
+
+// Get the current user's ID from the JWT
+export const getCurrentUserId = () => {
+  const token = getAccessToken();
+  return getJwtUserId(token);
+};
+
+// Check if the current user has ADMIN role (secure - from JWT)
+export const isCurrentUserAdmin = () => {
+  const role = getCurrentUserRole();
+  return role === "ADMIN" || role === "ROLE_ADMIN";
+};
+
+// Check if the current user's token is valid and not expired
+export const hasValidSession = () => {
+  const token = getAccessToken();
+  return token && !isTokenExpired(token);
+};
+
+// Fetch fresh user profile from backend (most secure - validates token server-side)
+export const fetchCurrentUserProfile = async () => {
+  const token = getAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await apiRequest(API_ENDPOINTS.currentUser);
+    if (!response) return null;
+    return mapUser(response);
+  } catch (err) {
+    console.error("Failed to fetch current user profile:", err);
+    return null;
+  }
 };

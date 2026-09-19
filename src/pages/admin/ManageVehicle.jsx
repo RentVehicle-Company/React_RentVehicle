@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import {
   LuMapPin,
@@ -10,47 +10,93 @@ import {
 } from "react-icons/lu";
 import { usePreferences } from "../../context/PreferencesContext";
 import {
-  isBicycle,
-  isMotorbike,
+  deleteVehicle,
+  getVehiclePage,
+  updateVehicle,
 } from "../../services/vehicleServices";
 import AddVehicle from "./AddVehicle";
 
-const classify = (vehicle) => {
-  if (vehicle.type === "bicycle" || isBicycle(vehicle)) return "bicycle";
-  if (vehicle.type === "motorbike" || isMotorbike(vehicle)) return "motorbike";
-  return "car";
-};
+const classify = (vehicle) => vehicle.vehicle_type;
 
 const TYPE_META = {
   car: { label: "Car", classes: "bg-blue-50 text-blue-600" },
-  motorbike: { label: "Motorbike", classes: "bg-orange-50 text-orange-600" },
+  moto: { label: "Motorbike", classes: "bg-orange-50 text-orange-600" },
   bicycle: { label: "Bicycle", classes: "bg-emerald-50 text-emerald-600" },
+  unknown: { label: "Unknown", classes: "bg-slate-100 text-slate-600" },
 };
 
 const TYPE_FILTERS = [
   { key: "all", label: "All" },
   { key: "car", label: "Cars" },
-  { key: "motorbike", label: "Motorbikes" },
+  { key: "moto", label: "Motorbikes" },
   { key: "bicycle", label: "Bicycles" },
 ];
 
-const ManageVehicle = ({ vehicles = [], onChange }) => {
+const toProductPayload = (vehicle, isAvailable = vehicle.is_available) => ({
+  name: `${vehicle.brand || ""} ${vehicle.model || ""}`.trim(),
+  brand: vehicle.brand || "",
+  model: vehicle.model || "",
+  modelYear: Number(vehicle.year) || new Date().getFullYear(),
+  licensePlate: vehicle.license_plate || "",
+  transmission: vehicle.transmission || "",
+  fuelType: vehicle.fuel_type || "",
+  seatingCapacity: Number(vehicle.seating_capacity) || 1,
+  material: vehicle.frame_material || "",
+  speeds: vehicle.gears || "",
+  wheelSize: vehicle.wheel_size || "",
+  engineCc: vehicle.engine_cc || "",
+  fuelEfficiency: vehicle.fuel_efficiency || "",
+  topSpeed: vehicle.top_speed || "",
+  pricePerDay: Number(vehicle.price_per_day) || 0,
+  description: vehicle.description || "",
+  isAvailable,
+  categoryId: vehicle.categoryId,
+  locationId: vehicle.locationId,
+});
+
+const ManageVehicle = () => {
   const { formatPrice } = usePreferences();
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+  const [pageData, setPageData] = useState({
+    content: [],
+    totalPages: 0,
+    totalElements: 0,
+    number: 0,
+    first: true,
+    last: true,
+  });
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [modal, setModal] = useState(null);
+  const [actionError, setActionError] = useState("");
+  const [pendingId, setPendingId] = useState(null);
 
-  const nextId = useMemo(
-    () =>
-      vehicles.reduce((max, vehicle) => Math.max(max, Number(vehicle.id) || 0), 0) +
-      1,
-    [vehicles]
-  );
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    setPageError("");
+    try {
+      setPageData(await getVehiclePage({ page, size }));
+    } catch (err) {
+      setPageData((current) => ({ ...current, content: [] }));
+      setPageError(err.message || "Failed to load vehicles.");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, size]);
+
+  useEffect(() => {
+    loadPage();
+  }, [loadPage]);
+
+  const vehicles = pageData.content;
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return vehicles.filter((vehicle) => {
-      if (typeFilter !== "all" && classify(vehicle) !== typeFilter) return false;
+      if (typeFilter !== "all" && vehicle.vehicle_type !== typeFilter) return false;
       if (!query) return true;
       const haystack = [
         vehicle.brand,
@@ -68,48 +114,57 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
   const completeTypeCount = useMemo(
     () =>
       vehicles.reduce((counts, vehicle) => {
-        counts[classify(vehicle)] += 1;
+        const vehicleType = classify(vehicle);
+        if (Object.hasOwn(counts, vehicleType)) counts[vehicleType] += 1;
         return counts;
-      }, { car: 0, motorbike: 0, bicycle: 0 }),
+      }, { car: 0, moto: 0, bicycle: 0 }),
     [vehicles]
   );
 
-  const updateList = (next) => onChange?.(next);
-
-  const handleSave = (payload) => {
-    if (modal?.mode === "edit" && modal?.vehicle) {
-      const current = modal.vehicle;
-      updateList(
-        vehicles.map((vehicle) =>
-          String(vehicle.id) === String(current.id)
-            ? { ...current, ...payload, id: current.id }
-            : vehicle
-        )
-      );
-    } else {
-      updateList([{ ...payload, id: nextId }, ...vehicles]);
-    }
+  const handleSave = () => {
+    setActionError("");
+    const isNewVehicle = modal?.mode === "add";
     setModal(null);
+    if (isNewVehicle && page !== 0) {
+      setPage(0);
+      return;
+    }
+    loadPage();
   };
 
-  const handleDelete = (vehicle) => {
+  const handleDelete = async (vehicle) => {
     const confirmed = window.confirm(
       `Delete ${vehicle.brand} ${vehicle.model} from the fleet?`
     );
     if (!confirmed) return;
-    updateList(
-      vehicles.filter((item) => String(item.id) !== String(vehicle.id))
-    );
+    setActionError("");
+    setPendingId(vehicle.id);
+    try {
+      await deleteVehicle(vehicle.id);
+      if (vehicles.length === 1 && !pageData.first) {
+        setPage((currentPage) => currentPage - 1);
+      } else {
+        loadPage();
+      }
+    } catch (err) {
+      setActionError(err.message || "Failed to delete the vehicle.");
+    } finally {
+      setPendingId(null);
+    }
   };
 
-  const handleToggle = (vehicle) => {
-    updateList(
-      vehicles.map((item) =>
-        String(item.id) === String(vehicle.id)
-          ? { ...item, is_available: !item.is_available }
-          : item
-      )
-    );
+  const handleToggle = async (vehicle) => {
+    setActionError("");
+    setPendingId(vehicle.id);
+    const isAvailable = !vehicle.is_available;
+    try {
+      await updateVehicle(vehicle.id, toProductPayload(vehicle, isAvailable));
+      loadPage();
+    } catch (err) {
+      setActionError(err.message || "Failed to update vehicle availability.");
+    } finally {
+      setPendingId(null);
+    }
   };
 
   return (
@@ -120,7 +175,7 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
           <h3 className="text-base font-bold text-slate-900 dark:text-white">
             Fleet Catalogue
             <span className="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600">
-              {vehicles.length} vehicles
+              {pageData.totalElements} vehicles
             </span>
           </h3>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
@@ -150,10 +205,28 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
             <LuPlus size={16} strokeWidth={2.5} />
             Add New Vehicle
           </button>
+          <select
+            aria-label="Vehicles per page"
+            value={size}
+            onChange={(event) => {
+              setPage(0);
+              setSize(Number(event.target.value));
+            }}
+            className="rounded-xl border border-borderColor bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-primary dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+          >
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
         </div>
       </div>
 
       {/* Type filters */}
+      {(pageError || actionError) && (
+        <p role="alert" className="mx-5 mt-4 rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+          {pageError || actionError}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
         {TYPE_FILTERS.map((filter) => {
           const active = typeFilter === filter.key;
@@ -200,8 +273,8 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((vehicle) => {
-              const meta = TYPE_META[classify(vehicle)];
+            {!loading && filtered.map((vehicle) => {
+              const meta = TYPE_META[classify(vehicle)] || TYPE_META.unknown;
               const available = Boolean(vehicle.is_available);
               return (
                 <tr
@@ -249,12 +322,13 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
                       role="switch"
                       aria-checked={available}
                       onClick={() => handleToggle(vehicle)}
+                      disabled={pendingId === vehicle.id}
                       title={
                         available
                           ? "Currently available — click to set maintenance"
                           : "Under maintenance — click to make available"
                       }
-                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 transition-colors ${
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                         available
                           ? "bg-emerald-50 text-emerald-600 ring-emerald-200 hover:bg-emerald-100"
                           : "bg-amber-50 text-amber-600 ring-amber-200 hover:bg-amber-100"
@@ -273,16 +347,18 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
                       <button
                         type="button"
                         onClick={() => setModal({ mode: "edit", vehicle })}
+                        disabled={pendingId === vehicle.id}
                         aria-label={`Edit ${vehicle.brand} ${vehicle.model}`}
-                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <LuPencil size={15} />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(vehicle)}
+                        disabled={pendingId === vehicle.id}
                         aria-label={`Delete ${vehicle.brand} ${vehicle.model}`}
-                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <LuTrash2 size={15} />
                       </button>
@@ -292,7 +368,15 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
               );
             })}
 
-            {filtered.length === 0 && (
+            {loading && (
+              <tr>
+                <td colSpan={6} className="px-5 py-14 text-center text-sm text-slate-500 dark:text-slate-400">
+                  Loading vehicles…
+                </td>
+              </tr>
+            )}
+
+            {!loading && filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-5 py-14 text-center">
                   <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400">
@@ -316,12 +400,29 @@ const ManageVehicle = ({ vehicles = [], onChange }) => {
       {/* Footer */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700 px-5 py-3.5">
         <p className="text-xs text-slate-400 dark:text-slate-500">
-          Showing {filtered.length} of {vehicles.length} vehicles
+          Showing {filtered.length} of {pageData.totalElements} vehicles
         </p>
-        <p className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-          <LuWrench size={13} />
-          Maintenance vehicles are hidden from new bookings
-        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+            disabled={pageData.first || loading}
+            className="rounded-lg border border-borderColor px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-300"
+          >
+            Previous
+          </button>
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            Page {pageData.totalPages ? pageData.number + 1 : 0} of {pageData.totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((currentPage) => currentPage + 1)}
+            disabled={pageData.last || loading}
+            className="rounded-lg border border-borderColor px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-300"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

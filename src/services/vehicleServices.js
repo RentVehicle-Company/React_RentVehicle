@@ -1,6 +1,146 @@
 import { API_BASE_URL, API_ENDPOINTS, request } from "./api.js";
+import { adaptApiVehicle, unwrapApiData, unwrapApiList } from "./adapters.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const getCategories = async (vehicleType) => {
+  try {
+    const url = vehicleType
+      ? `${API_ENDPOINTS.categories}?vehicleType=${encodeURIComponent(vehicleType)}`
+      : API_ENDPOINTS.categories;
+    const data = await request(url);
+    if (!data) throw new Error("Backend offline");
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
+  } catch (err) {
+    console.error("getCategories fallback triggered:", err);
+    await delay(300);
+    return [];
+  }
+};
+
+export const getLocations = async () => {
+  try {
+    const data = await request(API_ENDPOINTS.locations);
+    if (!data) throw new Error("Backend offline");
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
+  } catch (err) {
+    console.error("getLocations fallback triggered:", err);
+    await delay(300);
+    return [];
+  }
+};
+
+export const createLocation = async (locationData) => {
+  const response = await request(API_ENDPOINTS.locations, {
+    method: "POST",
+    body: JSON.stringify(locationData),
+  });
+  if (!response)
+    throw new Error("Failed to create location - no response from server");
+  return response;
+};
+
+export const updateLocation = async (id, locationData) => {
+  const response = await request(`${API_ENDPOINTS.locations}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(locationData),
+  });
+  if (!response)
+    throw new Error("Failed to update location - no response from server");
+  return response;
+};
+
+export const deleteLocation = async (id) => {
+  const response = await request(`${API_ENDPOINTS.locations}/${id}`, {
+    method: "DELETE",
+  });
+  if (!response)
+    throw new Error("Failed to delete location - no response from server");
+  return response;
+};
+
+export const createVehicle = async (vehicleData) => {
+  const response = await request(API_ENDPOINTS.products, {
+    method: "POST",
+    body: JSON.stringify(vehicleData),
+  });
+  if (!response)
+    throw new Error("Failed to create vehicle - no response from server");
+  return response.data ?? response;
+};
+
+export const updateVehicle = async (id, vehicleData) => {
+  const response = await request(API_ENDPOINTS.productById(id), {
+    method: "PUT",
+    body: JSON.stringify(vehicleData),
+  });
+  if (!response)
+    throw new Error("Failed to update vehicle - no response from server");
+  return response.data ?? response;
+};
+
+export const uploadVehicleImage = async (vehicleId, file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(API_ENDPOINTS.productImages(vehicleId), {
+    method: "POST",
+    headers: buildAuthHeaders(),
+    body: formData,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = new Error(data?.message || "Vehicle image upload failed.");
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+};
+
+export const deleteVehicle = async (id) => {
+  // A successful DELETE may deliberately return 204 No Content. Ask the
+  // shared request helper for a success sentinel so it remains distinct from
+  // a network failure, which returns null.
+  const response = await request(API_ENDPOINTS.productById(id), {
+    method: "DELETE",
+    noContentValue: true,
+  });
+  if (!response)
+    throw new Error("Failed to delete vehicle - no response from server");
+};
+
+export const createCategory = async (categoryData) => {
+  const response = await request(API_ENDPOINTS.categories, {
+    method: "POST",
+    body: JSON.stringify(categoryData),
+  });
+  if (!response)
+    throw new Error("Failed to create category - no response from server");
+  return response;
+};
+
+export const updateCategory = async (id, categoryData) => {
+  const response = await request(`${API_ENDPOINTS.categories}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(categoryData),
+  });
+  if (!response)
+    throw new Error("Failed to update category - no response from server");
+  return response;
+};
+
+export const deleteCategory = async (id) => {
+  const response = await request(`${API_ENDPOINTS.categories}/${id}`, {
+    method: "DELETE",
+  });
+  if (!response)
+    throw new Error("Failed to delete category - no response from server");
+  return response;
+};
 
 // ---------------------------------------------------------------------------
 // Gallery builder — generates crop/zoom variants from a single primary image
@@ -21,7 +161,7 @@ const buildGalleryFromImage = (primaryUrl, count = 5) => {
     ];
     for (let i = 0; i < count - 1 && i < crops.length; i++) {
       const p = new URLSearchParams(
-        Object.entries(crops[i]).map(([k, v]) => [k, String(v)])
+        Object.entries(crops[i]).map(([k, v]) => [k, String(v)]),
       );
       p.set("auto", "format");
       gallery.push(`${base}?${p.toString()}`);
@@ -40,13 +180,16 @@ const buildGalleryFromImage = (primaryUrl, count = 5) => {
 const u = (id) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=80`;
 
-const commons = (path) => `https://upload.wikimedia.org/wikipedia/commons/${path}`;
+const commons = (path) =>
+  `https://upload.wikimedia.org/wikipedia/commons/${path}`;
 
 const IMG = {
   // Sports Car
   supra: commons("b/bc/1996_Toyota_Supra_A80_%28front%29.jpg"),
   mustang: u("photo-1494976388531-d1058494cdd8"),
-  porsche911: commons("c/c6/2013_Porsche_911_Carrera_4S_%28991%29_%289626546987%29.jpg"),
+  porsche911: commons(
+    "c/c6/2013_Porsche_911_Carrera_4S_%28991%29_%289626546987%29.jpg",
+  ),
   gtr: commons("9/99/NISSAN_GT-R_%28R35%29_China.jpg"),
   // Supercar
   r8: u("photo-1542362567-b07e54358753"),
@@ -74,10 +217,7 @@ const baseVehicles = [
     brand: "Toyota",
     model: "Supra",
     image: IMG.supra,
-    images: [
-      IMG.supra,
-      commons("4/47/1996-2002_Toyota_Supra_rear.jpg"),
-    ],
+    images: [IMG.supra, commons("4/47/1996-2002_Toyota_Supra_rear.jpg")],
     year: 2022,
     category: "Sports Car",
     seating_capacity: 2,
@@ -321,10 +461,7 @@ const baseVehicles = [
     brand: "Nissan",
     model: "GT-R",
     image: IMG.gtr,
-    images: [
-      IMG.gtr,
-      commons("c/c9/Nissan_GT-R_%28CBA-R35%29_rear.jpg"),
-    ],
+    images: [IMG.gtr, commons("c/c9/Nissan_GT-R_%28CBA-R35%29_rear.jpg")],
     year: 2022,
     category: "Sports Car",
     seating_capacity: 2,
@@ -425,7 +562,7 @@ const enrichVehicle = (vehicle) => {
     topSpeed: profile.topSpeed + offset * 8,
     acceleration: Math.max(
       2.5,
-      Math.round((profile.acceleration + offset * 0.12) * 10) / 10
+      Math.round((profile.acceleration + offset * 0.12) * 10) / 10,
     ),
     horsepower: profile.horsepower + offset * 14,
     drive: profile.drive,
@@ -471,9 +608,18 @@ export const BIKE_CATEGORIES = [
   "E-Bike / Electric",
 ];
 
-export const isMotorbike = (vehicle) => MOTO_CATEGORIES.includes(vehicle?.category);
-export const isBicycle = (vehicle) => BIKE_CATEGORIES.includes(vehicle?.category);
-export const isAutomobile = (vehicle) => !isMotorbike(vehicle) && !isBicycle(vehicle);
+export const isMotorbike = (vehicle) =>
+  MOTO_CATEGORIES.includes(vehicle?.category);
+export const isBicycle = (vehicle) =>
+  BIKE_CATEGORIES.includes(vehicle?.category);
+export const isAutomobile = (vehicle) =>
+  !isMotorbike(vehicle) && !isBicycle(vehicle);
+
+// ➕ បន្ថែមថ្មី — ប្រើសម្រាប់ data ដែលមកពី backend ពិត (មាន categorySlug)
+export const isMotorbikeBySlug = (vehicle) =>
+  vehicle?.categorySlug === "motorbikes";
+export const isBicycleBySlug = (vehicle) =>
+  vehicle?.categorySlug === "bicycles";
 
 // Two-wheelers use metadata-verified Wikimedia Commons photos matched to each
 // exact model (never automobile photos, and never a shared pool), so every
@@ -858,7 +1004,9 @@ const BIKE_FEATURES = [
 
 const enrichFleet = (vehicle, specs, featurePool) => {
   const gallery = buildGalleryFromImage(vehicle.image, 5);
-  const start = ((vehicle.id % featurePool.length) + featurePool.length) % featurePool.length;
+  const start =
+    ((vehicle.id % featurePool.length) + featurePool.length) %
+    featurePool.length;
   const features = [
     ...featurePool.slice(start),
     ...featurePool.slice(0, start),
@@ -867,14 +1015,20 @@ const enrichFleet = (vehicle, specs, featurePool) => {
 };
 
 const enrichMotorbike = (vehicle) => {
-  const profile = MOTO_SPECS_FALLBACK[vehicle.category] ?? MOTO_SPECS_FALLBACK.Scooter;
+  const profile =
+    MOTO_SPECS_FALLBACK[vehicle.category] ?? MOTO_SPECS_FALLBACK.Scooter;
   const offset = (vehicle.id % 5) - 2;
   const specs = {
     engine: `${vehicle.engine_cc ?? profile.displacementCc}cc ${vehicle.transmission?.toLowerCase().includes("automatic") ? "CVT Engine" : "Engine"}`,
     topSpeed: vehicle.top_speed ?? profile.topSpeed,
-    acceleration: Math.max(3, Math.round((profile.acceleration + offset * 0.2) * 10) / 10),
+    acceleration: Math.max(
+      3,
+      Math.round((profile.acceleration + offset * 0.2) * 10) / 10,
+    ),
     horsepower: profile.horsepower + offset * 2,
-    drive: vehicle.transmission?.toLowerCase().includes("automatic") ? "CVT" : "Chain Drive",
+    drive: vehicle.transmission?.toLowerCase().includes("automatic")
+      ? "CVT"
+      : "Chain Drive",
     displacementCc: vehicle.engine_cc ?? profile.displacementCc,
     transmission: vehicle.transmission ?? profile.transmission,
     fuelEfficiency: vehicle.fuel_efficiency ?? profile.fuelEfficiency,
@@ -884,7 +1038,8 @@ const enrichMotorbike = (vehicle) => {
 
 const enrichBicycle = (vehicle) => {
   const profile =
-    BIKE_SPECS_FALLBACK[vehicle.category] ?? BIKE_SPECS_FALLBACK["Mountain Bike"];
+    BIKE_SPECS_FALLBACK[vehicle.category] ??
+    BIKE_SPECS_FALLBACK["Mountain Bike"];
   const specs = {
     frame: vehicle.frame_material ?? profile.frame,
     gears: vehicle.gears ?? profile.gears,
@@ -906,21 +1061,112 @@ export const ALL_MOCK_VEHICLES = [
   ...mockBicycles,
 ];
 
-const unwrapList = (data) => {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.data)) return data.data;
-  return [];
+const unwrapList = unwrapApiList;
+
+// ➕ បន្ថែមថ្មីទាំងអស់នេះ
+const buildLookupMap = (list, valueKey = "name") =>
+  Object.fromEntries(list.map((item) => [item.id, item[valueKey]]));
+
+const buildCategoryMaps = (categories) => ({
+  nameMap: Object.fromEntries(categories.map((c) => [c.id, c.name])),
+  slugMap: Object.fromEntries(categories.map((c) => [c.id, c.slug])),
+  vehicleTypeMap: Object.fromEntries(
+    categories.map((c) => [c.id, c.vehicleType]),
+  ),
+});
+
+// Categories change far less frequently than paged products. Reuse the same
+// categoryId → vehicleType lookup for every product page in this session.
+let categoryMapsPromise;
+
+const getCategoryMaps = async () => {
+  if (!categoryMapsPromise) {
+    categoryMapsPromise = request(API_ENDPOINTS.categories)
+      .then((data) => {
+        if (!data)
+          throw new Error("Unable to load categories from the backend.");
+        return buildCategoryMaps(unwrapList(data));
+      })
+      .catch((error) => {
+        categoryMapsPromise = undefined;
+        throw error;
+      });
+  }
+  return categoryMapsPromise;
+};
+
+const fetchVehicleImages = async (vehicleId) => {
+  try {
+    const data = await request(API_ENDPOINTS.productImages(vehicleId));
+    const list = unwrapList(data);
+    if (list.length === 0) return { image: null, images: [] };
+
+    // ជ្រើសរើសរូបភាពដែល isPrimary=true ជាមុន បើគ្មាន ប្រើរូបទីមួយ
+    const primary = list.find((img) => img.isPrimary) || list[0];
+    return {
+      image: primary.imageUrl,
+      images: list.map((img) => img.imageUrl),
+    };
+  } catch {
+    return { image: null, images: [] };
+  }
+};
+
+export const getVehiclePage = async ({ page = 0, size = 10 } = {}) => {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  const [vehicleData, categoryMaps, locationData] = await Promise.all([
+    request(`${API_ENDPOINTS.vehicles}?${params.toString()}`),
+    getCategoryMaps(),
+    request(API_ENDPOINTS.locations),
+  ]);
+  if (!vehicleData)
+    throw new Error("Unable to load vehicles from the backend.");
+
+  const productPage = unwrapApiData(vehicleData);
+  const locationMap = buildLookupMap(unwrapList(locationData), "city");
+  const vehicleList = unwrapApiList(productPage);
+
+  const imageResults = await Promise.all(
+    vehicleList.map((vehicle) => fetchVehicleImages(vehicle.id)),
+  );
+
+  const content = vehicleList.map((vehicle, index) => {
+    const adapted = adaptApiVehicle(vehicle, {
+      categoryMaps,
+      locationMap,
+      imageData: imageResults[index],
+    });
+    if (adapted.vehicle_type === "moto") return enrichMotorbike(adapted);
+    if (adapted.vehicle_type === "bicycle") return enrichBicycle(adapted);
+    return enrichVehicle(adapted);
+  });
+
+  return {
+    content,
+    totalPages: Number(productPage?.totalPages) || 0,
+    totalElements: Number(productPage?.totalElements) || 0,
+    number: Number.isInteger(productPage?.number) ? productPage.number : page,
+    size: Number(productPage?.size) || size,
+    first: Boolean(productPage?.first ?? page === 0),
+    last: Boolean(productPage?.last ?? true),
+  };
 };
 
 // Legacy convenience wrappers. The backend serves every fleet through
 // GET /api/products (scoped by vehicleType via /api/categories), so these
 // resolve against the real catalog instead of nonexistent /vehicles-style
 // endpoints.
-export const getVehicles = async () => getCatalogVehicles({ vehicleType: "car" });
+export const getVehicles = async () =>
+  getCatalogVehicles({ vehicleType: "car" });
 
-export const getMotorbikes = async () => getCatalogVehicles({ vehicleType: "moto" });
+export const getMotorbikes = async () =>
+  getCatalogVehicles({ vehicleType: "moto" });
 
-export const getBicycles = async () => getCatalogVehicles({ vehicleType: "bicycle" });
+export const getBicycles = async () =>
+  getCatalogVehicles({ vehicleType: "bicycle" });
 
 export const getVehicleById = async (id) => {
   try {
@@ -936,7 +1182,7 @@ export const getVehicleById = async (id) => {
     // falls back to the matching mock vehicle so the id always resolves.
     await delay(300);
     const vehicle = ALL_MOCK_VEHICLES.find(
-      (item) => String(item.id) === String(id)
+      (item) => String(item.id) === String(id),
     );
     if (!vehicle) throw new Error("Vehicle not found");
     return { ...vehicle };
@@ -1003,8 +1249,15 @@ const resolveImage = (value) => {
   if (value && typeof value === "object") {
     return absolutizeImageUrl(
       asString(
-        valueOf(value, ["url", "imageUrl", "src", "image", "path", "image_url"])
-      )
+        valueOf(value, [
+          "url",
+          "imageUrl",
+          "src",
+          "image",
+          "path",
+          "image_url",
+        ]),
+      ),
     );
   }
   return "";
@@ -1035,13 +1288,15 @@ export const getProductImages = async (productId) => {
   const promise = (async () => {
     let urls = [];
     try {
-      const entries = unwrapList(await request(API_ENDPOINTS.productImages(key)));
+      const entries = unwrapList(
+        await request(API_ENDPOINTS.productImages(key)),
+      );
       const primary = entries.find(
         (img) =>
           img &&
           (img.isPrimary === true ||
             img.primary === true ||
-            img.is_primary === true)
+            img.is_primary === true),
       );
       const ordered = primary
         ? [primary, ...entries.filter((img) => img !== primary)]
@@ -1062,7 +1317,9 @@ export const getProductImages = async (productId) => {
 // Backfills `image` / `images` on any vehicle that has none, using a small
 // worker pool so a large fleet never fires hundreds of parallel requests.
 const enrichCatalogImages = async (vehicles, { concurrency = 8 } = {}) => {
-  const pending = vehicles.filter((vehicle) => vehicle && vehicle.id != null && !vehicle.image);
+  const pending = vehicles.filter(
+    (vehicle) => vehicle && vehicle.id != null && !vehicle.image,
+  );
   if (!pending.length) return vehicles;
 
   let cursor = 0;
@@ -1076,7 +1333,7 @@ const enrichCatalogImages = async (vehicles, { concurrency = 8 } = {}) => {
         if (urls.length) vehicle.image = urls[0];
         if (urls.length > 1) vehicle.images = urls;
       }
-    }
+    },
   );
   await Promise.allSettled(workers);
   return vehicles;
@@ -1093,7 +1350,11 @@ export const mapProductToVehicle = (raw, refs = {}) => {
     locationId != null ? refs.locationById?.get(String(locationId)) : null;
 
   const latitude = valueOf(raw, ["latitude", "lat"], locationRef?.latitude);
-  const longitude = valueOf(raw, ["longitude", "lng", "lon"], locationRef?.longitude);
+  const longitude = valueOf(
+    raw,
+    ["longitude", "lng", "lon"],
+    locationRef?.longitude,
+  );
 
   const category =
     resolveName(raw.category) ||
@@ -1132,24 +1393,27 @@ export const mapProductToVehicle = (raw, refs = {}) => {
   const isAvailable = valueOf(
     raw,
     ["isAvailable", "is_available", "available"],
-    true
+    true,
   );
 
   return {
     id: raw.id,
     brand: asString(valueOf(raw, ["brand", "make"], "Unknown")) || "Unknown",
-    model: asString(valueOf(raw, ["model", "name", "title"], "Vehicle")) || "Vehicle",
+    model:
+      asString(valueOf(raw, ["model", "name", "title"], "Vehicle")) ||
+      "Vehicle",
     name: valueOf(raw, ["name", "title"]),
     year: valueOf(raw, ["modelYear", "year"]),
     category,
     location,
     price_per_day: Number(
-      valueOf(raw, ["pricePerDay", "price_per_day", "price"], 0)
+      valueOf(raw, ["pricePerDay", "price_per_day", "price"], 0),
     ),
-    seating_capacity: valueOf(
-      raw,
-      ["seatingCapacity", "seating_capacity", "seats"]
-    ),
+    seating_capacity: valueOf(raw, [
+      "seatingCapacity",
+      "seating_capacity",
+      "seats",
+    ]),
     fuel_type: valueOf(raw, ["fuelType", "fuel_type"], "Petrol"),
     transmission: valueOf(raw, ["transmission"]),
     stock_left: valueOf(raw, ["stockLeft", "stock_left", "stock"]),
@@ -1162,10 +1426,8 @@ export const mapProductToVehicle = (raw, refs = {}) => {
     images,
     bookedDates:
       raw.bookedDates ?? raw.booked_dates ?? raw.unavailableDates ?? undefined,
-    categoryId:
-      categoryId != null ? Number(categoryId) : undefined,
-    locationId:
-      locationId != null ? Number(locationId) : undefined,
+    categoryId: categoryId != null ? Number(categoryId) : undefined,
+    locationId: locationId != null ? Number(locationId) : undefined,
     // Moto / bicycle extras surfaced by the backend camelCase DTO fields.
     engine_cc: valueOf(raw, ["engineCc", "engine_cc"]),
     fuel_efficiency: valueOf(raw, ["fuelEfficiency", "fuel_efficiency"]),
@@ -1195,7 +1457,12 @@ const CATEGORY_FALLBACK = [
   { id: 5, name: "Motorbike", slug: "motorbike", vehicleType: "moto" },
   { id: 6, name: "Scooter", slug: "scooter", vehicleType: "moto" },
   { id: 7, name: "Bicycle", slug: "bicycle", vehicleType: "bicycle" },
-  { id: 8, name: "Mountain Bike", slug: "mountain-bike", vehicleType: "bicycle" },
+  {
+    id: 8,
+    name: "Mountain Bike",
+    slug: "mountain-bike",
+    vehicleType: "bicycle",
+  },
 ];
 
 let categoriesCache = null;
@@ -1252,10 +1519,13 @@ const CATEGORY_TYPE_HINTS = {
 
 const classifyCategoryType = (category = {}) => {
   const text = asString(
-    `${category?.name ?? ""} ${category?.slug ?? ""} ${category?.description ?? ""}`
+    `${category?.name ?? ""} ${category?.slug ?? ""} ${category?.description ?? ""}`,
   ).toLowerCase();
   const score = (keywords) =>
-    keywords.reduce((total, keyword) => total + (text.includes(keyword) ? 1 : 0), 0);
+    keywords.reduce(
+      (total, keyword) => total + (text.includes(keyword) ? 1 : 0),
+      0,
+    );
   const scores = {
     moto: score(CATEGORY_TYPE_HINTS.moto),
     car: score(CATEGORY_TYPE_HINTS.car),
@@ -1263,14 +1533,20 @@ const classifyCategoryType = (category = {}) => {
   };
   const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
   if (best && best[1] > 0) return best[0];
-  return asString(category?.vehicleType || category?.vehicle_type).toLowerCase() || "car";
+  return (
+    asString(category?.vehicleType || category?.vehicle_type).toLowerCase() ||
+    "car"
+  );
 };
 
 // GET /api/categories?vehicleType=... -> [{ id, name, slug, vehicleType }]
 // vehicleType uses the backend enum lowercase values: car | moto | bicycle.
 // The type is resolved dynamically via classifyCategoryType so the page maps
 // match what the database actually stores.
-export const getCatalogCategories = async ({ vehicleType, refresh = false } = {}) => {
+export const getCatalogCategories = async ({
+  vehicleType,
+  refresh = false,
+} = {}) => {
   if (!categoriesCache || refresh) {
     try {
       const data = await request(`${API_ENDPOINTS.categories}?size=200`);
@@ -1294,7 +1570,7 @@ export const getCatalogCategories = async ({ vehicleType, refresh = false } = {}
     ? categoriesCache.filter(
         (cat) =>
           asString(cat.vehicleType).toLowerCase() ===
-          asString(vehicleType).toLowerCase()
+          asString(vehicleType).toLowerCase(),
       )
     : categoriesCache;
   return filtered.map((cat) => ({ ...cat }));
@@ -1360,12 +1636,12 @@ export const getFeaturedVehicles = async (options = {}) => {
   try {
     const data = await request(
       `${API_ENDPOINTS.products}?isAvailable=true&page=0&size=6`,
-      { signal: options.signal }
+      { signal: options.signal },
     );
     if (!data) throw new Error("Backend offline");
     const refs = await buildCatalogRefs();
     const vehicles = unwrapProductList(data).map((product) =>
-      mapProductToVehicle(product, refs)
+      mapProductToVehicle(product, refs),
     );
     if (!vehicles.length) throw new Error("Backend offline");
     return await enrichCatalogImages(vehicles);
@@ -1398,7 +1674,7 @@ export const getCatalogVehicles = async (
     page = 0,
     size = 200,
   } = {},
-  options = {}
+  options = {},
 ) => {
   let allowedSet = null;
   if (categoryIds && categoryIds.length) {
@@ -1415,12 +1691,16 @@ export const getCatalogVehicles = async (
   // otherwise the client-side type filter below handles it.
   let selectedId = categoryId;
   if (allowedSet && selectedId != null && selectedId !== "") {
-    selectedId = allowedSet.has(Number(selectedId)) ? Number(selectedId) : undefined;
+    selectedId = allowedSet.has(Number(selectedId))
+      ? Number(selectedId)
+      : undefined;
   }
 
   const params = new URLSearchParams();
-  if (selectedId != null && selectedId !== "") params.set("categoryId", String(selectedId));
-  if (locationId != null && locationId !== "") params.set("locationId", String(locationId));
+  if (selectedId != null && selectedId !== "")
+    params.set("categoryId", String(selectedId));
+  if (locationId != null && locationId !== "")
+    params.set("locationId", String(locationId));
   if (isAvailable != null) params.set("isAvailable", String(isAvailable));
   if (maxPrice != null) params.set("maxPrice", String(maxPrice));
   params.set("page", String(page));
@@ -1435,12 +1715,12 @@ export const getCatalogVehicles = async (
     // /cars never shows motorbikes or bicycles (and vice versa).
     if (allowedSet && (selectedId == null || selectedId === "")) {
       products = products.filter((product) =>
-        allowedSet.has(Number(product?.categoryId))
+        allowedSet.has(Number(product?.categoryId)),
       );
     }
     const refs = await buildCatalogRefs();
     const vehicles = products.map((product) =>
-      mapProductToVehicle(product, refs)
+      mapProductToVehicle(product, refs),
     );
     return await enrichCatalogImages(vehicles);
   } catch (error) {
@@ -1449,8 +1729,10 @@ export const getCatalogVehicles = async (
     await delay(400);
     // Return the right mock fleet for this page's vehicle type so the offline
     // experience never mixes cars with motorbikes/bicycles.
-    if (vehicleType === "moto") return mockMotorbikes.map((moto) => ({ ...moto }));
-    if (vehicleType === "bicycle") return mockBicycles.map((bike) => ({ ...bike }));
+    if (vehicleType === "moto")
+      return mockMotorbikes.map((moto) => ({ ...moto }));
+    if (vehicleType === "bicycle")
+      return mockBicycles.map((bike) => ({ ...bike }));
     return mockVehicles.map((car) => ({ ...car }));
   }
 };

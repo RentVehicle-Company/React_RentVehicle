@@ -60,8 +60,9 @@ export const buildAuthHeaders = (headers = new Headers()) => {
 };
 
 export const API_ENDPOINTS = {
-  vehicles: `${API_BASE_URL}/vehicles`,
-  vehicleById: (id) => `${API_BASE_URL}/vehicles/${id}`,
+  vehicles: `${API_BASE_URL}/products`,
+  vehicleById: (id) => `${API_BASE_URL}/products/${id}`,
+  categories: `${API_BASE_URL}/categories`,
   motorbikes: `${API_BASE_URL}/motorbikes`,
   bicycles: `${API_BASE_URL}/bicycles`,
   visaPayment: `${API_BASE_URL}/payments/visa`,
@@ -69,6 +70,7 @@ export const API_ENDPOINTS = {
   khqrPaymentStatus: (transactionId) =>
     `${API_BASE_URL}/payments/khqr/${transactionId}`,
   currentUser: `${API_BASE_URL}/users/me`,
+  users: `${API_BASE_URL}/users`,
   userById: (id) => `${API_BASE_URL}/users/${id}`,
   userProfileImage: (id) => `${API_BASE_URL}/users/${id}/profile-image`,
   authRegister: `${API_BASE_URL}/auth/register`,
@@ -138,6 +140,9 @@ export const request = async (path, options = {}) => {
     throw error;
   }
 
+  // Some REST endpoints intentionally return 204. A caller can opt into a
+  // success sentinel, while the default remains null for existing consumers.
+  if (response.status === 204) return options.noContentValue ?? null;
   return data;
 };
 
