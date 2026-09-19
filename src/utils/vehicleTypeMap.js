@@ -1,25 +1,36 @@
-// Vehicle type mapping between frontend (lowercase) and backend (uppercase enum)
-// Spring Boot enum typically uses: CAR, MOTORBIKE, BICYCLE
+// Vehicle type mapping between the frontend labels and the backend values.
+// The product/category APIs use "moto" for motorbikes.
 
 export const VEHICLE_TYPE_MAP = {
-  car: "CAR",
-  motorbike: "MOTORBIKE",
-  bicycle: "BICYCLE",
+  car: "car",
+  moto: "moto",
+  motorbike: "moto",
+  bicycle: "bicycle",
 };
 
 // Reverse mapping for display
 export const VEHICLE_TYPE_REVERSE_MAP = {
   CAR: "car",
+  MOTO: "motorbike",
   MOTORBIKE: "motorbike",
   BICYCLE: "bicycle",
+  car: "car",
+  moto: "motorbike",
+  motorbike: "motorbike",
+  bicycle: "bicycle",
 };
 
 export const toBackendVehicleType = (frontendType) => {
-  return VEHICLE_TYPE_MAP[frontendType?.toLowerCase()] || frontendType?.toUpperCase();
+  return (
+    VEHICLE_TYPE_MAP[frontendType?.toLowerCase()] || frontendType?.toUpperCase()
+  );
 };
 
 export const fromBackendVehicleType = (backendType) => {
-  return VEHICLE_TYPE_REVERSE_MAP[backendType?.toUpperCase()] || backendType?.toLowerCase();
+  return (
+    VEHICLE_TYPE_REVERSE_MAP[backendType?.toUpperCase()] ||
+    backendType?.toLowerCase()
+  );
 };
 
 export const getVehicleTypeOptions = () => [

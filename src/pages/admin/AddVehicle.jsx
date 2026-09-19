@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   LuChevronDown,
@@ -16,12 +16,14 @@ import {
   getLocations,
   createVehicle,
   updateVehicle,
+  uploadVehicleImage,
 } from "../../services/vehicleServices";
 import { toBackendVehicleType } from "../../utils/vehicleTypeMap";
 
 const inputClass =
   "w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-borderColor dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClass = "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
+const labelClass =
+  "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
 
 const VEHICLE_TYPES = {
   car: {
@@ -53,7 +55,7 @@ const deriveType = (vehicle) => {
   if (cat.includes("bike") || cat.includes("e-bike")) return "bicycle";
   if (
     ["scooter", "underbone", "touring", "sportbike", "cruiser"].some((c) =>
-      cat.includes(c)
+      cat.includes(c),
     ) ||
     /cc|kawasaki|ducati|honda|yamaha/i.test(`${vehicle.brand || ""}`)
   ) {
@@ -71,22 +73,22 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
   const [year, setYear] = useState(vehicle?.modelYear ?? vehicle?.year ?? 2025);
   const [seats, setSeats] = useState(vehicle?.seating_capacity ?? 4);
   const [transmission, setTransmission] = useState(
-    vehicle?.transmission || "Automatic"
+    vehicle?.transmission || "Automatic",
   );
   const [location, setLocation] = useState(vehicle?.location || "");
   const [engine, setEngine] = useState(
-    vehicle?.engineCc ?? vehicle?.engine_cc ?? vehicle?.specs?.engine ?? ""
+    vehicle?.engineCc ?? vehicle?.engine_cc ?? vehicle?.specs?.engine ?? "",
   );
   const [horsepower, setHorsepower] = useState(
-    vehicle?.specs?.horsepower ?? ""
+    vehicle?.specs?.horsepower ?? "",
   );
   const [topSpeed, setTopSpeed] = useState(
-    vehicle?.topSpeed ?? vehicle?.top_speed ?? vehicle?.specs?.topSpeed ?? ""
+    vehicle?.topSpeed ?? vehicle?.top_speed ?? vehicle?.specs?.topSpeed ?? "",
   );
-  const [imageUrl, setImageUrl] = useState(vehicle?.image || "");
+  const [imageFile, setImageFile] = useState(null);
   const [description, setDescription] = useState(vehicle?.description || "");
   const [available, setAvailable] = useState(
-    vehicle ? Boolean(vehicle.isAvailable ?? vehicle.is_available) : true
+    vehicle ? Boolean(vehicle.isAvailable ?? vehicle.is_available) : true,
   );
 
   const [categories, setCategories] = useState([]);
@@ -98,12 +100,25 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
   const [success, setSuccess] = useState(false);
 
   const typeInfo = VEHICLE_TYPES[type];
-  const previewImage = imageUrl.trim() || typeInfo.defaultImage;
+  const previewImage = useMemo(
+    () =>
+      imageFile
+        ? URL.createObjectURL(imageFile)
+        : vehicle?.image || typeInfo.defaultImage,
+    [imageFile, typeInfo.defaultImage, vehicle?.image],
+  );
+
+  useEffect(() => {
+    if (!imageFile) return undefined;
+    return () => URL.revokeObjectURL(previewImage);
+  }, [imageFile, previewImage]);
 
   const fetchCategories = useCallback(async () => {
     setCategoriesLoading(true);
     try {
-      const data = await getCategories(toBackendVehicleType(typeInfo.apiVehicleType));
+      const data = await getCategories(
+        toBackendVehicleType(typeInfo.apiVehicleType),
+      );
       setCategories(data);
       if (data.length > 0 && !category) {
         setCategory(data[0].name);
@@ -149,9 +164,15 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
   const fuelType = vehicle?.fuelType ?? vehicle?.fuel_type ?? typeInfo.fuel;
 
   const adaptBackendVehicle = (v) => {
-    const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
-    const categorySlugMap = Object.fromEntries(categories.map((c) => [c.id, c.slug]));
-    const locationMap = Object.fromEntries(locations.map((l) => [l.id, l.city || l.name]));
+    const categoryMap = Object.fromEntries(
+      categories.map((c) => [c.id, c.name]),
+    );
+    const categorySlugMap = Object.fromEntries(
+      categories.map((c) => [c.id, c.slug]),
+    );
+    const locationMap = Object.fromEntries(
+      locations.map((l) => [l.id, l.city || l.name]),
+    );
     const PLACEHOLDER_IMAGE =
       "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23334155'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='20' fill='%2394a3b8' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
 
@@ -202,7 +223,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
 
     const selectedCategory = categories.find((c) => c.name === category);
     const selectedLocation = locations.find(
-      (l) => l.city === location || l.name === location || l.id === location
+      (l) => l.city === location || l.name === location || l.id === location,
     );
 
     if (!selectedCategory) {
@@ -239,10 +260,22 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
     };
 
     try {
-      const savedVehicle =
+      let savedVehicle =
         mode === "edit"
           ? await updateVehicle(vehicle.id, payload)
           : await createVehicle(payload);
+      if (imageFile) {
+        const vehicleId = savedVehicle.id || vehicle?.id;
+        if (!vehicleId)
+          throw new Error("Vehicle was saved without an ID for image upload.");
+        const uploadedImage = await uploadVehicleImage(vehicleId, imageFile);
+        const image =
+          uploadedImage?.imageUrl ||
+          uploadedImage?.url ||
+          uploadedImage?.image ||
+          savedVehicle.image;
+        savedVehicle = image ? { ...savedVehicle, image } : savedVehicle;
+      }
       setSuccess(true);
       setTimeout(() => {
         onSave(adaptBackendVehicle(savedVehicle));
@@ -301,7 +334,10 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto px-6 py-5 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-500 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb:hover]:bg-slate-400 dark:[&::-webkit-scrollbar-thumb:hover]:bg-slate-500">
+        <form
+          onSubmit={handleSubmit}
+          className="max-h-[70vh] overflow-y-auto px-6 py-5 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-500 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb:hover]:bg-slate-400 dark:[&::-webkit-scrollbar-thumb:hover]:bg-slate-500"
+        >
           {(error || success) && (
             <div
               className={`mb-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm ${
@@ -313,9 +349,9 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
               {success ? (
                 <>
                   <LuCircleCheck size={18} />
-              {mode === "edit"
-                ? "Vehicle updated successfully!"
-                : "Vehicle created successfully!"}
+                  {mode === "edit"
+                    ? "Vehicle updated successfully!"
+                    : "Vehicle created successfully!"}
                 </>
               ) : (
                 <>
@@ -363,7 +399,9 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                       Loading categories...
                     </div>
                   ) : categories.length === 0 ? (
-                    <div className="text-slate-400 text-sm">No categories found</div>
+                    <div className="text-slate-400 text-sm">
+                      No categories found
+                    </div>
                   ) : (
                     <>
                       <select
@@ -506,7 +544,9 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                       Loading locations...
                     </div>
                   ) : locations.length === 0 ? (
-                    <div className="text-slate-400 text-sm">No locations found</div>
+                    <div className="text-slate-400 text-sm">
+                      No locations found
+                    </div>
                   ) : (
                     <>
                       <LuMapPin
@@ -522,7 +562,10 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                         required
                       >
                         {locations.map((loc) => (
-                          <option key={loc.id} value={loc.city || loc.name || loc.id}>
+                          <option
+                            key={loc.id}
+                            value={loc.city || loc.name || loc.id}
+                          >
                             {loc.city || loc.name}
                           </option>
                         ))}
@@ -554,7 +597,9 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                     value={engine}
                     onChange={(e) => setEngine(e.target.value)}
                     placeholder={
-                      type === "bicycle" ? "Aluminum Frame" : "e.g. 2.5L I4 / 125cc"
+                      type === "bicycle"
+                        ? "Aluminum Frame"
+                        : "e.g. 2.5L I4 / 125cc"
                     }
                     className={inputClass}
                     disabled={submitting}
@@ -591,10 +636,10 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
               </div>
             </div>
 
-            {/* Image URL with live preview */}
+            {/* Image file with live preview */}
             <div>
               <label htmlFor="addv-image" className={labelClass}>
-                Image URL
+                Vehicle Image
               </label>
               <div className="flex items-start gap-3">
                 <div className="relative min-w-0 flex-1">
@@ -604,11 +649,10 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   />
                   <input
                     id="addv-image"
-                    type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://… or leave empty for a default image"
-                    className={`${inputClass} pl-9`}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    className={`${inputClass} cursor-pointer pl-9 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white`}
                     disabled={submitting}
                   />
                 </div>
@@ -619,7 +663,9 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-slate-400">
-                Leave empty to use the default {typeInfo.label.toLowerCase()} photo.
+                {vehicle?.image
+                  ? "Choose a new file to replace the current image."
+                  : `Leave empty to use the default ${typeInfo.label.toLowerCase()} photo.`}
               </p>
             </div>
 

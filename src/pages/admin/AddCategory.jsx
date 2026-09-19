@@ -8,18 +8,25 @@ import {
   LuCircleCheck,
 } from "react-icons/lu";
 import { createCategory, updateCategory } from "../../services/vehicleServices";
-import { toBackendVehicleType, getVehicleTypeOptions } from "../../utils/vehicleTypeMap";
+import {
+  toBackendVehicleType,
+  fromBackendVehicleType,
+  getVehicleTypeOptions,
+} from "../../utils/vehicleTypeMap";
 
 const inputClass =
   "w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-borderColor dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClass = "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
+const labelClass =
+  "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
 
 const VEHICLE_TYPE_OPTIONS = getVehicleTypeOptions();
 
 const AddCategory = ({ mode = "add", category, onClose, onSave }) => {
   const [name, setName] = useState(category?.name || "");
   const [slug, setSlug] = useState(category?.slug || "");
-  const [vehicleType, setVehicleType] = useState(category?.vehicleType || "car");
+  const [vehicleType, setVehicleType] = useState(
+    fromBackendVehicleType(category?.vehicleType || "car"),
+  );
   const [description, setDescription] = useState(category?.description || "");
 
   const [submitting, setSubmitting] = useState(false);
@@ -74,7 +81,9 @@ const AddCategory = ({ mode = "add", category, onClose, onSave }) => {
       } else if (err.status === 422) {
         setError(err.message || "Validation failed. Please check your input.");
       } else {
-        setError(err.message || `Failed to ${mode} category. Please try again.`);
+        setError(
+          err.message || `Failed to ${mode} category. Please try again.`,
+        );
       }
     } finally {
       setSubmitting(false);
@@ -131,7 +140,8 @@ const AddCategory = ({ mode = "add", category, onClose, onSave }) => {
               {success ? (
                 <>
                   <LuCircleCheck size={18} />
-                  Category {mode === "edit" ? "updated" : "created"} successfully!
+                  Category {mode === "edit" ? "updated" : "created"}{" "}
+                  successfully!
                 </>
               ) : (
                 <>
@@ -171,7 +181,9 @@ const AddCategory = ({ mode = "add", category, onClose, onSave }) => {
                   id="addc-slug"
                   type="text"
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
+                  onChange={(e) =>
+                    setSlug(e.target.value.toLowerCase().replace(/\s+/g, "-"))
+                  }
                   placeholder="e.g. sports-car"
                   className={`${inputClass} pl-8`}
                   required

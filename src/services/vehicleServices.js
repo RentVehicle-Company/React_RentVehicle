@@ -1,9 +1,5 @@
-import { API_ENDPOINTS, request } from "./api.js";
-import {
-  adaptApiVehicle,
-  unwrapApiData,
-  unwrapApiList,
-} from "./adapters.js";
+import { API_ENDPOINTS, buildAuthHeaders, request } from "./api.js";
+import { adaptApiVehicle, unwrapApiData, unwrapApiList } from "./adapters.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -43,7 +39,8 @@ export const createLocation = async (locationData) => {
     method: "POST",
     body: JSON.stringify(locationData),
   });
-  if (!response) throw new Error("Failed to create location - no response from server");
+  if (!response)
+    throw new Error("Failed to create location - no response from server");
   return response;
 };
 
@@ -52,7 +49,8 @@ export const updateLocation = async (id, locationData) => {
     method: "PUT",
     body: JSON.stringify(locationData),
   });
-  if (!response) throw new Error("Failed to update location - no response from server");
+  if (!response)
+    throw new Error("Failed to update location - no response from server");
   return response;
 };
 
@@ -60,7 +58,8 @@ export const deleteLocation = async (id) => {
   const response = await request(`${API_ENDPOINTS.locations}/${id}`, {
     method: "DELETE",
   });
-  if (!response) throw new Error("Failed to delete location - no response from server");
+  if (!response)
+    throw new Error("Failed to delete location - no response from server");
   return response;
 };
 
@@ -69,7 +68,8 @@ export const createVehicle = async (vehicleData) => {
     method: "POST",
     body: JSON.stringify(vehicleData),
   });
-  if (!response) throw new Error("Failed to create vehicle - no response from server");
+  if (!response)
+    throw new Error("Failed to create vehicle - no response from server");
   return response.data ?? response;
 };
 
@@ -78,8 +78,27 @@ export const updateVehicle = async (id, vehicleData) => {
     method: "PUT",
     body: JSON.stringify(vehicleData),
   });
-  if (!response) throw new Error("Failed to update vehicle - no response from server");
+  if (!response)
+    throw new Error("Failed to update vehicle - no response from server");
   return response.data ?? response;
+};
+
+export const uploadVehicleImage = async (vehicleId, file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(API_ENDPOINTS.productImages(vehicleId), {
+    method: "POST",
+    headers: buildAuthHeaders(),
+    body: formData,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = new Error(data?.message || "Vehicle image upload failed.");
+    error.status = response.status;
+    throw error;
+  }
+  return data;
 };
 
 export const deleteVehicle = async (id) => {
@@ -90,7 +109,8 @@ export const deleteVehicle = async (id) => {
     method: "DELETE",
     noContentValue: true,
   });
-  if (!response) throw new Error("Failed to delete vehicle - no response from server");
+  if (!response)
+    throw new Error("Failed to delete vehicle - no response from server");
 };
 
 export const createCategory = async (categoryData) => {
@@ -98,7 +118,8 @@ export const createCategory = async (categoryData) => {
     method: "POST",
     body: JSON.stringify(categoryData),
   });
-  if (!response) throw new Error("Failed to create category - no response from server");
+  if (!response)
+    throw new Error("Failed to create category - no response from server");
   return response;
 };
 
@@ -107,7 +128,8 @@ export const updateCategory = async (id, categoryData) => {
     method: "PUT",
     body: JSON.stringify(categoryData),
   });
-  if (!response) throw new Error("Failed to update category - no response from server");
+  if (!response)
+    throw new Error("Failed to update category - no response from server");
   return response;
 };
 
@@ -115,7 +137,8 @@ export const deleteCategory = async (id) => {
   const response = await request(`${API_ENDPOINTS.categories}/${id}`, {
     method: "DELETE",
   });
-  if (!response) throw new Error("Failed to delete category - no response from server");
+  if (!response)
+    throw new Error("Failed to delete category - no response from server");
   return response;
 };
 
@@ -138,7 +161,7 @@ const buildGalleryFromImage = (primaryUrl, count = 5) => {
     ];
     for (let i = 0; i < count - 1 && i < crops.length; i++) {
       const p = new URLSearchParams(
-        Object.entries(crops[i]).map(([k, v]) => [k, String(v)])
+        Object.entries(crops[i]).map(([k, v]) => [k, String(v)]),
       );
       p.set("auto", "format");
       gallery.push(`${base}?${p.toString()}`);
@@ -157,13 +180,16 @@ const buildGalleryFromImage = (primaryUrl, count = 5) => {
 const u = (id) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=80`;
 
-const commons = (path) => `https://upload.wikimedia.org/wikipedia/commons/${path}`;
+const commons = (path) =>
+  `https://upload.wikimedia.org/wikipedia/commons/${path}`;
 
 const IMG = {
   // Sports Car
   supra: commons("b/bc/1996_Toyota_Supra_A80_%28front%29.jpg"),
   mustang: u("photo-1494976388531-d1058494cdd8"),
-  porsche911: commons("c/c6/2013_Porsche_911_Carrera_4S_%28991%29_%289626546987%29.jpg"),
+  porsche911: commons(
+    "c/c6/2013_Porsche_911_Carrera_4S_%28991%29_%289626546987%29.jpg",
+  ),
   gtr: commons("9/99/NISSAN_GT-R_%28R35%29_China.jpg"),
   // Supercar
   r8: u("photo-1542362567-b07e54358753"),
@@ -191,10 +217,7 @@ const baseVehicles = [
     brand: "Toyota",
     model: "Supra",
     image: IMG.supra,
-    images: [
-      IMG.supra,
-      commons("4/47/1996-2002_Toyota_Supra_rear.jpg"),
-    ],
+    images: [IMG.supra, commons("4/47/1996-2002_Toyota_Supra_rear.jpg")],
     year: 2022,
     category: "Sports Car",
     seating_capacity: 2,
@@ -438,10 +461,7 @@ const baseVehicles = [
     brand: "Nissan",
     model: "GT-R",
     image: IMG.gtr,
-    images: [
-      IMG.gtr,
-      commons("c/c9/Nissan_GT-R_%28CBA-R35%29_rear.jpg"),
-    ],
+    images: [IMG.gtr, commons("c/c9/Nissan_GT-R_%28CBA-R35%29_rear.jpg")],
     year: 2022,
     category: "Sports Car",
     seating_capacity: 2,
@@ -542,7 +562,7 @@ const enrichVehicle = (vehicle) => {
     topSpeed: profile.topSpeed + offset * 8,
     acceleration: Math.max(
       2.5,
-      Math.round((profile.acceleration + offset * 0.12) * 10) / 10
+      Math.round((profile.acceleration + offset * 0.12) * 10) / 10,
     ),
     horsepower: profile.horsepower + offset * 14,
     drive: profile.drive,
@@ -588,13 +608,18 @@ export const BIKE_CATEGORIES = [
   "E-Bike / Electric",
 ];
 
-export const isMotorbike = (vehicle) => MOTO_CATEGORIES.includes(vehicle?.category);
-export const isBicycle = (vehicle) => BIKE_CATEGORIES.includes(vehicle?.category);
-export const isAutomobile = (vehicle) => !isMotorbike(vehicle) && !isBicycle(vehicle);
+export const isMotorbike = (vehicle) =>
+  MOTO_CATEGORIES.includes(vehicle?.category);
+export const isBicycle = (vehicle) =>
+  BIKE_CATEGORIES.includes(vehicle?.category);
+export const isAutomobile = (vehicle) =>
+  !isMotorbike(vehicle) && !isBicycle(vehicle);
 
 // ➕ បន្ថែមថ្មី — ប្រើសម្រាប់ data ដែលមកពី backend ពិត (មាន categorySlug)
-export const isMotorbikeBySlug = (vehicle) => vehicle?.categorySlug === "motorbikes";
-export const isBicycleBySlug = (vehicle) => vehicle?.categorySlug === "bicycles";
+export const isMotorbikeBySlug = (vehicle) =>
+  vehicle?.categorySlug === "motorbikes";
+export const isBicycleBySlug = (vehicle) =>
+  vehicle?.categorySlug === "bicycles";
 
 // Two-wheelers use metadata-verified Wikimedia Commons photos matched to each
 // exact model (never automobile photos, and never a shared pool), so every
@@ -979,7 +1004,9 @@ const BIKE_FEATURES = [
 
 const enrichFleet = (vehicle, specs, featurePool) => {
   const gallery = buildGalleryFromImage(vehicle.image, 5);
-  const start = ((vehicle.id % featurePool.length) + featurePool.length) % featurePool.length;
+  const start =
+    ((vehicle.id % featurePool.length) + featurePool.length) %
+    featurePool.length;
   const features = [
     ...featurePool.slice(start),
     ...featurePool.slice(0, start),
@@ -988,14 +1015,20 @@ const enrichFleet = (vehicle, specs, featurePool) => {
 };
 
 const enrichMotorbike = (vehicle) => {
-  const profile = MOTO_SPECS_FALLBACK[vehicle.category] ?? MOTO_SPECS_FALLBACK.Scooter;
+  const profile =
+    MOTO_SPECS_FALLBACK[vehicle.category] ?? MOTO_SPECS_FALLBACK.Scooter;
   const offset = (vehicle.id % 5) - 2;
   const specs = {
     engine: `${vehicle.engine_cc ?? profile.displacementCc}cc ${vehicle.transmission?.toLowerCase().includes("automatic") ? "CVT Engine" : "Engine"}`,
     topSpeed: vehicle.top_speed ?? profile.topSpeed,
-    acceleration: Math.max(3, Math.round((profile.acceleration + offset * 0.2) * 10) / 10),
+    acceleration: Math.max(
+      3,
+      Math.round((profile.acceleration + offset * 0.2) * 10) / 10,
+    ),
     horsepower: profile.horsepower + offset * 2,
-    drive: vehicle.transmission?.toLowerCase().includes("automatic") ? "CVT" : "Chain Drive",
+    drive: vehicle.transmission?.toLowerCase().includes("automatic")
+      ? "CVT"
+      : "Chain Drive",
     displacementCc: vehicle.engine_cc ?? profile.displacementCc,
     transmission: vehicle.transmission ?? profile.transmission,
     fuelEfficiency: vehicle.fuel_efficiency ?? profile.fuelEfficiency,
@@ -1005,7 +1038,8 @@ const enrichMotorbike = (vehicle) => {
 
 const enrichBicycle = (vehicle) => {
   const profile =
-    BIKE_SPECS_FALLBACK[vehicle.category] ?? BIKE_SPECS_FALLBACK["Mountain Bike"];
+    BIKE_SPECS_FALLBACK[vehicle.category] ??
+    BIKE_SPECS_FALLBACK["Mountain Bike"];
   const specs = {
     frame: vehicle.frame_material ?? profile.frame,
     gears: vehicle.gears ?? profile.gears,
@@ -1036,7 +1070,9 @@ const buildLookupMap = (list, valueKey = "name") =>
 const buildCategoryMaps = (categories) => ({
   nameMap: Object.fromEntries(categories.map((c) => [c.id, c.name])),
   slugMap: Object.fromEntries(categories.map((c) => [c.id, c.slug])),
-  vehicleTypeMap: Object.fromEntries(categories.map((c) => [c.id, c.vehicleType])),
+  vehicleTypeMap: Object.fromEntries(
+    categories.map((c) => [c.id, c.vehicleType]),
+  ),
 });
 
 // Categories change far less frequently than paged products. Reuse the same
@@ -1047,7 +1083,8 @@ const getCategoryMaps = async () => {
   if (!categoryMapsPromise) {
     categoryMapsPromise = request(API_ENDPOINTS.categories)
       .then((data) => {
-        if (!data) throw new Error("Unable to load categories from the backend.");
+        if (!data)
+          throw new Error("Unable to load categories from the backend.");
         return buildCategoryMaps(unwrapList(data));
       })
       .catch((error) => {
@@ -1076,20 +1113,24 @@ const fetchVehicleImages = async (vehicleId) => {
 };
 
 export const getVehiclePage = async ({ page = 0, size = 10 } = {}) => {
-  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
   const [vehicleData, categoryMaps, locationData] = await Promise.all([
-      request(`${API_ENDPOINTS.vehicles}?${params.toString()}`),
-      getCategoryMaps(),
-      request(API_ENDPOINTS.locations),
+    request(`${API_ENDPOINTS.vehicles}?${params.toString()}`),
+    getCategoryMaps(),
+    request(API_ENDPOINTS.locations),
   ]);
-  if (!vehicleData) throw new Error("Unable to load vehicles from the backend.");
+  if (!vehicleData)
+    throw new Error("Unable to load vehicles from the backend.");
 
   const productPage = unwrapApiData(vehicleData);
   const locationMap = buildLookupMap(unwrapList(locationData), "city");
   const vehicleList = unwrapApiList(productPage);
 
   const imageResults = await Promise.all(
-    vehicleList.map((vehicle) => fetchVehicleImages(vehicle.id))
+    vehicleList.map((vehicle) => fetchVehicleImages(vehicle.id)),
   );
 
   const content = vehicleList.map((vehicle, index) => {
@@ -1160,7 +1201,7 @@ export const getVehicleById = async (id) => {
     // falls back to the matching mock vehicle so the id always resolves.
     await delay(300);
     const vehicle = ALL_MOCK_VEHICLES.find(
-      (item) => String(item.id) === String(id)
+      (item) => String(item.id) === String(id),
     );
     if (!vehicle) throw new Error("Vehicle not found");
     return { ...vehicle };

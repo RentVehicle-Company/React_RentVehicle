@@ -10,14 +10,34 @@ import {
   LuBike,
   LuCar,
 } from "react-icons/lu";
-import { getCategories, createCategory, updateCategory, deleteCategory } from "../../services/vehicleServices";
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from "../../services/vehicleServices";
 import { LuLoader } from "react-icons/lu";
 import AddCategory from "./AddCategory";
+import { fromBackendVehicleType } from "../../utils/vehicleTypeMap";
 
 const VEHICLE_TYPE_META = {
-  car: { label: "Car", icon: LuCar, classes: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
-  motorbike: { label: "Motorbike", icon: LuBike, classes: "bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" },
-  bicycle: { label: "Bicycle", icon: LuTruck, classes: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  car: {
+    label: "Car",
+    icon: LuCar,
+    classes: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+  },
+  motorbike: {
+    label: "Motorbike",
+    icon: LuBike,
+    classes:
+      "bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
+  },
+  bicycle: {
+    label: "Bicycle",
+    icon: LuTruck,
+    classes:
+      "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
 };
 
 const TYPE_FILTERS = [
@@ -26,6 +46,11 @@ const TYPE_FILTERS = [
   { key: "motorbike", label: "Motorbikes" },
   { key: "bicycle", label: "Bicycles" },
 ];
+
+const normalizeCategory = (category) => ({
+  ...category,
+  vehicleType: fromBackendVehicleType(category.vehicleType),
+});
 
 const ManageCategories = () => {
   const [categories, setCategories] = useState([]);
@@ -39,7 +64,7 @@ const ManageCategories = () => {
     setLoading(true);
     try {
       const data = await getCategories();
-      setCategories(data);
+      setCategories(data.map(normalizeCategory));
     } catch (err) {
       console.error("Failed to fetch categories:", err);
       setCategories([]);
@@ -56,14 +81,15 @@ const ManageCategories = () => {
     try {
       if (modal?.mode === "edit" && modal?.category) {
         const updated = await updateCategory(modal.category.id, payload);
+        const normalized = normalizeCategory(updated);
         setCategories(
           categories.map((cat) =>
-            String(cat.id) === String(modal.category.id) ? updated : cat
-          )
+            String(cat.id) === String(modal.category.id) ? normalized : cat,
+          ),
         );
       } else {
         const created = await createCategory(payload);
-        setCategories([created, ...categories]);
+        setCategories([normalizeCategory(created), ...categories]);
       }
       setModal(null);
     } catch (err) {
@@ -73,14 +99,16 @@ const ManageCategories = () => {
 
   const handleDelete = async (category) => {
     const confirmed = window.confirm(
-      `Delete "${category.name}" category? This action cannot be undone.`
+      `Delete "${category.name}" category? This action cannot be undone.`,
     );
     if (!confirmed) return;
 
     setDeletingId(category.id);
     try {
       await deleteCategory(category.id);
-      setCategories(categories.filter((cat) => String(cat.id) !== String(category.id)));
+      setCategories(
+        categories.filter((cat) => String(cat.id) !== String(category.id)),
+      );
     } catch (err) {
       console.error("Failed to delete category:", err);
       alert("Failed to delete category. Please try again.");
@@ -92,7 +120,8 @@ const ManageCategories = () => {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return categories.filter((category) => {
-      if (typeFilter !== "all" && category.vehicleType !== typeFilter) return false;
+      if (typeFilter !== "all" && category.vehicleType !== typeFilter)
+        return false;
       if (!query) return true;
       const haystack = [
         category.name,
@@ -109,11 +138,14 @@ const ManageCategories = () => {
 
   const typeCounts = useMemo(
     () =>
-      categories.reduce((counts, cat) => {
-        counts[cat.vehicleType] = (counts[cat.vehicleType] || 0) + 1;
-        return counts;
-      }, { car: 0, motorbike: 0, bicycle: 0 }),
-    [categories]
+      categories.reduce(
+        (counts, cat) => {
+          counts[cat.vehicleType] = (counts[cat.vehicleType] || 0) + 1;
+          return counts;
+        },
+        { car: 0, motorbike: 0, bicycle: 0 },
+      ),
+    [categories],
   );
 
   return (
@@ -180,7 +212,9 @@ const ManageCategories = () => {
               {filter.label}
               <span
                 className={`rounded-full px-1.5 text-[10px] font-bold ${
-                  active ? "bg-white/20" : "bg-white dark:bg-slate-600 text-slate-500 dark:text-slate-300"
+                  active
+                    ? "bg-white/20"
+                    : "bg-white dark:bg-slate-600 text-slate-500 dark:text-slate-300"
                 }`}
               >
                 {count}
@@ -212,74 +246,78 @@ const ManageCategories = () => {
                   </div>
                 </td>
               </tr>
-            ) : filtered.map((category) => {
-              const meta = VEHICLE_TYPE_META[category.vehicleType] || VEHICLE_TYPE_META.car;
-              const Icon = meta.icon;
-              return (
-                <tr
-                  key={String(category.id)}
-                  className="group border-b border-slate-100 dark:border-slate-700 transition-colors last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-700/40"
-                >
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                        <LuTag size={18} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-900 dark:text-white">
-                          {category.name}
-                        </p>
-                        <p className="truncate text-xs text-slate-400 dark:text-slate-500">
-                          ID: {String(category.id)}
-                        </p>
+            ) : (
+              filtered.map((category) => {
+                const meta =
+                  VEHICLE_TYPE_META[category.vehicleType] ||
+                  VEHICLE_TYPE_META.car;
+                const Icon = meta.icon;
+                return (
+                  <tr
+                    key={String(category.id)}
+                    className="group border-b border-slate-100 dark:border-slate-700 transition-colors last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-700/40"
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                          <LuTag size={18} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-slate-900 dark:text-white">
+                            {category.name}
+                          </p>
+                          <p className="truncate text-xs text-slate-400 dark:text-slate-500">
+                            ID: {String(category.id)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-400">
-                    {category.slug}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.classes}`}
-                    >
-                      <Icon size={12} />
-                      {meta.label}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <p className="truncate max-w-xs text-sm text-slate-500 dark:text-slate-400">
-                      {category.description || "—"}
-                    </p>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setModal({ mode: "edit", category })}
-                        aria-label={`Edit ${category.name}`}
-                        disabled={deletingId === category.id}
-                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-400">
+                      {category.slug}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.classes}`}
                       >
-                        <LuPencil size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(category)}
-                        aria-label={`Delete ${category.name}`}
-                        disabled={deletingId === category.id}
-                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                      >
-                        {deletingId === category.id ? (
-                          <LuLoader className="animate-spin" size={15} />
-                        ) : (
-                          <LuTrash2 size={15} />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                        <Icon size={12} />
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <p className="truncate max-w-xs text-sm text-slate-500 dark:text-slate-400">
+                        {category.description || "—"}
+                      </p>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setModal({ mode: "edit", category })}
+                          aria-label={`Edit ${category.name}`}
+                          disabled={deletingId === category.id}
+                          className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
+                        >
+                          <LuPencil size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(category)}
+                          aria-label={`Delete ${category.name}`}
+                          disabled={deletingId === category.id}
+                          className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        >
+                          {deletingId === category.id ? (
+                            <LuLoader className="animate-spin" size={15} />
+                          ) : (
+                            <LuTrash2 size={15} />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
 
             {!loading && filtered.length === 0 && (
               <tr>
@@ -288,7 +326,9 @@ const ManageCategories = () => {
                     {search ? <LuSearch size={20} /> : <LuTag size={20} />}
                   </span>
                   <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    {search ? "No categories match your search" : "No categories yet"}
+                    {search
+                      ? "No categories match your search"
+                      : "No categories yet"}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
                     {search
