@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { assets } from "../../assets/assets.js";
 import {
   LuArrowRight,
   LuPlay,
@@ -16,6 +17,8 @@ import {
 } from "react-icons/lu";
 
 const ease = [0.22, 1, 0.36, 1];
+
+const heroSlides = [assets.car_image1, assets.car_image2, assets.car_image3];
 
 const team = [
   {
@@ -91,6 +94,15 @@ const faqs = [
 export default function About() {
   const [openMember, setOpenMember] = useState(null);
   const [accordion, setAccordion] = useState(0);
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(
+      () => setHeroIndex((i) => (i + 1) % heroSlides.length),
+      4500
+    );
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (openMember) document.body.style.overflow = "hidden";
@@ -98,9 +110,6 @@ export default function About() {
       document.body.style.overflow = "";
     };
   }, [openMember]);
-
-  const heroRef = useRef(null);
-  const heroInView = useInView(heroRef, { once: true, margin: "-80px" });
 
   const container = {
     hidden: {},
@@ -119,8 +128,8 @@ export default function About() {
         <div aria-hidden className="pointer-events-none absolute bottom-0 left-[-10%] h-[420px] w-[520px] rounded-full bg-indigo-700/20 blur-[130px]" />
         <div aria-hidden className="pointer-events-none absolute right-[-12%] top-1/3 h-[380px] w-[420px] rounded-full bg-amber-500/10 blur-[130px]" />
 
-        <div className="relative z-10 mx-auto grid min-h-[92vh] w-full max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-10">
-          <motion.div variants={container} initial="hidden" animate={heroInView ? "show" : "hidden"} className="relative z-10">
+        <div className="relative z-10 mx-auto grid min-h-[92vh] w-full max-w-7xl items-center gap-14 px-6 py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+          <motion.div variants={container} initial="hidden" animate="show" className="relative z-10">
             <motion.span variants={item} className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-300">
               <LuSparkles size={13} />
               The Story Behind the Keys
@@ -164,14 +173,25 @@ export default function About() {
 
           <motion.div
             initial={{ opacity: 0, y: 40, scale: 0.97 }}
-            animate={heroInView ? { opacity: 1, y: 0, scale: 1 } : {}}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.9, ease, delay: 0.2 }}
             className="relative z-10"
           >
             <div className="relative mx-auto aspect-[4/5] w-full max-w-md">
               <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-slate-900 via-slate-950 to-black shadow-2xl shadow-blue-950/50">
                 <div className="absolute inset-0 animate-float-slow">
-                  <img src="/team/BER.jpg" alt="Cinematic drive with our fleet" className="h-full w-full object-cover opacity-60 grayscale-[0.3]" />
+                  {heroSlides.map((src, i) => {
+                    const active = i === heroIndex;
+                    return (
+                      <img
+                        key={src}
+                        src={src}
+                        alt={active ? "Cinematic drive with our fleet" : ""}
+                        aria-hidden={!active}
+                        className={`absolute inset-0 h-full w-full object-cover opacity-0 grayscale-[0.3] transition-opacity duration-[1200ms] ease-in-out ${active ? "opacity-60" : ""}`}
+                      />
+                    );
+                  })}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                 </div>
                 <div className="absolute inset-0 animate-shimmer bg-[linear-gradient(110deg,transparent_30%,rgba(59,130,246,0.25)_48%,rgba(251,191,36,0.18)_52%,transparent_70%)]" />
@@ -194,7 +214,7 @@ export default function About() {
                 </div>
               </div>
 
-              <div className="absolute -left-6 top-1/4 hidden rounded-2xl border border-white/10 bg-black/70 p-4 shadow-xl shadow-black/50 backdrop-blur-md md:block">
+              <div className="absolute -left-6 top-1/4 hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-xl shadow-black/50 backdrop-blur-md md:block">
                 <div className="flex items-center gap-3">
                   <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600/20 text-blue-400"><LuShieldCheck size={20} /></div>
                   <div>
@@ -203,7 +223,7 @@ export default function About() {
                   </div>
                 </div>
               </div>
-              <div className="absolute -right-4 bottom-16 hidden rounded-2xl border border-white/10 bg-black/70 p-4 shadow-xl shadow-black/50 backdrop-blur-md md:block">
+              <div className="absolute -right-4 bottom-16 hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-xl shadow-black/50 backdrop-blur-md md:block">
                 <div className="flex items-center gap-3">
                   <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500/20 text-amber-400"><LuFuel size={20} /></div>
                   <div>
@@ -220,8 +240,8 @@ export default function About() {
       </section>
 
       {/* VALUES — pulsing narrative blocks */}
-      <section className="relative py-24">
-        <div className="mx-auto max-w-6xl px-6">
+      <section className="relative py-16">
+        <div className="mx-auto w-full max-w-7xl px-6">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-400">What We Stand For</p>
             <h2 className="mt-4 text-3xl font-extrabold text-white sm:text-4xl">Driven by Values That Travel With You</h2>
@@ -252,9 +272,9 @@ export default function About() {
       </section>
 
       {/* ADVISORY BOARD — the Architects of Your Journey */}
-      <section id="advisory" className="relative py-24">
+      <section id="advisory" className="relative py-16">
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[700px] -translate-x-1/2 rounded-full bg-indigo-800/20 blur-[150px]" />
-        <div className="relative mx-auto max-w-7xl px-6">
+        <div className="relative mx-auto w-full max-w-7xl px-6">
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
             <div className="max-w-xl">
               <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-300">
@@ -281,7 +301,7 @@ export default function About() {
                 className="group relative h-[440px] cursor-pointer overflow-hidden rounded-[2rem] bg-slate-950"
                 onClick={() => setOpenMember(member)}
               >
-                <img src={member.image} alt={member.name} className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" />
+                <img src={member.image} alt={member.name} className="h-72 w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-transparent transition-colors duration-700 group-hover:from-[#0b1437] group-hover:via-[#0a1128]/70" />
                 <span className="absolute left-5 top-5 rounded-full border border-white/20 bg-black/50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90 backdrop-blur-md">
                   {member.tag}
@@ -311,8 +331,8 @@ export default function About() {
       </section>
 
       {/* MILESTONES */}
-      <section className="relative py-24">
-        <div className="mx-auto max-w-6xl px-6">
+      <section className="relative py-16">
+        <div className="mx-auto w-full max-w-7xl px-6">
           <div className="mx-auto max-w-xl text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-400">Milestones</p>
             <h2 className="mt-4 text-3xl font-extrabold text-white sm:text-4xl">A Roadmap Written Mile by Mile</h2>
@@ -338,13 +358,13 @@ export default function About() {
       </section>
 
       {/* FAQ */}
-      <section className="relative py-24">
-        <div className="mx-auto max-w-3xl px-6">
+      <section className="relative py-16">
+        <div className="mx-auto w-full max-w-7xl px-6">
           <div className="mx-auto max-w-xl text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-300">Questions, Answered</p>
             <h2 className="mt-4 text-3xl font-extrabold text-white sm:text-4xl">Everything You're Wondering</h2>
           </div>
-          <div className="mt-12 space-y-3">
+          <div className="mx-auto mt-12 max-w-3xl space-y-3">
             {faqs.map((f, i) => {
               const open = accordion === i;
               return (
@@ -377,9 +397,10 @@ export default function About() {
       </section>
 
       {/* CTA BAND */}
-      <section className="relative overflow-hidden py-28">
+      <section className="relative overflow-hidden py-16">
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.18),transparent_60%)]" />
-        <div className="relative mx-auto max-w-4xl px-6 text-center">
+        <div className="relative mx-auto w-full max-w-7xl px-6">
+          <div className="mx-auto max-w-4xl text-center">
           <LuQuote className="mx-auto text-amber-300/60" size={40} />
           <blockquote className="mt-6 text-2xl font-bold leading-snug text-white sm:text-3xl">
             "Mobility is more than transport. It is the prologue to every memory you will make."
@@ -391,6 +412,7 @@ export default function About() {
             Start Your Own Story
             <LuWrench size={16} className="rotate-45" />
           </Link>
+          </div>
         </div>
       </section>
 
@@ -421,27 +443,27 @@ export default function About() {
               >
                 <LuX size={16} />
               </button>
-              <div className="relative flex p-8 sm:p-10">
-                <div className="hidden h-64 w-44 shrink-0 sm:block">
-                  <img src={openMember.image} alt={openMember.name} className="h-full w-full rounded-3xl border border-white/10 object-cover" />
+<div className="relative grid grid-cols-1 gap-8 p-8 items-center md:grid-cols-12 md:p-10">
+                  <div className="md:col-span-4 overflow-hidden rounded-2xl shadow-xl flex-shrink-0">
+                    <img src={openMember.image} alt={openMember.name} className="h-80 w-full object-cover object-center" />
+                  </div>
+                  <div className="space-y-4 md:col-span-8">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-amber-300">
+                      {openMember.tag} · {openMember.title}
+                    </span>
+                    <h3 className="text-3xl font-extrabold text-white">{openMember.name}</h3>
+                    <p className="max-h-[42vh] overflow-y-auto pr-4 text-sm leading-[1.9] text-slate-300">
+                      {openMember.narrative}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setOpenMember(null)}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-xs font-bold text-slate-900 transition-colors hover:bg-blue-600 hover:text-white"
+                    >
+                      Close Narrative
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-amber-300">
-                    {openMember.tag} · {openMember.title}
-                  </span>
-                  <h3 className="mt-2 text-3xl font-extrabold text-white">{openMember.name}</h3>
-                  <p className="mt-4 max-h-[38vh] overflow-y-auto pr-2 text-sm leading-loose text-slate-300">
-                    {openMember.narrative}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setOpenMember(null)}
-                    className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-xs font-bold text-slate-900 transition-colors hover:bg-blue-600 hover:text-white"
-                  >
-                    Close Narrative
-                  </button>
-                </div>
-              </div>
             </motion.div>
           </motion.div>
         )}

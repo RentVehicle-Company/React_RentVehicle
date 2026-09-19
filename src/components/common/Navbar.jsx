@@ -38,10 +38,10 @@ const Navbar = () => {
 
   return (
     <div className="print:hidden">
-      <nav className="bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-t-2xl px-4 sm:px-8 py-3 sm:py-4 shadow-sm transition-colors duration-200">
+      <header className="w-full px-8 py-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center cursor-pointer">
+          {/* Left: Logo */}
+          <div className="flex-1 flex justify-start">
             <Link
               to="/"
               onClick={() => closeMenu("/")}
@@ -51,8 +51,8 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
+          {/* Center: Navigation Links */}
+          <nav className="hidden md:flex items-center justify-center space-x-8">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -70,9 +70,10 @@ const Navbar = () => {
                 )}
               </Link>
             ))}
-          </div>
+          </nav>
 
-          <div className="flex items-center space-x-3 sm:space-x-4">
+          {/* Right: Actions (Theme Toggle, Login, Register) */}
+          <div className="flex-1 flex items-center justify-end space-x-4">
             <button
               type="button"
               onClick={toggleTheme}
@@ -176,7 +177,7 @@ const Navbar = () => {
             </div>
           </div>
         )}
-      </nav>
+      </header>
 
       {authOpen && <AuthModal mode={authOpen.mode} onClose={closeAuth} />}
     </div>
