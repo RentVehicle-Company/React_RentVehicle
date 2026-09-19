@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://spring-rentvehicle.onrender.com/api";
+const API_BASE_URL = "/api";
 
 export { API_BASE_URL };
 

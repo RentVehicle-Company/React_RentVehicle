@@ -1,4 +1,9 @@
-import { API_BASE_URL, API_ENDPOINTS, request } from "./api.js";
+import {
+  API_BASE_URL,
+  API_ENDPOINTS,
+  buildAuthHeaders,
+  request,
+} from "./api.js";
 import { adaptApiVehicle, unwrapApiData, unwrapApiList } from "./adapters.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -84,17 +89,38 @@ export const updateVehicle = async (id, vehicleData) => {
 };
 
 export const uploadVehicleImage = async (vehicleId, file) => {
+  if (file?.size > 5 * 1024 * 1024) {
+    const error = new Error("File size must not exceed 5 MB.");
+    error.status = 400;
+    throw error;
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(API_ENDPOINTS.productImages(vehicleId), {
-    method: "POST",
-    headers: buildAuthHeaders(),
-    body: formData,
-  });
+  let response;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      response = await fetch(API_ENDPOINTS.productImages(vehicleId), {
+        method: "POST",
+        headers: buildAuthHeaders(),
+        body: formData,
+      });
+    } catch (error) {
+      if (attempt === 1) throw error;
+      await delay(1000);
+      continue;
+    }
+
+    if (![502, 503].includes(response.status) || attempt === 1) break;
+    await delay(1000);
+  }
+
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(data?.message || "Vehicle image upload failed.");
+    const error = new Error(
+      data?.message || `Vehicle image upload failed (HTTP ${response.status}).`,
+    );
     error.status = response.status;
     throw error;
   }

@@ -47,6 +47,7 @@ const VEHICLE_TYPES = {
 };
 
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual", "Semi-Automatic", "CVT"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 const deriveType = (vehicle) => {
   if (!vehicle) return "car";
@@ -97,6 +98,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
   const [locationsLoading, setLocationsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const [success, setSuccess] = useState(false);
 
   const typeInfo = VEHICLE_TYPES[type];
@@ -206,7 +208,13 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    setWarning("");
     setSuccess(false);
+
+    if (imageFile?.size > MAX_IMAGE_SIZE) {
+      setError("Vehicle image must not exceed 5 MB.");
+      return;
+    }
 
     if (!brand.trim() || !model.trim()) {
       setError("Brand and Model are required");
@@ -268,18 +276,25 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
         const vehicleId = savedVehicle.id || vehicle?.id;
         if (!vehicleId)
           throw new Error("Vehicle was saved without an ID for image upload.");
-        const uploadedImage = await uploadVehicleImage(vehicleId, imageFile);
-        const image =
-          uploadedImage?.imageUrl ||
-          uploadedImage?.url ||
-          uploadedImage?.image ||
-          savedVehicle.image;
-        savedVehicle = image ? { ...savedVehicle, image } : savedVehicle;
+        try {
+          const uploadedImage = await uploadVehicleImage(vehicleId, imageFile);
+          const image =
+            uploadedImage?.imageUrl ||
+            uploadedImage?.url ||
+            uploadedImage?.image ||
+            savedVehicle.image;
+          savedVehicle = image ? { ...savedVehicle, image } : savedVehicle;
+        } catch (uploadError) {
+          console.error("Vehicle saved but image upload failed:", uploadError);
+          setWarning(
+            `Vehicle saved, but the image could not be uploaded (${uploadError.message}).`,
+          );
+        }
       }
       setSuccess(true);
       setTimeout(() => {
         onSave(adaptBackendVehicle(savedVehicle));
-      }, 500);
+      }, 1200);
     } catch (err) {
       console.error("Failed to create vehicle:", err);
       if (err.status === 401 || err.status === 403) {
@@ -338,20 +353,29 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
           onSubmit={handleSubmit}
           className="max-h-[70vh] overflow-y-auto px-6 py-5 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-500 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb:hover]:bg-slate-400 dark:[&::-webkit-scrollbar-thumb:hover]:bg-slate-500"
         >
-          {(error || success) && (
+          {(error || warning || success) && (
             <div
               className={`mb-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm ${
                 success
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                  ? warning
+                    ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                   : "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
               }`}
             >
               {success ? (
                 <>
-                  <LuCircleCheck size={18} />
-                  {mode === "edit"
-                    ? "Vehicle updated successfully!"
-                    : "Vehicle created successfully!"}
+                  {warning ? (
+                    <LuTriangleAlert size={18} />
+                  ) : (
+                    <LuCircleCheck size={18} />
+                  )}
+                  <span>
+                    {mode === "edit"
+                      ? "Vehicle updated successfully!"
+                      : "Vehicle created successfully!"}
+                    {warning && <span className="block">{warning}</span>}
+                  </span>
                 </>
               ) : (
                 <>
@@ -651,7 +675,17 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                     id="addv-image"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const selectedFile = e.target.files?.[0] || null;
+                      if (selectedFile?.size > MAX_IMAGE_SIZE) {
+                        setImageFile(null);
+                        setError("Vehicle image must not exceed 5 MB.");
+                        e.target.value = "";
+                        return;
+                      }
+                      setError("");
+                      setImageFile(selectedFile);
+                    }}
                     className={`${inputClass} cursor-pointer pl-9 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white`}
                     disabled={submitting}
                   />
@@ -666,6 +700,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                 {vehicle?.image
                   ? "Choose a new file to replace the current image."
                   : `Leave empty to use the default ${typeInfo.label.toLowerCase()} photo.`}
+                <span className="block">Maximum image size: 5 MB.</span>
               </p>
             </div>
 
