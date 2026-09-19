@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { IoCarSport, IoSearch } from "react-icons/io5";
@@ -143,10 +144,12 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
-  const [carColor, setCarColor] = useState("#FFD700");
+  const [carColor, setCarColor] = useState("#1C1C1C");
   const [cameraView, setCameraView] = useState("auto");
   const [headlightsOn, setHeadlightsOn] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [locationMenuPos, setLocationMenuPos] = useState(null);
+  const locationButtonRef = useRef(null);
   const [recentSearches, setRecentSearches] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY)) || [];
@@ -238,11 +241,6 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
   const handleSearch = (e) => {
     e.preventDefault();
     persistRecentSearch();
-    const params = new URLSearchParams();
-    if (selectedLocation) params.set("location", selectedLocation);
-    if (pickupDate) params.set("pickup", pickupDate);
-    if (returnDate) params.set("return", returnDate);
-    navigate(`/cars?${params.toString()}`);
   };
 
   const clearRecent = () => {
@@ -250,14 +248,61 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
     localStorage.removeItem(RECENT_STORAGE_KEY);
   };
 
+  const closeLocationMenu = () => {
+    setIsLocationOpen(false);
+    setLocationMenuPos(null);
+  };
+
+  const toggleLocationMenu = () => {
+    if (isLocationOpen) {
+      closeLocationMenu();
+      return;
+    }
+    const rect = locationButtonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuWidth = 264;
+    const menuHeight = 292;
+    const margin = 8;
+    const spaceBelow = window.innerHeight - rect.bottom - margin;
+    const openUp = spaceBelow < menuHeight && rect.top - margin > spaceBelow;
+    const left = Math.max(
+      margin,
+      Math.min(rect.left, window.innerWidth - menuWidth - margin)
+    );
+    const top = openUp
+      ? Math.max(margin, rect.top - menuHeight - margin)
+      : rect.bottom + margin;
+    setLocationMenuPos({ left, top });
+    setIsLocationOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isLocationOpen) return;
+    const close = () => {
+      setIsLocationOpen(false);
+      setLocationMenuPos(null);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [isLocationOpen]);
+
   return (
-    <section className="relative w-full flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-indigo-50/30 to-white py-8 pb-16 min-h-[calc(100vh-80px)] dark:from-slate-900 dark:via-slate-900/50 dark:to-slate-900">
+    <section className="relative w-full flex flex-col items-center justify-center overflow-hidden bg-slate-50 py-8 pb-16 min-h-[calc(100vh-80px)] dark:bg-slate-950">
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 text-center sm:gap-5 sm:px-6 lg:px-8">
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="max-w-2xl text-2xl font-semibold leading-tight text-slate-900 sm:text-3xl lg:text-4xl"
+          className="max-w-2xl text-2xl font-semibold leading-tight text-slate-900 dark:text-white sm:text-3xl lg:text-4xl"
         >
           Find & Rent Your Next Ride in Minutes
         </motion.h1>
@@ -268,7 +313,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.08, ease: "easeOut" }}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-7 py-3 text-sm font-semibold text-white shadow-md shadow-slate-200/50 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-dull hover:shadow-lg active:scale-95"
+          className="mb-6 mx-auto w-fit inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-7 py-3 text-sm font-semibold text-white shadow-md shadow-slate-200/50 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-dull hover:shadow-lg active:scale-95"
         >
           <IoCarSport size={18} />
           Explore Vehicles
@@ -279,127 +324,133 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           initial={{ opacity: 0, y: 30, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-          className="relative flex w-full max-w-4xl flex-col items-stretch justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none md:flex-row md:items-center md:gap-0 md:rounded-full md:p-2 md:pl-5 md:pr-3"
+          className="relative z-20 mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 rounded-full border border-white/20 bg-white/95 p-2.5 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.4)] backdrop-blur-md md:flex-row dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40"
         >
-          <div className="flex w-full flex-col items-stretch gap-3 md:flex-1 md:flex-row md:items-center md:gap-5">
-            <div className="flex flex-1 flex-col gap-1 text-left">
+          <div className="flex w-full flex-1 flex-col md:flex-row md:items-center">
+            <div className="flex-1 px-4 py-2 hover:bg-slate-100/80 rounded-2xl transition-all cursor-pointer dark:hover:bg-slate-800/60">
               <label
                 htmlFor="pickup-location"
-                className="px-1 text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm md:text-slate-700 md:dark:text-slate-300"
+                className="mb-0.5 block text-[11px] font-extrabold uppercase tracking-wider text-slate-900 dark:text-slate-200"
               >
                 {t("pickup_location")}
               </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  id="pickup-location"
-                  onClick={() => setIsLocationOpen((open) => !open)}
-                  aria-haspopup="listbox"
-                  aria-expanded={isLocationOpen}
-                  className={`flex h-12 w-full cursor-pointer items-center justify-between gap-2 rounded-xl border px-3 text-sm transition-colors ${
-                    isLocationOpen
-                      ? "border-primary bg-slate-50 dark:border-primary dark:bg-slate-700/60"
-                      : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700/60"
-                  }`}
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <LuMapPin
-                      size={16}
-                      className={
-                        selectedLocation
-                          ? "shrink-0 text-primary"
-                          : "shrink-0 text-slate-400"
-                      }
-                    />
-                    <span
-                      className={
-                        selectedLocation
-                          ? "truncate font-medium text-slate-900 dark:text-white"
-                          : "truncate text-slate-500 dark:text-slate-400"
-                      }
-                    >
-                      {selectedLocation || t("pickup_location")}
-                    </span>
-                  </span>
-                  <LuChevronDown
-                    size={14}
-                    className={`shrink-0 text-slate-400 transition-transform duration-200 ${
-                      isLocationOpen ? "rotate-180" : ""
-                    }`}
+              <button
+                type="button"
+                id="pickup-location"
+                ref={locationButtonRef}
+                onClick={toggleLocationMenu}
+                aria-haspopup="listbox"
+                aria-expanded={isLocationOpen}
+                className="flex w-full cursor-pointer items-center justify-between gap-2 bg-transparent text-sm font-semibold text-slate-700 placeholder-slate-400 outline-none dark:text-slate-200"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <LuMapPin
+                    size={16}
+                    className={
+                      selectedLocation
+                        ? "shrink-0 text-primary"
+                        : "shrink-0 text-slate-400"
+                    }
                   />
-                </button>
-
-                {isLocationOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsLocationOpen(false)}
-                      aria-hidden="true"
-                    />
-                    <div
-                      role="listbox"
-                      aria-label="Pickup location"
-                      className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-2xl dark:border-slate-700 dark:bg-slate-800"
-                    >
-                      <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:border-slate-700">
-                        Choose pickup city
-                      </p>
-                      <ul className="max-h-64 overflow-y-auto p-1.5">
-                        {CITY_OPTIONS.map((city) => {
-                          const isSelected = selectedLocation === city;
-                          return (
-                            <li key={city}>
-                              <button
-                                type="button"
-                                role="option"
-                                aria-selected={isSelected}
-                                onClick={() => {
-                                  setSelectedLocation(city);
-                                  setIsLocationOpen(false);
-                                }}
-                                className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                                  isSelected
-                                    ? "bg-primary/10 font-medium text-primary"
-                                    : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
-                                }`}
-                              >
-                                <LuMapPin
-                                  size={15}
-                                  className={
-                                    isSelected ? "text-primary" : "text-slate-400"
-                                  }
-                                />
-                                <span className="flex-1">{city}</span>
-                                {isSelected && (
-                                  <LuCheck size={15} className="text-primary" />
-                                )}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      {selectedLocation && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedLocation("");
-                            setIsLocationOpen(false);
-                          }}
-                          className="w-full cursor-pointer border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
-                        >
-                          Clear location
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                  <span
+                    className={
+                      selectedLocation
+                        ? "truncate font-medium text-slate-900 dark:text-white"
+                        : "truncate text-slate-400"
+                    }
+                  >
+                    {selectedLocation || t("pickup_location")}
+                  </span>
+                </span>
+                <LuChevronDown
+                  size={14}
+                  className={`shrink-0 text-slate-400 transition-transform duration-200 ${
+                    isLocationOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
             </div>
 
-            <div className="flex flex-1 flex-col gap-1 text-left">
+            {isLocationOpen &&
+              locationMenuPos &&
+              createPortal(
+                <>
+                  <div
+                    className="fixed inset-0 z-[90]"
+                    onClick={closeLocationMenu}
+                    aria-hidden="true"
+                  />
+                  <div
+                    role="listbox"
+                    aria-label="Pickup location"
+                    style={{
+                      left: locationMenuPos.left,
+                      top: locationMenuPos.top,
+                    }}
+                    className="fixed z-[100] w-64 animate-pop-in overflow-hidden rounded-2xl border border-slate-100 bg-white p-1.5 text-left shadow-2xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:shadow-black/40"
+                  >
+                    <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:border-slate-700">
+                      Choose pickup city
+                    </p>
+                    <ul className="max-h-64 overflow-y-auto p-1.5">
+                      {CITY_OPTIONS.map((city) => {
+                        const isSelected = selectedLocation === city;
+                        return (
+                          <li key={city}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                setSelectedLocation(city);
+                                closeLocationMenu();
+                              }}
+                              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                                isSelected
+                                  ? "bg-primary/10 font-medium text-primary"
+                                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                              }`}
+                            >
+                              <LuMapPin
+                                size={15}
+                                className={
+                                  isSelected ? "text-primary" : "text-slate-400"
+                                }
+                              />
+                              <span className="flex-1">{city}</span>
+                              {isSelected && (
+                                <LuCheck size={15} className="text-primary" />
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {selectedLocation && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedLocation("");
+                          closeLocationMenu();
+                        }}
+                        className="w-full cursor-pointer border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                      >
+                        Clear location
+                      </button>
+                    )}
+                  </div>
+                </>,
+                document.body
+              )}
+
+            <span
+              className="hidden h-8 w-px bg-slate-200 md:block dark:bg-slate-700"
+            />
+
+            <div className="flex-1 px-4 py-2 hover:bg-slate-100/80 rounded-2xl transition-all cursor-pointer dark:hover:bg-slate-800/60">
               <label
                 htmlFor="pickup-date"
-                className="px-1 text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm md:text-slate-700 md:dark:text-slate-300"
+                className="mb-0.5 block text-[11px] font-extrabold uppercase tracking-wider text-slate-900 dark:text-slate-200"
               >
                 Pick-up Date
               </label>
@@ -410,13 +461,18 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 min={today}
                 onChange={setPickupDate}
                 placeholder="Pick-up date"
+                variant="bar"
               />
             </div>
 
-            <div className="flex flex-1 flex-col gap-1 text-left">
+            <span
+              className="hidden h-8 w-px bg-slate-200 md:block dark:bg-slate-700"
+            />
+
+            <div className="flex-1 px-4 py-2 hover:bg-slate-100/80 rounded-2xl transition-all cursor-pointer dark:hover:bg-slate-800/60">
               <label
                 htmlFor="return-date"
-                className="px-1 text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm md:text-slate-700 md:dark:text-slate-300"
+                className="mb-0.5 block text-[11px] font-extrabold uppercase tracking-wider text-slate-900 dark:text-slate-200"
               >
                 Return Date
               </label>
@@ -427,31 +483,22 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
                 min={pickupDate || today}
                 onChange={setReturnDate}
                 placeholder="Return date"
+                variant="bar"
               />
             </div>
-          </div>
 
-          <div className="flex w-full flex-col gap-3 md:w-auto">
-            <button
+          <button
               type="submit"
-              className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-900 px-7 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 active:scale-95 md:w-auto dark:bg-primary dark:hover:bg-primary-dull"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-black px-8 py-3.5 font-bold text-white shadow-lg transition-all duration-200 hover:scale-[1.02] hover:bg-slate-800 active:scale-95 md:w-auto"
             >
-              <IoSearch />
+              <IoSearch size={17} />
               Search
             </button>
-
-            {totalDays > 0 && selectedLocation && (
-              <div className="flex items-center justify-center gap-1.5 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary md:hidden">
-                <LuCalendarDays size={14} />
-                {totalDays} {totalDays === 1 ? "day" : "days"} ·{" "}
-                {formatPrice(totalDays * AVG_DAILY_RATE)}
-              </div>
-            )}
           </div>
 
           {totalDays > 0 && selectedLocation && (
-            <div className="hidden items-center gap-2 border-t border-slate-100 pt-3 md:flex md:border-0 md:pt-0 md:pl-2">
-              <div className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+            <div className="mt-2 flex justify-center">
+              <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
                 <LuCalendarDays size={14} />
                 {totalDays} {totalDays === 1 ? "day" : "days"} ·{" "}
                 {formatPrice(totalDays * AVG_DAILY_RATE)}
@@ -492,7 +539,11 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           </div>
         )}
 
-        <div className="relative mx-auto w-full max-w-5xl py-6">
+        <div className="relative isolate mx-auto w-full max-w-5xl py-6">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[350px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600/20 blur-[120px]"
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-[780px] w-[1150px] max-w-[135vw] -translate-x-1/2 -translate-y-1/2 transition-colors duration-700"

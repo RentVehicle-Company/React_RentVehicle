@@ -23,6 +23,7 @@ const Navbar = () => {
     { name: t("nav_cars"), path: "/cars" },
     { name: t("nav_motorbikes"), path: "/motorbikes" },
     { name: t("nav_bicycles"), path: "/bicycles" },
+    { name: t("nav_about"), path: "/about" },
   ];
 
   useEffect(() => {
@@ -46,11 +47,7 @@ const Navbar = () => {
               onClick={() => closeMenu("/")}
               className="flex items-center cursor-pointer"
             >
-              <Logo
-                text="Rental Company"
-                shortText="Rental"
-                wordClassName="text-lg sm:text-xl font-bold tracking-tight text-slate-950 dark:text-white"
-              />
+              <Logo />
             </Link>
           </div>
 

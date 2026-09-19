@@ -66,9 +66,9 @@ const Home = () => {
 
       <WhyChooseUs />
       <section className="px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl bg-[#0F172A] shadow-sm">
+        <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <StatsBanner flush />
-          <div aria-hidden="true" className="mx-5 border-b border-slate-800 sm:mx-6" />
+          <div aria-hidden="true" className="mx-5 border-b border-slate-200 dark:border-slate-800 sm:mx-6" />
           <Banner flush />
         </div>
       </section>

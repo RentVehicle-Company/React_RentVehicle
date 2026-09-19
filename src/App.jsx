@@ -2,6 +2,7 @@ import React from "react";
 import Navbar from "./components/common/Navbar";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/customer/Home";
+import About from "./pages/customer/About";
 import Cars from "./pages/vehicles/Cars";
 import MotorBikes from "./pages/vehicles/MotorBikes";
 import Bicycles from "./pages/vehicles/Bicycles";
@@ -42,6 +43,7 @@ const App = () => {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/motorbikes" element={<MotorBikes />} />
           <Route path="/bicycles" element={<Bicycles />} />
+          <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route
