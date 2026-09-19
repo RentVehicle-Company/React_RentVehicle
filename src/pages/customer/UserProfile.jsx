@@ -32,10 +32,14 @@ const UserProfile = () => {
           setUser((prev) => ({ ...prev, ...data }));
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (mounted) {
           const cached = getCachedUser();
-          if (cached.id) setUser(cached);
+          if (cached && Object.keys(cached).length > 0) {
+            setUser(cached);
+          } else if (error?.status === 401) {
+            setUser(null);
+          }
         }
       });
     return () => {

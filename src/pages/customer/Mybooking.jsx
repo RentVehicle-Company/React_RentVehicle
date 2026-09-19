@@ -32,9 +32,18 @@ const Mybooking = () => {
       .then((data) => {
         setBookings(data);
         setLoading(false);
+        setError("");
       })
-      .catch(() => {
-        setError("We couldn't load your bookings right now. Please try again.");
+      .catch((err) => {
+        if (err?.status === 401) {
+          setError("Your session has expired. Please log in again.");
+        } else if (err?.status === 403) {
+          setError("You don't have permission to view bookings.");
+        } else if (err instanceof TypeError || err?.message?.includes("fetch")) {
+          setError("Unable to connect to the server. Please check your connection.");
+        } else {
+          setError("We couldn't load your bookings right now. Please try again.");
+        }
         setLoading(false);
       });
   }, [isAuthenticated]);

@@ -1,6 +1,5 @@
 import { assets, dummyCarData } from "../assets/assets.js";
 import { API_ENDPOINTS, buildAuthHeaders, request } from "./api.js";
-import { getCachedUser } from "./userService.js";
 
 // ---------------------------------------------------------------------------
 // Live backend helpers
@@ -19,6 +18,12 @@ const safe = (promise) => promise.catch(() => []);
 const toDate = (value) => {
   if (!value) return null;
   if (/^\d{4}-\d{2}-\d{2}/.test(value)) return new Date(`${value}T00:00:00`);
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const parseDateSafe = (value) => {
+  if (!value) return null;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
@@ -132,6 +137,10 @@ export const mapBooking = (raw, context) => {
   const pickup = toDate(raw.pickupDate);
   const returned = toDate(raw.returnDate);
 
+  // Store raw ISO strings for reliable parsing in UI
+  const pickupISO = raw.pickupDate;
+  const returnISO = raw.returnDate;
+
   // Past rentals automatically complete once the return date has passed,
   // so the "Completed" tab stays populated (unless cancelled by a user).
   const isPast =
@@ -159,6 +168,11 @@ export const mapBooking = (raw, context) => {
     image: primaryImage?.imageUrl || assets.car_image1,
     startDate: formatDate(pickup),
     endDate: formatDate(returned),
+    pickupDate: formatDateTime(pickup),
+    returnDate: formatDateTime(returned),
+    // Raw ISO strings for reliable date parsing in UI
+    pickupDateISO: pickupISO,
+    returnDateISO: returnISO,
     pricePerDay,
     totalPrice,
     status,
@@ -167,8 +181,6 @@ export const mapBooking = (raw, context) => {
     serviceFee: Math.max(0, totalPrice - rentalFee),
     paymentMethod: payment?.paymentMethod === "CASH" ? "Cash" : "Bakong KHQR",
     pickupLocation: location.name,
-    pickupDate: formatDateTime(pickup),
-    returnDate: formatDateTime(returned),
     latitude: location.latitude,
     longitude: location.longitude,
     contactPhone: raw.contactPhone,
@@ -405,6 +417,9 @@ const deriveBookingStatus = (booking) => {
 
 const enrichBooking = (booking) => {
   const car = specLookup(booking.vehicleName);
+  // Parse formatted date strings to create ISO for consistent UI handling
+  const pickupParsed = parseDateSafe(booking.pickupDate || booking.startDate);
+  const returnParsed = parseDateSafe(booking.returnDate || booking.endDate);
   return {
     ...booking,
     status: deriveBookingStatus(booking),
@@ -417,6 +432,9 @@ const enrichBooking = (booking) => {
           year: car.year,
         }
       : null,
+    // Add ISO date fields for consistent date handling in UI
+    pickupDateISO: pickupParsed?.toISOString() || "",
+    returnDateISO: returnParsed?.toISOString() || "",
   };
 };
 
@@ -424,10 +442,11 @@ const enrichBooking = (booking) => {
 // Public API
 // ---------------------------------------------------------------------------
 
-// GET /api/bookings filtered to the current user, enriched with product and
-// payment data. Falls back to local mocks when the backend is unreachable.
+// GET /api/bookings/my-bookings — returns bookings for the authenticated user (JWT).
+// Backend filters by the token's user ID. Falls back to local mocks when
+// the backend is unreachable.
 export const getMyBookings = async () => {
-  const data = await request(API_ENDPOINTS.bookings);
+  const data = await request(API_ENDPOINTS.myBookings);
 
   if (data == null) {
     await delay(400);
@@ -435,13 +454,9 @@ export const getMyBookings = async () => {
   }
 
   try {
-    const userId = getCachedUser().id;
     const all = unwrapList(data);
-    const mine = userId
-      ? all.filter((booking) => String(booking.userId) === String(userId))
-      : all;
-    const context = await loadCatalog(mine);
-    return mine.map((booking) => mapBooking(booking, context));
+    const context = await loadCatalog(all);
+    return all.map((booking) => mapBooking(booking, context));
   } catch (error) {
     if (error?.status || !(error instanceof TypeError)) throw error;
     await delay(400);
@@ -533,13 +548,16 @@ export const createBookingRequest = async ({
   idCardImage,
   drivingLicenseImage,
 }) => {
+  const params = new URLSearchParams({
+    productId: String(productId),
+    userId: String(userId),
+    pickupDate: toIsoLocal(pickupDate) || "",
+    returnDate: toIsoLocal(returnDate) || "",
+    contactPhone: contactPhone || "",
+  });
+  if (notes) params.set("notes", notes);
+
   const form = new FormData();
-  form.append("productId", String(productId));
-  form.append("userId", String(userId));
-  if (toIsoLocal(pickupDate)) form.append("pickupDate", toIsoLocal(pickupDate));
-  if (toIsoLocal(returnDate)) form.append("returnDate", toIsoLocal(returnDate));
-  if (contactPhone) form.append("contactPhone", contactPhone);
-  if (notes) form.append("notes", notes);
   // Files must be attached as real multipart parts with a filename — the
   // backend binds them via @RequestParam MultipartFile. Anything that isn't a
   // File/Blob (e.g. a stale string) is skipped instead of being serialised.
@@ -556,23 +574,13 @@ export const createBookingRequest = async ({
 
   let response;
   try {
-    response = await fetch(API_ENDPOINTS.bookings, {
+    response = await fetch(`${API_ENDPOINTS.bookings}?${params.toString()}`, {
       method: "POST",
       headers: buildAuthHeaders(),
       body: form,
     });
   } catch {
-    // Backend unreachable -> local mock record keeps the flow alive.
-    const local = await createBooking({
-      vehicleName: notes || "Rental",
-      pickupDate,
-      returnDate,
-      pickupLocation: "Phnom Penh",
-      totalPrice: 0,
-      rentalFee: 0,
-      serviceFee: 0,
-    });
-    return { ...local, backendBookingId: null, local: true };
+    throw new Error("Booking service is unavailable. Please try again.");
   }
 
   const raw = await response.text().catch(() => null);

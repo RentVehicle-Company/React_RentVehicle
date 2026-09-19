@@ -1,8 +1,8 @@
 // Payment service for VISA and Bakong KHQR.
 // Talks to the Spring Boot backend via api.js.
 
-import { API_ENDPOINTS, request } from "./api.js";
-import { getCachedUser } from "./userService.js";
+import { API_ENDPOINTS, buildAuthHeaders, request } from "./api.js";
+import { getCurrentUserId } from "./authServices.js";
 import { loadCatalog, mapBooking } from "./bookingService.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,32 +27,40 @@ const formatPaymentDate = (payment, fallback) => {
   return fallback || "";
 };
 
-// GET /api/payments filtered to the current user's bookings, enriched with
-// the vehicle name so the Payments History table can render without N+1 calls.
-// Uses live data only — failures surface to the caller.
+// GET /api/payments/my-payments — returns payments for the authenticated user's bookings.
+// Backend filters by the token's user ID. Enriches with vehicle name for the Payments History table.
 export const getMyPayments = async () => {
-  const userId = getCachedUser().id;
-  const [bookingsData, paymentsData] = await Promise.all([
-    safe(request(API_ENDPOINTS.bookings)),
-    safe(request(API_ENDPOINTS.payments)),
-  ]);
+  const data = await request(API_ENDPOINTS.myPayments);
 
-  const allBookings = unwrapList(bookingsData);
-  const allPayments = unwrapList(paymentsData);
+  if (data == null) {
+    return [];
+  }
 
-  const myBookings = userId
-    ? allBookings.filter((b) => String(b.userId) === String(userId))
-    : allBookings;
+  try {
+    const allPayments = unwrapList(data);
 
-  const context = await loadCatalog(myBookings);
-  const bookingById = new Map(myBookings.map((b) => [String(b.id), b]));
-  const enrichedById = new Map(
-    myBookings.map((b) => [String(b.id), mapBooking(b, context)]),
-  );
+    // Extract unique booking IDs from payments to fetch booking details for enrichment
+    const bookingIds = [
+      ...new Set(allPayments.map((p) => String(p.bookingId)).filter(Boolean)),
+    ];
 
-  return allPayments
-    .filter((payment) => bookingById.has(String(payment.bookingId)))
-    .map((payment) => {
+    // Fetch booking details for enrichment
+    const bookingsData = await Promise.all(
+      bookingIds.map((bookingId) =>
+        safe(request(API_ENDPOINTS.bookingById(bookingId)))
+      )
+    );
+    const bookings = bookingsData
+      .map((d) => unwrapList(d))
+      .filter((b) => b.length > 0)
+      .map((b) => b[0]);
+
+    const context = await loadCatalog(bookings);
+    const enrichedById = new Map(
+      bookings.map((b) => [String(b.id), mapBooking(b, context)]),
+    );
+
+    return allPayments.map((payment) => {
       const booking = enrichedById.get(String(payment.bookingId));
       const isPaid =
         String(payment.paymentStatus || "").toUpperCase() === "PAID";
@@ -70,6 +78,10 @@ export const getMyPayments = async () => {
         currency: payment.currency,
       };
     });
+  } catch (error) {
+    if (error?.status || !(error instanceof TypeError)) throw error;
+    return [];
+  }
 };
 
 export const PAYMENT_METHODS = {
@@ -80,6 +92,22 @@ export const PAYMENT_METHODS = {
 export const MERCHANT_NAME = "Rental Company";
 
 const QR_TTL_MS = 7 * 60 * 1000;
+
+const getPaymentQrImage = async (paymentId) => {
+  if (!paymentId || String(paymentId).startsWith("mock_")) return null;
+
+  const response = await fetch(API_ENDPOINTS.paymentQr(paymentId), {
+    headers: buildAuthHeaders(),
+  });
+  if (!response.ok) {
+    const error = new Error(`Could not load payment QR (HTTP ${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const imageBlob = await response.blob();
+  return URL.createObjectURL(imageBlob);
+};
 
 const generateTransactionId = () =>
   `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random()
@@ -181,7 +209,7 @@ export const processVisaPayment = async ({ booking = {}, card = {} } = {}) => {
 // Mock fallback is used when the backend is unreachable or the booking is a
 // local record (no backendBookingId).
 export const generateKhqrPayment = async ({ booking = {} } = {}) => {
-  const bookingId = booking.backendBookingId || booking.id;
+  const bookingId = booking.backendBookingId;
   const { total } = buildPaymentAmount(booking);
   const now = new Date();
   const transactionId = generateTransactionId();
@@ -232,20 +260,23 @@ export const generateKhqrPayment = async ({ booking = {} } = {}) => {
       throw new Error("Could not generate payment.");
     }
 
-    const mock = buildMockPayment();
+    const paymentId = data.id;
+    const qrImageUrl = await getPaymentQrImage(paymentId);
+    const fallbackPayment = buildMockPayment();
     return {
-      ...mock,
+      ...fallbackPayment,
       ...data,
-      paymentId: data.id,
-      transactionId: data.transactionId || mock.transactionId,
-      paymentStatus: data.paymentStatus || mock.paymentStatus,
+      paymentId,
+      transactionId: data.transactionId || fallbackPayment.transactionId,
+      paymentStatus: data.paymentStatus || fallbackPayment.paymentStatus,
+      qrImageUrl,
     };
   } catch (error) {
     // Network or server failure on a demo/local booking → gracefully fall back
     // to a mock QR so the standalone checkout page still works. Surface
     // client-side rejections (4xx) only when the booking was persisted on the
     // backend so real failures are never silently swallowed.
-    if (!booking.backendBookingId || error?.status >= 500) {
+    if (!booking.backendBookingId) {
       await delay(600);
       return buildMockPayment();
     }
@@ -261,57 +292,29 @@ export const verifyKhqrPayment = async ({
   transactionId,
   booking = {},
 } = {}) => {
-  const { total } = buildPaymentAmount(booking);
-  const now = new Date();
-
-  const buildMockResult = () => ({
-    paymentId,
-    bookingId: booking.backendBookingId || booking.id,
-    transactionId,
-    method: PAYMENT_METHODS.khqr,
-    amount: total,
-    paymentStatus: "PAID",
-    status: "paid",
-    paidAt: now.toISOString(),
-  });
-
-  // Local/demo payments (no backend id) resolve directly as paid, mimicking
-  // the pre-backend behaviour of the standalone flow.
   if (!paymentId || String(paymentId).startsWith("mock_")) {
-    await delay(2600);
-    return buildMockResult();
+    throw new Error("Please scan the QR code and complete payment first.");
   }
 
-  try {
-    const data = await request(API_ENDPOINTS.paymentVerify(paymentId));
+  const data = await request(API_ENDPOINTS.paymentVerify(paymentId));
 
-    if (data == null) {
-      await delay(2600);
-      return buildMockResult();
-    }
-    if (data.success === false) {
-      throw new Error(data.message || "Payment not verified.");
-    }
-    if (data.id === undefined) {
-      throw new Error("Payment not found.");
-    }
-
-    const mock = buildMockResult();
-    return {
-      ...mock,
-      ...data,
-      paymentId: data.id,
-      transactionId: data.transactionId || mock.transactionId,
-      paymentStatus: data.paymentStatus || mock.paymentStatus,
-      method: PAYMENT_METHODS.khqr,
-    };
-  } catch (error) {
-    if (error?.status >= 500) {
-      await delay(2600);
-      return buildMockResult();
-    }
-    throw error;
+  if (data == null) {
+    throw new Error("Payment status could not be retrieved.");
   }
+  if (data.success === false) {
+    throw new Error(data.message || "Payment not verified.");
+  }
+  if (data.id === undefined) {
+    throw new Error("Payment not found.");
+  }
+
+  return {
+    ...data,
+    paymentId: data.id,
+    transactionId: data.transactionId || transactionId,
+    paymentStatus: data.paymentStatus || data.status,
+    method: PAYMENT_METHODS.khqr,
+  };
 };
 
 // Human-readable label for a backend PaymentStatus enum value.

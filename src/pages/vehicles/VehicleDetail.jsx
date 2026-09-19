@@ -53,7 +53,7 @@ import { usePreferences } from "../../context/PreferencesContext";
 import { useAuth } from "../../context/AuthContext";
 import CustomDatePicker from "../../components/common/CustomDatePicker";
 import { createBookingRequest } from "../../services/bookingService";
-import { getCachedUser } from "../../services/userService";
+import { getCurrentUserId } from "../../services/authServices";
 
 const inputClass =
   "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -321,6 +321,7 @@ const VehicleDetail = () => {
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [pickupLocation, setPickupLocation] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState("pickup");
   const [deliveryCity, setDeliveryCity] = useState("Phnom Penh");
   const [deliveryDistrict, setDeliveryDistrict] = useState("");
@@ -355,6 +356,7 @@ const VehicleDetail = () => {
     setPickupDate(searchParams.get("pickup") || "");
     setReturnDate(searchParams.get("return") || "");
     setPickupLocation(searchParams.get("location") || "");
+    setContactPhone(user?.phone || getCachedUser().phone || "");
     setDeliveryMethod("pickup");
     setDeliveryCity("Phnom Penh");
     setDeliveryDistrict("");
@@ -541,6 +543,10 @@ const VehicleDetail = () => {
       );
       return;
     }
+    if (!contactPhone.trim()) {
+      setBookingError("Please enter a contact phone number to continue.");
+      return;
+    }
 
     const baseBooking = {
       vehicleName: `${vehicle?.brand || "Vehicle"} ${vehicle?.model || ""}`,
@@ -579,13 +585,17 @@ const VehicleDetail = () => {
     // Persist the booking on the backend (POST /api/bookings, multipart with
     // the uploaded ID card and driving license photos).
     let persisted = { ...baseBooking, backendBookingId: null };
+    const userId = getCurrentUserId();
+    if (!userId) {
+      throw new Error("You must be logged in to create a booking.");
+    }
     try {
       const created = await createBookingRequest({
         productId: vehicle.id,
-        userId: getCachedUser().id,
+        userId,
         pickupDate,
         returnDate,
-        contactPhone: user?.phone || getCachedUser().phone || "",
+        contactPhone: contactPhone.trim(),
         notes: `${vehicle.brand} ${vehicle.model}`,
         idCardImage: idDocument,
         drivingLicenseImage: licenseDocument,
@@ -601,16 +611,11 @@ const VehicleDetail = () => {
           status: String(created.status || "confirmed").toLowerCase(),
         };
       }
-    } catch {
-      // Development fallback: the backend booking POST failed or was rejected
-      // (offline, expired token, or document verification error). Instead of
-      // dead-ending the user, fall back to a local booking so they can still
-      // proceed directly to the Bakong KHQR payment screen.
-      persisted = {
-        ...baseBooking,
-        backendBookingId: null,
-        local: true,
-      };
+    } catch (error) {
+      setBookingError(
+        error.message || "Booking could not be confirmed. Please try again.",
+      );
+      return;
     }
 
     navigate("/checkout", {
@@ -1200,6 +1205,21 @@ const VehicleDetail = () => {
                   min={pickupDate || today}
                   onChange={setReturnDate}
                   placeholder="Select return date"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="detail-contact-phone" className={labelClass}>
+                  Contact Phone
+                </label>
+                <input
+                  id="detail-contact-phone"
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
+                  placeholder="e.g. 012 345 678"
+                  className={inputClass}
+                  required
                 />
               </div>
 

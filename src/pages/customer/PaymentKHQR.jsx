@@ -8,6 +8,7 @@ import {
   LuMapPin,
   LuQrCode,
   LuScanLine,
+  LuShieldCheck,
   LuStore,
   LuTruck,
 } from "react-icons/lu";
@@ -241,11 +242,27 @@ const PaymentKHQR = () => {
     setVerifying(true);
     setError(null);
     try {
-      await ensureQrPayment();
-      await verifyKhqrPayment({
-        transactionId: khqr?.transactionId || payment.transactionId,
-        booking,
-      });
+      const paymentData = await ensureQrPayment();
+      const paymentId = paymentData?.paymentId || paymentData?.id;
+      let verification;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        verification = await verifyKhqrPayment({
+          paymentId,
+          transactionId: paymentData?.transactionId || payment.transactionId,
+          booking,
+        });
+        const status = String(
+          verification.paymentStatus || verification.status || "",
+        ).toUpperCase();
+        if (status !== "PENDING" || attempt === 4) break;
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      if (
+        String(verification.paymentStatus || verification.status || "").toUpperCase() !==
+        "PAID"
+      ) {
+        throw new Error("Payment is still pending. Please complete payment and try again.");
+      }
       const { rentalFee, serviceFee, total } = buildPaymentAmount(booking);
       await createBooking({
         vehicleName: booking.vehicleName,
@@ -312,10 +329,10 @@ const PaymentKHQR = () => {
     : 1;
   const statusBadge = STATUS_BADGE[booking.status] || STATUS_BADGE.confirmed;
 
-  const qrPayload = khqr?.qrString || khqr?.qrData || "";
-  const qrImageUrl = qrPayload
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrPayload)}`
-    : QR_IMAGE_URL;
+  const hasBackendPayment =
+    Boolean(khqr?.paymentId || khqr?.id) &&
+    !String(khqr?.paymentId || khqr?.id).startsWith("mock_");
+  const qrImageUrl = khqr?.qrImageUrl || "";
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -470,8 +487,10 @@ const PaymentKHQR = () => {
                     "Generating QR code..."
                   )}
                 </div>
-              ) : qrFailed || !qrPayload ? (
-                <QrCodeMock seed={qrPayload || "KHQR_SAMPLE_PAYMENT"} />
+              ) : qrFailed || !qrImageUrl ? (
+                <div className="flex h-[250px] w-[250px] items-center justify-center rounded-lg bg-slate-50 px-6 text-center text-xs text-slate-500">
+                  The secure Bakong QR code is unavailable. Please retry.
+                </div>
               ) : (
                 <img
                   src={qrImageUrl}
@@ -610,12 +629,14 @@ const PaymentKHQR = () => {
             <button
               type="button"
               onClick={handleVerify}
-              disabled={verifying}
+              disabled={verifying || !hasBackendPayment}
               className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary-dull shadow-lg shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               <LuScanLine size={18} />
               {verifying
                 ? "Confirming Payment..."
+                : !hasBackendPayment
+                  ? "Preparing Payment..."
                 : "I have paid — Confirm Payment"}
             </button>
             <p className="mt-3 text-center text-xs text-slate-500">

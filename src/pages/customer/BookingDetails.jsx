@@ -11,6 +11,33 @@ import {
 import { getBookingById } from "../../services/bookingService";
 import { usePreferences } from "../../context/PreferencesContext";
 
+const parseDateSafe = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatDisplayDateTime = (value) => {
+  const date = parseDateSafe(value);
+  if (!date) return "—";
+  return date.toLocaleString("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const calculateDurationDays = (startValue, endValue) => {
+  const start = parseDateSafe(startValue);
+  const end = parseDateSafe(endValue);
+  if (!start || !end) return 1;
+  const diffMs = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(1, diffDays);
+};
+
 const STATUS_CONFIG = {
   confirmed: {
     label: "Confirmed",
@@ -86,7 +113,13 @@ const BookingDetails = () => {
   const rentalFee = booking.rentalFee ?? booking.totalPrice;
   const serviceFee = booking.serviceFee ?? 0;
   const usingDelivery = booking.deliveryMethod === "delivery";
-  const duration = Math.max(1, Math.round(rentalFee / booking.pricePerDay));
+
+  // Use ISO date fields from backend (pickupDateISO, returnDateISO) for reliable parsing,
+  // fall back to formatted strings (pickupDate, returnDate) for mock data
+  const startISO = booking.pickupDateISO || booking.pickupDate;
+  const endISO = booking.returnDateISO || booking.returnDate;
+  const duration = calculateDurationDays(startISO, endISO);
+
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${booking.longitude - 0.04}%2C${booking.latitude - 0.03}%2C${booking.longitude + 0.04}%2C${booking.latitude + 0.03}&layer=mapnik&marker=${booking.latitude}%2C${booking.longitude}`;
   const hasCoords =
     Number.isFinite(Number(booking.latitude)) &&
@@ -153,13 +186,13 @@ const BookingDetails = () => {
                 <div>
                   <p className="text-xs text-slate-400">Pickup Date</p>
                   <p className="mt-1 font-medium text-slate-100">
-                    {booking.pickupDate || booking.startDate}
+                    {formatDisplayDateTime(startISO)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Return Date</p>
                   <p className="mt-1 font-medium text-slate-100">
-                    {booking.returnDate || booking.endDate}
+                    {formatDisplayDateTime(endISO)}
                   </p>
                 </div>
               </div>

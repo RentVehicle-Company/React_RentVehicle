@@ -468,12 +468,10 @@ const Checkout = () => {
 
   // The real QR is rendered from the backend qrString (a KHQR data payload),
   // falling back to the generated mock pattern while offline.
-  const qrPayload = khqr?.qrString || khqr?.qrData || "";
-  const qrImageUrl = qrPayload
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-        qrPayload,
-      )}`
-    : QR_IMAGE_URL;
+  const hasBackendPayment =
+    Boolean(khqr?.paymentId || khqr?.id) &&
+    !String(khqr?.paymentId || khqr?.id).startsWith("mock_");
+  const qrImageUrl = khqr?.qrImageUrl || "";
 
   useEffect(() => {
     let mounted = true;
@@ -604,11 +602,20 @@ const Checkout = () => {
       // Always work from a live payment: if generation hasn't happened yet or
       // the QR already expired, create a fresh one before verifying.
       const payment = await ensureQrPayment();
-      const result = await verifyKhqrPayment({
-        paymentId: payment?.paymentId || payment?.id,
-        transactionId: payment?.transactionId,
-        booking,
-      });
+      const paymentId = payment?.paymentId || payment?.id;
+      let result;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        result = await verifyKhqrPayment({
+          paymentId,
+          transactionId: payment?.transactionId,
+          booking,
+        });
+        const currentStatus = String(
+          result.paymentStatus || result.status || "",
+        ).toUpperCase();
+        if (currentStatus !== "PENDING" || attempt === 4) break;
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
       const status = String(
         result.paymentStatus || result.status || "",
       ).toUpperCase();
@@ -622,7 +629,7 @@ const Checkout = () => {
             (result.failureReason || "The payment was declined.")) ||
           (status === "EXPIRED" &&
             "The payment link expired before it was settled. Please retry.") ||
-          `Payment status: ${paymentStatusLabel(status)}`;
+          `Payment status: ${paymentStatusLabel(status)}. Please complete the payment in your bank app and try again.`;
         throw new Error(reason);
       }
 
@@ -967,10 +974,10 @@ const Checkout = () => {
                               "Generating QR code..."
                             )}
                           </div>
-                        ) : qrFailed || !qrPayload ? (
-                          <QrCodeMock
-                            seed={qrPayload || "KHQR_SAMPLE_PAYMENT"}
-                          />
+                        ) : qrFailed || !qrImageUrl ? (
+                          <div className="flex h-[250px] w-[250px] items-center justify-center rounded-lg bg-slate-50 px-6 text-center text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                            The secure Bakong QR code is unavailable. Please retry.
+                          </div>
                         ) : (
                           <img
                             src={qrImageUrl}
@@ -1025,12 +1032,14 @@ const Checkout = () => {
                     <button
                       type="button"
                       onClick={handleKhqrVerify}
-                      disabled={verifying}
+                      disabled={verifying || !hasBackendPayment}
                       className="inline-flex items-center justify-center gap-2 w-full px-5 py-3 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-dull disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       <LuScanLine size={17} />
                       {verifying
                         ? "Checking Payment Status..."
+                        : !hasBackendPayment
+                          ? "Preparing Payment..."
                         : "Check Payment Status"}
                     </button>
 
