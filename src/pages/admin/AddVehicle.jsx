@@ -11,7 +11,12 @@ import {
   LuCircleCheck,
 } from "react-icons/lu";
 import { assets } from "../../assets/assets";
-import { getCategories, getLocations, createVehicle } from "../../services/vehicleServices";
+import {
+  getCategories,
+  getLocations,
+  createVehicle,
+  updateVehicle,
+} from "../../services/vehicleServices";
 import { toBackendVehicleType } from "../../utils/vehicleTypeMap";
 
 const inputClass =
@@ -69,11 +74,15 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
     vehicle?.transmission || "Automatic"
   );
   const [location, setLocation] = useState(vehicle?.location || "");
-  const [engine, setEngine] = useState(vehicle?.engineCc ?? vehicle?.specs?.engine ?? "");
+  const [engine, setEngine] = useState(
+    vehicle?.engineCc ?? vehicle?.engine_cc ?? vehicle?.specs?.engine ?? ""
+  );
   const [horsepower, setHorsepower] = useState(
     vehicle?.specs?.horsepower ?? ""
   );
-  const [topSpeed, setTopSpeed] = useState(vehicle?.topSpeed ?? vehicle?.specs?.topSpeed ?? "");
+  const [topSpeed, setTopSpeed] = useState(
+    vehicle?.topSpeed ?? vehicle?.top_speed ?? vehicle?.specs?.topSpeed ?? ""
+  );
   const [imageUrl, setImageUrl] = useState(vehicle?.image || "");
   const [description, setDescription] = useState(vehicle?.description || "");
   const [available, setAvailable] = useState(
@@ -156,6 +165,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
       category: categoryMap[v.categoryId] ?? "Uncategorized",
       categorySlug: categorySlugMap[v.categoryId] ?? null,
       categoryId: v.categoryId,
+      locationId: v.locationId,
       seating_capacity: v.seatingCapacity,
       fuel_type: v.fuelType,
       transmission: v.transmission,
@@ -229,10 +239,13 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
     };
 
     try {
-      const createdVehicle = await createVehicle(payload);
+      const savedVehicle =
+        mode === "edit"
+          ? await updateVehicle(vehicle.id, payload)
+          : await createVehicle(payload);
       setSuccess(true);
       setTimeout(() => {
-        onSave(adaptBackendVehicle(createdVehicle));
+        onSave(adaptBackendVehicle(savedVehicle));
       }, 500);
     } catch (err) {
       console.error("Failed to create vehicle:", err);
@@ -300,7 +313,9 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
               {success ? (
                 <>
                   <LuCircleCheck size={18} />
-                  Vehicle created successfully!
+              {mode === "edit"
+                ? "Vehicle updated successfully!"
+                : "Vehicle created successfully!"}
                 </>
               ) : (
                 <>

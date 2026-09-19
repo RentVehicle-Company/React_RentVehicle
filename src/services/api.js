@@ -134,6 +134,9 @@ export const request = async (path, options = {}) => {
     throw error;
   }
 
+  // Some REST endpoints intentionally return 204. A caller can opt into a
+  // success sentinel, while the default remains null for existing consumers.
+  if (response.status === 204) return options.noContentValue ?? null;
   return data;
 };
 

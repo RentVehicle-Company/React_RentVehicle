@@ -1,4 +1,9 @@
 import { API_ENDPOINTS, request } from "./api.js";
+import {
+  adaptApiVehicle,
+  unwrapApiData,
+  unwrapApiList,
+} from "./adapters.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -65,7 +70,27 @@ export const createVehicle = async (vehicleData) => {
     body: JSON.stringify(vehicleData),
   });
   if (!response) throw new Error("Failed to create vehicle - no response from server");
-  return response;
+  return response.data ?? response;
+};
+
+export const updateVehicle = async (id, vehicleData) => {
+  const response = await request(API_ENDPOINTS.productById(id), {
+    method: "PUT",
+    body: JSON.stringify(vehicleData),
+  });
+  if (!response) throw new Error("Failed to update vehicle - no response from server");
+  return response.data ?? response;
+};
+
+export const deleteVehicle = async (id) => {
+  // A successful DELETE may deliberately return 204 No Content. Ask the
+  // shared request helper for a success sentinel so it remains distinct from
+  // a network failure, which returns null.
+  const response = await request(API_ENDPOINTS.productById(id), {
+    method: "DELETE",
+    noContentValue: true,
+  });
+  if (!response) throw new Error("Failed to delete vehicle - no response from server");
 };
 
 export const createCategory = async (categoryData) => {
@@ -1002,11 +1027,7 @@ export const ALL_MOCK_VEHICLES = [
   ...mockBicycles,
 ];
 
-const unwrapList = (data) => {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.data)) return data.data;
-  return [];
-};
+const unwrapList = unwrapApiList;
 
 // ➕ បន្ថែមថ្មីទាំងអស់នេះ
 const buildLookupMap = (list, valueKey = "name") =>
@@ -1015,35 +1036,27 @@ const buildLookupMap = (list, valueKey = "name") =>
 const buildCategoryMaps = (categories) => ({
   nameMap: Object.fromEntries(categories.map((c) => [c.id, c.name])),
   slugMap: Object.fromEntries(categories.map((c) => [c.id, c.slug])),
+  vehicleTypeMap: Object.fromEntries(categories.map((c) => [c.id, c.vehicleType])),
 });
 
-const PLACEHOLDER_IMAGE =
-  "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23334155'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='20' fill='%2394a3b8' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
+// Categories change far less frequently than paged products. Reuse the same
+// categoryId → vehicleType lookup for every product page in this session.
+let categoryMapsPromise;
 
-const adaptApiVehicle = (v, categoryMaps, locationMap, imageData = {}) => ({
-  id: v.id,
-  brand: v.brand,
-  model: v.model,
-  image: imageData.image || PLACEHOLDER_IMAGE,   // ✅ ប្រើពី Cloudinary
-  images: imageData.images?.length ? imageData.images : [],
-  year: v.modelYear,
-  category: categoryMaps.nameMap[v.categoryId] ?? "Uncategorized",
-  categorySlug: categoryMaps.slugMap[v.categoryId] ?? null,
-  categoryId: v.categoryId,
-  seating_capacity: v.seatingCapacity,
-  fuel_type: v.fuelType,
-  transmission: v.transmission,
-  price_per_day: v.pricePerDay,
-  location: locationMap[v.locationId] ?? "Unknown",
-  description: v.description,
-  is_available: v.isAvailable,
-  engine_cc: v.engineCc,
-  fuel_efficiency: v.fuelEfficiency,
-  top_speed: v.topSpeed,
-  gears: v.speeds,
-  frame_material: v.material,
-  wheel_size: v.wheelSize,
-});
+const getCategoryMaps = async () => {
+  if (!categoryMapsPromise) {
+    categoryMapsPromise = request(API_ENDPOINTS.categories)
+      .then((data) => {
+        if (!data) throw new Error("Unable to load categories from the backend.");
+        return buildCategoryMaps(unwrapList(data));
+      })
+      .catch((error) => {
+        categoryMapsPromise = undefined;
+        throw error;
+      });
+  }
+  return categoryMapsPromise;
+};
 
 const fetchVehicleImages = async (vehicleId) => {
   try {
@@ -1062,33 +1075,49 @@ const fetchVehicleImages = async (vehicleId) => {
   }
 };
 
+export const getVehiclePage = async ({ page = 0, size = 10 } = {}) => {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  const [vehicleData, categoryMaps, locationData] = await Promise.all([
+      request(`${API_ENDPOINTS.vehicles}?${params.toString()}`),
+      getCategoryMaps(),
+      request(API_ENDPOINTS.locations),
+  ]);
+  if (!vehicleData) throw new Error("Unable to load vehicles from the backend.");
+
+  const productPage = unwrapApiData(vehicleData);
+  const locationMap = buildLookupMap(unwrapList(locationData), "city");
+  const vehicleList = unwrapApiList(productPage);
+
+  const imageResults = await Promise.all(
+    vehicleList.map((vehicle) => fetchVehicleImages(vehicle.id))
+  );
+
+  const content = vehicleList.map((vehicle, index) => {
+    const adapted = adaptApiVehicle(vehicle, {
+      categoryMaps,
+      locationMap,
+      imageData: imageResults[index],
+    });
+    if (adapted.vehicle_type === "moto") return enrichMotorbike(adapted);
+    if (adapted.vehicle_type === "bicycle") return enrichBicycle(adapted);
+    return enrichVehicle(adapted);
+  });
+
+  return {
+    content,
+    totalPages: Number(productPage?.totalPages) || 0,
+    totalElements: Number(productPage?.totalElements) || 0,
+    number: Number.isInteger(productPage?.number) ? productPage.number : page,
+    size: Number(productPage?.size) || size,
+    first: Boolean(productPage?.first ?? page === 0),
+    last: Boolean(productPage?.last ?? true),
+  };
+};
+
 export const getVehicles = async () => {
   try {
-    const [vehicleData, categoryData, locationData] = await Promise.all([
-      request(API_ENDPOINTS.vehicles),
-      request(API_ENDPOINTS.categories),
-      request(API_ENDPOINTS.locations),
-    ]);
-    if (!vehicleData) throw new Error("Backend offline");
-
-    const categoryMaps = buildCategoryMaps(unwrapList(categoryData));
-    const locationMap = buildLookupMap(unwrapList(locationData), "city");
-    const vehicleList = unwrapList(vehicleData);
-
-    // ➕ Fetch images សម្រាប់ vehicle ទាំងអស់ ស្របគ្នា
-    const imageResults = await Promise.all(
-      vehicleList.map((v) => fetchVehicleImages(v.id))
-    );
-
-    const adapted = vehicleList.map((v, i) =>
-      adaptApiVehicle(v, categoryMaps, locationMap, imageResults[i])
-    );
-
-    return adapted.map((v) => {
-      if (v.categorySlug === "motorbikes") return enrichMotorbike(v);
-      if (v.categorySlug === "bicycles") return enrichBicycle(v);
-      return enrichVehicle(v);
-    });
+    const result = await getVehiclePage({ page: 0, size: 100 });
+    return result.content;
   } catch (err) {
     console.error("getVehicles fallback triggered:", err);
     await delay(400);
