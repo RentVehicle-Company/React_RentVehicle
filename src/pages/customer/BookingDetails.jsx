@@ -13,13 +13,14 @@ import { usePreferences } from "../../context/PreferencesContext";
 
 const parseDateSafe = (value) => {
   if (!value) return null;
+  if (value instanceof Date) return value;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const formatDisplayDateTime = (value) => {
   const date = parseDateSafe(value);
-  if (!date) return "—";
+  if (!date) return "N/A";
   return date.toLocaleString("en-US", {
     day: "2-digit",
     month: "short",
@@ -39,6 +40,11 @@ const calculateDurationDays = (startValue, endValue) => {
 };
 
 const STATUS_CONFIG = {
+  pending: {
+    label: "Pending",
+    className:
+      "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  },
   confirmed: {
     label: "Confirmed",
     className:
@@ -48,11 +54,6 @@ const STATUS_CONFIG = {
     label: "Active",
     className:
       "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  },
-  pending: {
-    label: "Pending",
-    className:
-      "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
   },
   completed: {
     label: "Completed",
@@ -109,7 +110,8 @@ const BookingDetails = () => {
     );
   }
 
-  const status = STATUS_CONFIG[booking.status] || STATUS_CONFIG.confirmed;
+  const rawStatus = String(booking.status || "pending").toLowerCase();
+  const status = STATUS_CONFIG[rawStatus] || STATUS_CONFIG.pending;
   const rentalFee = booking.rentalFee ?? booking.totalPrice;
   const serviceFee = booking.serviceFee ?? 0;
   const usingDelivery = booking.deliveryMethod === "delivery";
@@ -120,15 +122,25 @@ const BookingDetails = () => {
   const endISO = booking.returnDateISO || booking.returnDate;
   const duration = calculateDurationDays(startISO, endISO);
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${booking.longitude - 0.04}%2C${booking.latitude - 0.03}%2C${booking.longitude + 0.04}%2C${booking.latitude + 0.03}&layer=mapnik&marker=${booking.latitude}%2C${booking.longitude}`;
+  // Formatted dates for display
+  const pickupDisplay = formatDisplayDateTime(startISO);
+  const returnDisplay = formatDisplayDateTime(endISO);
+
   const hasCoords =
     Number.isFinite(Number(booking.latitude)) &&
     Number.isFinite(Number(booking.longitude));
+  const mapUrl = hasCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${booking.longitude - 0.04}%2C${booking.latitude - 0.03}%2C${booking.longitude + 0.04}%2C${booking.latitude + 0.03}&layer=mapnik&marker=${booking.latitude}%2C${booking.longitude}`
+    : "";
   const googleMapsUrl = hasCoords
     ? `https://www.google.com/maps/search/?api=1&query=${booking.latitude},${booking.longitude}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
         booking.pickupLocation || "",
       )}`;
+
+  const vehicleImage = booking.image || "";
+  const vehicleName = booking.vehicleName || "Vehicle";
+  const pickupLocation = booking.pickupLocation || "—";
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -149,16 +161,22 @@ const BookingDetails = () => {
           </span>
           <div className="grid sm:grid-cols-[minmax(180px,0.8fr)_minmax(0,1.2fr)] min-h-[210px]">
             <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-slate-800 sm:aspect-auto sm:min-h-74">
-              <img
-                src={booking.image}
-                alt={booking.vehicleName}
-                className="h-full w-full object-cover"
-              />
+              {vehicleImage ? (
+                <img
+                  src={vehicleImage}
+                  alt={vehicleName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full w-full bg-slate-700 text-slate-400">
+                  No image available
+                </div>
+              )}
             </div>
             <div className="p-5 sm:p-7 flex flex-col justify-center">
               <div className="flex items-start justify-between gap-3">
                 <h1 className="text-xl font-bold text-white">
-                  {booking.vehicleName}
+                  {vehicleName}
                 </h1>
               </div>
 
@@ -173,7 +191,7 @@ const BookingDetails = () => {
                     ) : (
                       <LuMapPin size={15} />
                     )}
-                    {booking.pickupLocation}
+                    {pickupLocation}
                   </p>
                 </div>
                 <div>
@@ -186,13 +204,13 @@ const BookingDetails = () => {
                 <div>
                   <p className="text-xs text-slate-400">Pickup Date</p>
                   <p className="mt-1 font-medium text-slate-100">
-                    {formatDisplayDateTime(startISO)}
+                    {pickupDisplay}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Return Date</p>
                   <p className="mt-1 font-medium text-slate-100">
-                    {formatDisplayDateTime(endISO)}
+                    {returnDisplay}
                   </p>
                 </div>
               </div>
@@ -263,29 +281,30 @@ const BookingDetails = () => {
         </button>
       </div>
 
-      <a
-        href={googleMapsUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={`Open ${booking.pickupLocation} in Google Maps`}
-        className="print:hidden group relative mt-3 block cursor-pointer overflow-hidden rounded-xl border border-slate-800 bg-slate-800 transition-colors hover:border-primary/50"
-      >
-        <iframe
-          title={`Map showing ${booking.pickupLocation}`}
-          src={mapUrl}
-          className="pointer-events-none w-full h-[280px] sm:h-[360px] border-0"
-          loading="lazy"
-        />
-        <span className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-slate-900/95 px-4 py-2 text-sm font-medium text-white shadow-sm">
-            <LuMapPin size={15} className="text-primary" />
-            Open in Google Maps
+      {hasCoords && mapUrl && (
+        <a
+          href={googleMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`Open ${pickupLocation} in Google Maps`}
+          className="print:hidden group relative mt-3 block cursor-pointer overflow-hidden rounded-xl border border-slate-800 bg-slate-800 transition-colors hover:border-primary/50"
+        >
+          <iframe
+            title={`Map showing ${pickupLocation}`}
+            src={mapUrl}
+            className="pointer-events-none w-full h-[280px] sm:h-[360px] border-0"
+            loading="lazy"
+          />
+          <span className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-slate-900/95 px-4 py-2 text-sm font-medium text-white shadow-sm">
+              <LuMapPin size={15} className="text-primary" />
+              Open in Google Maps
+            </span>
           </span>
-        </span>
-      </a>
+        </a>
+      )}
       <p className="print:hidden mt-2 text-xs text-slate-500 dark:text-slate-400">
-        {booking.pickupLocation} | Lat: {booking.latitude}, Long:{" "}
-        {booking.longitude}
+        {pickupLocation} {hasCoords ? `| Lat: ${booking.latitude}, Long: ${booking.longitude}` : ""}
       </p>
     </div>
   );

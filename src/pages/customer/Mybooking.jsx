@@ -30,9 +30,9 @@ const Mybooking = () => {
     setLoading(true);
     getMyBookings()
       .then((data) => {
-        setBookings(data);
-        setLoading(false);
+        setBookings(data || []);
         setError("");
+        setLoading(false);
       })
       .catch((err) => {
         if (err?.status === 401) {
@@ -52,7 +52,10 @@ const Mybooking = () => {
   const filteredBookings =
     allowedStatuses === null
       ? bookings
-      : bookings.filter((booking) => allowedStatuses.includes(booking.status));
+      : bookings.filter((booking) => {
+          const status = String(booking.status || "pending").toLowerCase();
+          return allowedStatuses.includes(status);
+        });
 
   const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
@@ -120,9 +123,31 @@ const Mybooking = () => {
 
           <div className="mt-6">
             {loading ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Loading bookings...
-              </p>
+              <div className="flex items-center justify-center min-h-[200px]">
+                <div className="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400">
+                  <svg
+                    className="animate-spin h-8 w-8 text-primary"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  <p className="text-sm">Loading your bookings...</p>
+                </div>
+              </div>
             ) : error ? (
               <div className="rounded-2xl border border-borderColor bg-white p-10 text-center dark:border-slate-800 dark:bg-slate-900">
                 <p className="text-base font-semibold text-slate-900 dark:text-white">

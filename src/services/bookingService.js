@@ -8,10 +8,17 @@ import { API_ENDPOINTS, buildAuthHeaders, request } from "./api.js";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const unwrapList = (data) => {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.data)) return data.data;
+  const value = data?.data ?? data;
+  if (Array.isArray(value)) return value;
+  if (value && Array.isArray(value.content)) return value.content;
   return [];
 };
+
+const getProductId = (booking) =>
+  booking?.productId ??
+  booking?.product?.id ??
+  booking?.vehicleId ??
+  booking?.vehicle?.id;
 
 const safe = (promise) => promise.catch(() => []);
 
@@ -20,6 +27,13 @@ const toDate = (value) => {
   if (/^\d{4}-\d{2}-\d{2}/.test(value)) return new Date(`${value}T00:00:00`);
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getBookingDate = (booking, primaryKey, fallbackKeys = []) => {
+  for (const key of [primaryKey, ...fallbackKeys]) {
+    if (booking?.[key]) return booking[key];
+  }
+  return null;
 };
 
 const parseDateSafe = (value) => {
@@ -58,7 +72,8 @@ const locationFallback = (location) => {
   if (!location) return FALLBACK_LOCATION;
   const latitude = Number(location.latitude);
   const longitude = Number(location.longitude);
-  const validLat = Number.isFinite(latitude) && latitude >= -90 && latitude <= 90;
+  const validLat =
+    Number.isFinite(latitude) && latitude >= -90 && latitude <= 90;
   const validLng =
     Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
   if (!validLat || !validLng) return FALLBACK_LOCATION;
@@ -69,7 +84,12 @@ const locationFallback = (location) => {
 // indexes them so bookings can be enriched in one pass.
 export const loadCatalog = async (bookings = []) => {
   const productIds = [
-    ...new Set(bookings.map((b) => String(b.productId)).filter(Boolean)),
+    ...new Set(
+      bookings
+        .map((booking) => getProductId(booking))
+        .filter((productId) => productId != null)
+        .map(String),
+    ),
   ];
 
   const [products, locations] = await Promise.all([
@@ -82,13 +102,13 @@ export const loadCatalog = async (bookings = []) => {
   const [images, payments] = await Promise.all([
     Promise.all(
       productIds.map((productId) =>
-        safe(request(API_ENDPOINTS.productImages(productId)))
-      )
+        safe(request(API_ENDPOINTS.productImages(productId))),
+      ),
     ),
     Promise.all(
       bookings.map((booking) =>
-        safe(request(API_ENDPOINTS.paymentsByBooking(booking.id)))
-      )
+        safe(request(API_ENDPOINTS.paymentsByBooking(booking.id))),
+      ),
     ),
   ]);
 
@@ -110,19 +130,20 @@ export const loadCatalog = async (bookings = []) => {
 
 // Maps a backend BookingResponseDTO (plus context) to the shape the UI uses.
 export const mapBooking = (raw, context) => {
-  const product = context.productById.get(String(raw.productId));
+  const productId = getProductId(raw);
+  const product = context.productById.get(String(productId));
   const productImages = product
-    ? context.imagesByProduct[String(raw.productId)] || []
+    ? context.imagesByProduct[String(productId)] || []
     : [];
   const primaryImage =
     productImages.find((image) => image.isPrimary) || productImages[0];
   const location = locationFallback(
-    product ? context.locationById.get(String(product.locationId)) : null
+    product ? context.locationById.get(String(product.locationId)) : null,
   );
 
   const payments = context.paymentsByBooking[String(raw.id)] || [];
   const paid = payments.some(
-    (payment) => String(payment.paymentStatus || "").toUpperCase() === "PAID"
+    (payment) => String(payment.paymentStatus || "").toUpperCase() === "PAID",
   );
   const payment = payments[0] || null;
 
@@ -134,12 +155,14 @@ export const mapBooking = (raw, context) => {
   const finishedStatus =
     confirmedStatus === "finished" ? "completed" : confirmedStatus;
 
-  const pickup = toDate(raw.pickupDate);
-  const returned = toDate(raw.returnDate);
+  const pickupValue = getBookingDate(raw, "pickupDate", ["startDate"]);
+  const returnValue = getBookingDate(raw, "returnDate", ["endDate"]);
+  const pickup = toDate(pickupValue);
+  const returned = toDate(returnValue);
 
   // Store raw ISO strings for reliable parsing in UI
-  const pickupISO = raw.pickupDate;
-  const returnISO = raw.returnDate;
+  const pickupISO = pickupValue;
+  const returnISO = returnValue;
 
   // Past rentals automatically complete once the return date has passed,
   // so the "Completed" tab stays populated (unless cancelled by a user).
@@ -159,7 +182,7 @@ export const mapBooking = (raw, context) => {
 
   return {
     id: raw.id,
-    productId: raw.productId,
+    productId,
     vehicleName: product
       ? `${product.brand || ""} ${product.model || ""}`.trim() ||
         product.name ||
@@ -395,12 +418,15 @@ const persistBookings = (list) => {
 let mockBookings = readBookings();
 
 const normalizeName = (value) =>
-  String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+  String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
 const specLookup = (vehicleName) =>
   dummyCarData.find(
     (car) =>
-      normalizeName(`${car.brand} ${car.model}`) === normalizeName(vehicleName)
+      normalizeName(`${car.brand} ${car.model}`) === normalizeName(vehicleName),
   ) || null;
 
 const deriveBookingStatus = (booking) => {
@@ -545,9 +571,9 @@ const toIsoLocal = (value) => {
   if (Number.isNaN(date.getTime())) return null;
   const pad = (n) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
+    date.getDate(),
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
-    date.getSeconds()
+    date.getSeconds(),
   )}`;
 };
 

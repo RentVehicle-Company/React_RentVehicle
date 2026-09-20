@@ -24,6 +24,7 @@ import {
   LuIdCard,
   LuInfo,
   LuLayers,
+  LuLoader,
   LuMapPin,
   LuPause,
   LuPenLine,
@@ -341,6 +342,7 @@ const VehicleDetail = () => {
   const [reviewText, setReviewText] = useState("");
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [bookingError, setBookingError] = useState("");
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const bookingRef = useRef(null);
   const today = new Date().toISOString().split("T")[0];
 
@@ -372,6 +374,7 @@ const VehicleDetail = () => {
     setReviewText("");
     setShowStickyBar(false);
     setBookingError("");
+    setBookingSubmitting(false);
     getVehicleById(id)
       .then(async (data) => {
         setVehicle(data);
@@ -418,8 +421,14 @@ const VehicleDetail = () => {
     return () => clearInterval(timer);
   }, [viewMode, spinning, images.length]);
 
-  const lat = vehicle?.latitude ?? CITY_COORDS[vehicle?.location]?.[0] ?? CITY_COORDS["Phnom Penh"][0];
-  const lon = vehicle?.longitude ?? CITY_COORDS[vehicle?.location]?.[1] ?? CITY_COORDS["Phnom Penh"][1];
+  const lat =
+    vehicle?.latitude ??
+    CITY_COORDS[vehicle?.location]?.[0] ??
+    CITY_COORDS["Phnom Penh"][0];
+  const lon =
+    vehicle?.longitude ??
+    CITY_COORDS[vehicle?.location]?.[1] ??
+    CITY_COORDS["Phnom Penh"][1];
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.04}%2C${lat - 0.03}%2C${lon + 0.04}%2C${lat + 0.03}&layer=mapnik&marker=${lat}%2C${lon}`;
 
   const pickupMs = pickupDate
@@ -531,7 +540,7 @@ const VehicleDetail = () => {
   }, [vehicle]);
 
   const handleBook = async () => {
-    if (!vehicle || !hasValidDates) return;
+    if (!vehicle || !hasValidDates || bookingSubmitting) return;
     setBookingError("");
     if (!isAuthenticated) {
       openAuth("login");
@@ -539,7 +548,7 @@ const VehicleDetail = () => {
     }
     if (!idDocument || !licenseDocument) {
       setBookingError(
-        "Please upload both your ID card and driving license to continue."
+        "Please upload both your ID card and driving license to continue.",
       );
       return;
     }
@@ -548,9 +557,12 @@ const VehicleDetail = () => {
       return;
     }
 
+    setBookingSubmitting(true);
+
     const baseBooking = {
+      productId: vehicle.id,
       vehicleName: `${vehicle?.brand || "Vehicle"} ${vehicle?.model || ""}`,
-      image: vehicle?.image,
+      image: productImages[0] || vehicle?.image,
       startDate: formatDate(pickupDate),
       endDate: formatDate(returnDate),
       pickupDate: formatDate(pickupDate),
@@ -585,11 +597,11 @@ const VehicleDetail = () => {
     // Persist the booking on the backend (POST /api/bookings, multipart with
     // the uploaded ID card and driving license photos).
     let persisted = { ...baseBooking, backendBookingId: null };
-    const userId = getCurrentUserId();
-    if (!userId) {
-      throw new Error("You must be logged in to create a booking.");
-    }
     try {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error("You must be logged in to create a booking.");
+      }
       const created = await createBookingRequest({
         productId: vehicle.id,
         userId,
@@ -612,6 +624,7 @@ const VehicleDetail = () => {
         };
       }
     } catch (error) {
+      setBookingSubmitting(false);
       setBookingError(
         error.message || "Booking could not be confirmed. Please try again.",
       );
@@ -932,7 +945,8 @@ const VehicleDetail = () => {
             <div className="mt-4 rounded-xl border border-blue-100 dark:border-blue-500/30 bg-gradient-to-br from-blue-50/70 dark:from-blue-500/10 via-slate-50 dark:via-slate-800 to-indigo-50/60 dark:to-indigo-500/10 p-4">
               <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
                 <LuZap size={13} className="text-primary" />
-                The {vehicle?.brand || "Vehicle"} {vehicle?.model || ""} experience
+                The {vehicle?.brand || "Vehicle"} {vehicle?.model || ""}{" "}
+                experience
               </p>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 {buildDescription(vehicle, derived, features)}
@@ -996,7 +1010,8 @@ const VehicleDetail = () => {
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Essentials you'll need to pick up this{" "}
-              {vehicle?.category?.toLowerCase() || "vehicle"} in {vehicle?.location || "unknown location"}.
+              {vehicle?.category?.toLowerCase() || "vehicle"} in{" "}
+              {vehicle?.location || "unknown location"}.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="group rounded-2xl bg-gradient-to-br from-blue-500/50 via-slate-400/40 to-indigo-500/50 p-px shadow-sm transition-shadow duration-200 group-hover:shadow-lg group-hover:shadow-primary/10">
@@ -1053,7 +1068,8 @@ const VehicleDetail = () => {
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              {vehicle?.location || "Unknown"} | Lat: {lat.toFixed(4)}, Long: {lon.toFixed(4)}
+              {vehicle?.location || "Unknown"} | Lat: {lat.toFixed(4)}, Long:{" "}
+              {lon.toFixed(4)}
             </p>
           </section>
 
@@ -1063,8 +1079,8 @@ const VehicleDetail = () => {
                 Similar Vehicles You Might Like
               </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                More {vehicle?.category?.toLowerCase() || "vehicle"} options near{" "}
-                {vehicle?.location || "unknown location"}
+                More {vehicle?.category?.toLowerCase() || "vehicle"} options
+                near {vehicle?.location || "unknown location"}
               </p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {similarVehicles.map((similar) => (
@@ -1526,12 +1542,24 @@ const VehicleDetail = () => {
                 <button
                   type="button"
                   onClick={handleBook}
-                  disabled={!hasValidDates}
+                  disabled={!hasValidDates || bookingSubmitting}
                   className="relative inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
-                  Confirm & Pay Now
+                  {bookingSubmitting ? (
+                    <>
+                      <LuLoader size={16} className="animate-spin" />
+                      Preparing payment...
+                    </>
+                  ) : (
+                    "Confirm & Pay Now"
+                  )}
                 </button>
               </div>
+              {bookingSubmitting && (
+                <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+                  Please wait while we confirm your booking.
+                </p>
+              )}
               {bookingError && (
                 <p className="mt-2 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 px-3 py-2 text-xs text-red-600 dark:text-red-300">
                   {bookingError}
@@ -1673,7 +1701,8 @@ const VehicleDetail = () => {
                   Leave a Review
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  {vehicle?.brand || "Vehicle"} {vehicle?.model || ""} · {user?.name || "Renter"}
+                  {vehicle?.brand || "Vehicle"} {vehicle?.model || ""} ·{" "}
+                  {user?.name || "Renter"}
                 </p>
               </div>
               <button

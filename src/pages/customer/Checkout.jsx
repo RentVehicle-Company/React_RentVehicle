@@ -976,7 +976,8 @@ const Checkout = () => {
                           </div>
                         ) : qrFailed || !qrImageUrl ? (
                           <div className="flex h-[250px] w-[250px] items-center justify-center rounded-lg bg-slate-50 px-6 text-center text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                            The secure Bakong QR code is unavailable. Please retry.
+                            The secure Bakong QR code is unavailable. Please
+                            retry.
                           </div>
                         ) : (
                           <img
@@ -1040,7 +1041,7 @@ const Checkout = () => {
                         ? "Checking Payment Status..."
                         : !hasBackendPayment
                           ? "Preparing Payment..."
-                        : "Check Payment Status"}
+                          : "Check Payment Status"}
                     </button>
 
                     <TrustBadges />
@@ -1102,16 +1103,6 @@ const Checkout = () => {
 
         <aside className="lg:sticky lg:top-6">
           <div className="overflow-hidden rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-            <div className="relative">
-              <img
-                src={booking.image}
-                alt={booking.vehicleName}
-                className="h-44 w-full object-cover"
-              />
-              <span className="absolute left-3 top-3 rounded-full bg-white/90 dark:bg-slate-900/90 px-2.5 py-1 text-xs font-semibold text-slate-900 dark:text-slate-100 backdrop-blur">
-                {duration} Day{duration > 1 ? "s" : ""}
-              </span>
-            </div>
             <div className="p-5 sm:p-6">
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {booking.vehicleName}

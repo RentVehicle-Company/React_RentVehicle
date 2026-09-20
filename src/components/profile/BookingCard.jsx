@@ -12,25 +12,69 @@ import {
 import { usePreferences } from "../../context/PreferencesContext";
 
 const STATUS_CONFIG = {
-  confirmed: { label: "Confirmed", className: "bg-green-100 text-green-700" },
-  active: { label: "Active", className: "bg-blue-100 text-blue-700" },
-  pending: { label: "Pending", className: "bg-amber-100 text-amber-700" },
-  completed: { label: "Completed", className: "bg-slate-200 text-slate-700" },
-  cancelled: { label: "Cancelled", className: "bg-red-100 text-red-700" },
+  pending: {
+    label: "Pending",
+    className:
+      "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  },
+  confirmed: {
+    label: "Confirmed",
+    className:
+      "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300",
+  },
+  active: {
+    label: "Active",
+    className:
+      "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  },
+  completed: {
+    label: "Completed",
+    className:
+      "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+  },
+  cancelled: {
+    label: "Cancelled",
+    className: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  },
 };
 
 const PAYMENT_CONFIG = {
-  PAID: { label: "Paid", className: "bg-blue-100 text-blue-700" },
-  UNPAID: { label: "Unpaid", className: "bg-red-100 text-red-600" },
-  PENDING: { label: "Pending", className: "bg-amber-100 text-amber-700" },
+  PAID: {
+    label: "Paid",
+    className:
+      "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  },
+  UNPAID: {
+    label: "Unpaid",
+    className: "bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-300",
+  },
+  PENDING: {
+    label: "Pending",
+    className:
+      "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  },
+};
+
+// Safe date formatting helper
+const formatDateSafe = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return Number.isNaN(date.getTime())
+    ? "N/A"
+    : date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
 };
 
 // Actions are driven by payment state: a paid booking is locked (no cancel).
 const getActions = (booking) => {
+  const rawStatus = String(booking.status || "pending").toLowerCase();
   if (booking.paymentStatus === "PAID") return ["details"];
-  if (booking.status === "cancelled") return ["details"];
-  if (booking.status === "completed") return ["details", "bookAgain"];
-  if (booking.status === "active") return ["details"];
+  if (rawStatus === "cancelled") return ["details"];
+  if (rawStatus === "completed") return ["details", "bookAgain"];
+  if (rawStatus === "active") return ["details"];
   return ["details", "cancel"];
 };
 
@@ -38,11 +82,9 @@ const BookingCard = ({ booking, onCancelRequest }) => {
   const navigate = useNavigate();
   const { formatAmount } = usePreferences();
 
-  // Paid reservations read as "Confirmed" (or stay "Completed"/"Cancelled"),
-  // never as the amber "Pending" placeholder.
+  const rawStatus = String(booking.status || "pending").toLowerCase();
   const isPaid = booking.paymentStatus === "PAID";
-  const statusKey =
-    isPaid && booking.status === "pending" ? "confirmed" : booking.status;
+  const statusKey = isPaid && rawStatus === "pending" ? "confirmed" : rawStatus;
   const status = STATUS_CONFIG[statusKey] || STATUS_CONFIG.pending;
 
   const payment = PAYMENT_CONFIG[booking.paymentStatus] || null;
@@ -50,14 +92,33 @@ const BookingCard = ({ booking, onCancelRequest }) => {
   const specs = booking.vehicleSpecs;
   const usingDelivery = booking.deliveryMethod === "delivery";
 
+  // Prefer the raw API timestamps so pickup and return dates are not reparsed
+  // from a localized display string.
+  const startDateDisplay = formatDateSafe(
+    booking.pickupDateISO || booking.startDate || booking.pickupDate,
+  );
+  const endDateDisplay = formatDateSafe(
+    booking.returnDateISO || booking.endDate || booking.returnDate,
+  );
+
+  // Image with fallback
+  const vehicleImage = booking.image || "";
+  const vehicleName = booking.vehicleName || "Vehicle";
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
       <div className="relative h-28 bg-slate-100 dark:bg-slate-800">
-        <img
-          src={booking.image}
-          alt={booking.vehicleName}
-          className="w-full h-full object-cover"
-        />
+        {vehicleImage ? (
+          <img
+            src={vehicleImage}
+            alt={vehicleName}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-400">
+            No image
+          </div>
+        )}
         <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
           {status && (
             <span
@@ -71,13 +132,13 @@ const BookingCard = ({ booking, onCancelRequest }) => {
 
       <div className="p-4 space-y-3">
         <h3 className="truncate text-base font-semibold text-slate-900 dark:text-white">
-          {booking.vehicleName}
+          {vehicleName}
         </h3>
 
         <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           <LuCalendar size={16} className="shrink-0" />
           <span>
-            {booking.startDate} - {booking.endDate}
+            {startDateDisplay} - {endDateDisplay}
           </span>
         </div>
 
