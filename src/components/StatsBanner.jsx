@@ -51,10 +51,10 @@ const StatItem = ({ icon: Icon, value, suffix, label, inView, index }) => {
         <span className="animate-pulse-dot absolute inset-0 rounded-full bg-primary/30" />
         <Icon size={28} className="relative text-primary" />
       </span>
-      <span className="text-3xl font-bold tabular-nums text-white sm:text-4xl">
+      <span className="text-3xl font-bold tabular-nums text-slate-900 dark:text-white sm:text-4xl">
         {display}
       </span>
-      <span className="text-sm text-slate-300">{label}</span>
+      <span className="text-sm text-slate-500 dark:text-slate-300">{label}</span>
     </motion.div>
   );
 };
@@ -86,19 +86,19 @@ const StatsBanner = ({ flush = false }) => {
           {index % 2 === 0 && index < 3 && (
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute right-0 top-1/2 h-12 w-px -translate-y-1/2 bg-slate-700/50 sm:hidden"
+              className="pointer-events-none absolute right-0 top-1/2 h-12 w-px -translate-y-1/2 bg-slate-200 dark:bg-slate-700/50 sm:hidden"
             />
           )}
           {index < 3 && (
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute right-0 top-1/2 hidden h-12 w-px -translate-y-1/2 bg-slate-700/50 sm:block"
+              className="pointer-events-none absolute right-0 top-1/2 hidden h-12 w-px -translate-y-1/2 bg-slate-200 dark:bg-slate-700/50 sm:block"
             />
           )}
           {index >= 2 && (
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-slate-700/50 sm:hidden"
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-slate-200 dark:bg-slate-700/50 sm:hidden"
             />
           )}
           <StatItem
@@ -126,7 +126,7 @@ const StatsBanner = ({ flush = false }) => {
     <section className="px-4 sm:px-6 lg:px-16">
       <div
         ref={ref}
-        className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-[#0F172A] py-10 shadow-sm sm:py-12"
+        className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white py-10 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:py-12"
       >
         {grid}
       </div>

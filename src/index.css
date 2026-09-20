@@ -16,6 +16,12 @@
   .dark {
     @apply bg-slate-900 text-slate-100;
   }
+  .price-range {
+    --price-range-track: #e2e8f0;
+  }
+  .dark .price-range {
+    --price-range-track: #334155;
+  }
 }
 
 @theme{
