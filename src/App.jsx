@@ -1,6 +1,6 @@
 import React from "react";
 import Navbar from "./components/common/Navbar";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Home from "./pages/customer/Home";
 import About from "./pages/customer/About";
 import Cars from "./pages/vehicles/Cars";
@@ -10,8 +10,7 @@ import VehicleDetail from "./pages/vehicles/VehicleDetail";
 import PaymentVisa from "./pages/customer/PaymentVisa";
 import PaymentKHQR from "./pages/customer/PaymentKHQR";
 import Checkout from "./pages/customer/Checkout";
-import Login from "./components/auth/Login";
-import Register from "./components/auth/Register";
+import AuthModal from "./components/auth/AuthModal";
 import UserProfile from "./pages/customer/UserProfile";
 import Mybooking from "./pages/customer/Mybooking";
 import BookingDetails from "./pages/customer/BookingDetails";
@@ -22,6 +21,19 @@ import Footer from "./components/common/Footer";
 import LiveChatButton from "./components/LiveChatButton";
 import RequireAuth from "./components/common/RequireAuth";
 import AdminRequireAuth from "./components/common/AdminRequireAuth";
+
+const AuthPage = ({ mode }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const redirectTo = location.state?.from || "/";
+
+  return (
+    <AuthModal
+      mode={mode}
+      onClose={() => navigate(redirectTo, { replace: true })}
+    />
+  );
+};
 
 const App = () => {
   const location = useLocation();
@@ -44,8 +56,8 @@ const App = () => {
           <Route path="/motorbikes" element={<MotorBikes />} />
           <Route path="/bicycles" element={<Bicycles />} />
           <Route path="/about" element={<About />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/register" element={<AuthPage mode="register" />} />
           <Route
             path="/profile"
             element={

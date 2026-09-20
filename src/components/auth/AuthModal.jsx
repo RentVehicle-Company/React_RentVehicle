@@ -1,8 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { LuEye, LuEyeOff, LuLock, LuMail, LuUser } from "react-icons/lu";
+import {
+  LuArrowLeft,
+  LuEye,
+  LuEyeOff,
+  LuLock,
+  LuMail,
+  LuUser,
+} from "react-icons/lu";
 import Logo from "../common/Logo";
 import { useAuth } from "../../context/AuthContext";
+import { resendOtp, verifyEmail } from "../../services/authServices";
 
 const inputClass =
   "w-full rounded-xl border border-white/60 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-sm outline-none backdrop-blur-sm transition focus:border-primary focus:ring-2 focus:ring-primary/30";
@@ -20,13 +28,21 @@ const getErrorMessage = (err) =>
 const AuthModal = ({ mode = "login", onClose }) => {
   const { login, register } = useAuth();
   const [formMode, setFormMode] = useState(mode);
+  const [registerStep, setRegisterStep] = useState("details");
   const [values, setValues] = useState({ name: "", email: "", password: "" });
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const otpRefs = useRef([]);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
+  const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setFormMode(mode);
+    setRegisterStep("details");
+    setOtp(["", "", "", "", "", ""]);
+    setError(null);
+    setMessage("");
   }, [mode]);
 
   useEffect(() => {
@@ -72,6 +88,9 @@ const AuthModal = ({ mode = "login", onClose }) => {
           email: values.email.trim(),
           password: values.password,
         });
+        setRegisterStep("otp");
+        setMessage(`We sent a verification code to ${values.email.trim()}.`);
+        return;
       } else {
         await login({
           email: values.email.trim(),
@@ -79,6 +98,57 @@ const AuthModal = ({ mode = "login", onClose }) => {
         });
       }
       onClose?.();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOtpChange = (index, value) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const nextOtp = [...otp];
+    nextOtp[index] = digit;
+    setOtp(nextOtp);
+    setError(null);
+    if (digit && index < otp.length - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerify = async (event) => {
+    event.preventDefault();
+    const code = otp.join("");
+    if (code.length !== 6) {
+      setError("Enter the 6-digit verification code.");
+      return;
+    }
+
+    setError(null);
+    setSubmitting(true);
+    try {
+      await verifyEmail(values.email.trim(), code);
+      await login({ email: values.email.trim(), password: values.password });
+      onClose?.();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await resendOtp(values.email.trim());
+      setMessage(`A new code was sent to ${values.email.trim()}.`);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -130,19 +200,78 @@ const AuthModal = ({ mode = "login", onClose }) => {
               wordClassName="text-lg font-bold tracking-tight text-slate-950"
             />
             <span className="rounded-full bg-white/70 dark:bg-slate-700/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary ring-1 ring-primary/20 backdrop-blur">
-              {formMode === "login" ? "Sign In" : "Register"}
+              {registerStep === "otp"
+                ? "Verify"
+                : formMode === "login"
+                  ? "Sign In"
+                  : "Register"}
             </span>
           </div>
 
           <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
-            {formMode === "login" ? "Welcome back" : "Create your account"}
+            {registerStep === "otp"
+              ? "Verify your email"
+              : formMode === "login"
+                ? "Welcome back"
+                : "Create your account"}
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {formMode === "login"
-              ? "Log in to manage your bookings and favorites."
-              : "Sign up to start renting in minutes."}
+            {registerStep === "otp"
+              ? `Enter the 6-digit code sent to ${values.email}.`
+              : formMode === "login"
+                ? "Log in to manage your bookings and favorites."
+                : "Sign up to start renting in minutes."}
           </p>
 
+          {registerStep === "otp" ? (
+            <form onSubmit={handleVerify} className="mt-5 space-y-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setRegisterStep("details");
+                  setError(null);
+                  setMessage("");
+                }}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
+              >
+                <LuArrowLeft size={14} /> Back
+              </button>
+              <div className="flex justify-center gap-2">
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(element) => {
+                      otpRefs.current[index] = element;
+                    }}
+                    value={digit}
+                    onChange={(event) =>
+                      handleOtpChange(index, event.target.value)
+                    }
+                    onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                    inputMode="numeric"
+                    maxLength="1"
+                    aria-label={`Verification digit ${index + 1}`}
+                    className="h-11 w-10 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-semibold text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                  />
+                ))}
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? "Verifying..." : "Verify Email"}
+              </button>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={submitting}
+                className="block w-full text-center text-xs font-medium text-primary hover:underline disabled:opacity-60"
+              >
+                Resend code
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
             {formMode === "register" && (
               <div>
@@ -242,8 +371,15 @@ const AuthModal = ({ mode = "login", onClose }) => {
                   : "Create Account"}
             </button>
           </form>
+          )}
 
-          <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-300">
+          {message && (
+            <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-center text-sm text-blue-700">
+              {message}
+            </p>
+          )}
+
+          {registerStep === "details" && <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-300">
             {formMode === "login" ? (
               <>
                 Don't have an account?{" "}
@@ -267,7 +403,7 @@ const AuthModal = ({ mode = "login", onClose }) => {
                 </button>
               </>
             )}
-          </div>
+          </div>}
         </div>
       </motion.div>
     </motion.div>

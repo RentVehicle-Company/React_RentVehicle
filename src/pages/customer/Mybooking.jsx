@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import BookingFilters from "../../components/profile/BookingFilters";
 import BookingCard from "../../components/profile/BookingCard";
@@ -18,6 +18,7 @@ const FILTER_MAP = {
 
 const Mybooking = () => {
   const { isAuthenticated, openAuth, logout } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState("all");
@@ -76,6 +77,7 @@ const Mybooking = () => {
 
   const handleLogout = () => {
     logout();
+    navigate("/");
   };
 
   if (!isAuthenticated) {

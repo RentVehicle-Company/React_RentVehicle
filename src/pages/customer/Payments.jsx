@@ -8,11 +8,12 @@ import {
 } from "react-icons/lu";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import { getMyPayments } from "../../services/paymentService";
-import { signOut } from "../../services/authServices";
+import { useAuth } from "../../context/AuthContext";
 import { usePreferences } from "../../context/PreferencesContext";
 
 const Payments = () => {
   const { formatAmount } = usePreferences();
+  const { logout } = useAuth();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,8 +34,8 @@ const Payments = () => {
   }, []);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
+    logout();
+    navigate("/");
   };
 
   return (

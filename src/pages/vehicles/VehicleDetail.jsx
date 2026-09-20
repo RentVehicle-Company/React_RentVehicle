@@ -55,6 +55,7 @@ import { useAuth } from "../../context/AuthContext";
 import CustomDatePicker from "../../components/common/CustomDatePicker";
 import { createBookingRequest } from "../../services/bookingService";
 import { getCurrentUserId } from "../../services/authServices";
+import { getCachedUser } from "../../services/userService";
 
 const inputClass =
   "w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";

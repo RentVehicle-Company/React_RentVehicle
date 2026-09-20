@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
 import ProfileInfo from "../../components/profile/ProfileInfo";
 import ProfileForm from "../../components/profile/ProfileForm";
@@ -19,6 +20,7 @@ const UserProfile = () => {
     updateUser,
     openAuth,
   } = useAuth();
+  const navigate = useNavigate();
   const [user, setUser] = useState(() =>
     sessionUser ? { ...sessionUser } : getCachedUser(),
   );
@@ -60,6 +62,7 @@ const UserProfile = () => {
 
   const handleLogout = () => {
     logout();
+    navigate("/");
   };
 
   if (!isAuthenticated) {
