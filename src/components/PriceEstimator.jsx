@@ -84,7 +84,7 @@ const PriceEstimator = ({ vehicle = null }) => {
     setAddOns((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
-    <section className="bg-slate-50 py-12 sm:py-16">
+    <section className="bg-slate-50 py-12 text-slate-900 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100 sm:py-16">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
       <Title
         title="Rental Price Estimator"
@@ -97,13 +97,13 @@ const PriceEstimator = ({ vehicle = null }) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "0px 0px -60px 0px" }}
           transition={{ duration: 0.55, ease: "easeOut" }}
-          className="rounded-2xl border border-borderColor bg-white p-6 shadow-sm"
+          className="rounded-2xl border border-borderColor bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800"
         >
           <div>
             <div className="flex items-center justify-between gap-4">
               <label
                 htmlFor="duration-slider"
-                className="flex items-center gap-2 text-sm font-medium text-slate-700"
+                className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200"
               >
                 <LuCalendarDays size={16} className="text-primary" />
                 Rental Duration
@@ -120,9 +120,9 @@ const PriceEstimator = ({ vehicle = null }) => {
               step={1}
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
-              className="mt-4 w-full cursor-pointer accent-primary"
+              className="price-range mt-4 w-full cursor-pointer accent-primary"
               style={{
-                background: `linear-gradient(90deg, #2563eb ${fillPct}%, #e2e8f0 ${fillPct}%)`,
+                background: `linear-gradient(90deg, #2563eb ${fillPct}%, var(--price-range-track) ${fillPct}%)`,
                 borderRadius: "9999px",
                 height: "6px",
               }}
@@ -134,7 +134,7 @@ const PriceEstimator = ({ vehicle = null }) => {
           </div>
 
           <div className="mt-6">
-            <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <span className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
               <LuTimer size={16} className="text-primary" />
               Vehicle Tier
             </span>
@@ -151,7 +151,7 @@ const PriceEstimator = ({ vehicle = null }) => {
                     className={`relative cursor-pointer overflow-hidden rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
                       isActive
                         ? "border-slate-900 text-white"
-                        : "border-slate-300 bg-white text-slate-700 hover:border-slate-900"
+                        : "border-slate-300 bg-white text-slate-700 hover:border-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-300"
                     }`}
                   >
                     {isActive && (
@@ -176,7 +176,7 @@ const PriceEstimator = ({ vehicle = null }) => {
           </div>
 
           <div className="mt-6 space-y-3">
-            <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <span className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
               <LuShieldCheck size={16} className="text-primary" />
               Add-Ons
             </span>
@@ -190,20 +190,20 @@ const PriceEstimator = ({ vehicle = null }) => {
                   whileTap={{ scale: 0.99 }}
                   aria-checked={isActive}
                   onClick={() => toggleAddOn(key)}
-                  className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-all duration-200 ease-out hover:border-slate-900/40"
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-all duration-200 ease-out hover:border-slate-900/40 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-300/40"
                 >
                   <span className="flex items-center gap-3">
                     <span
                       className={`grid h-9 w-9 place-items-center rounded-lg transition-colors duration-200 ${
                         isActive
                           ? "bg-primary text-white"
-                          : "bg-slate-100 text-slate-400"
+                          : "bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-300"
                       }`}
                     >
                       <Icon size={18} />
                     </span>
                     <span>
-                      <span className="block text-sm font-medium text-slate-900">
+                      <span className="block text-sm font-medium text-slate-900 dark:text-white">
                         {label}
                       </span>
                       <span className="block text-xs text-slate-400">
@@ -213,7 +213,7 @@ const PriceEstimator = ({ vehicle = null }) => {
                   </span>
                   <span
                     className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
-                      isActive ? "bg-primary" : "bg-slate-200"
+                      isActive ? "bg-primary" : "bg-slate-200 dark:bg-slate-600"
                     }`}
                   >
                     <motion.span
@@ -235,52 +235,52 @@ const PriceEstimator = ({ vehicle = null }) => {
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true, margin: "0px 0px -60px 0px" }}
           transition={{ duration: 0.55, delay: 0.12, ease: "easeOut" }}
-          className="flex flex-col justify-between rounded-2xl bg-[#0F172A] p-6 text-white shadow-sm"
+          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
         >
           <div>
-            <h3 className="text-sm font-medium uppercase tracking-wider text-slate-400">
+            <h3 className="text-sm font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Price Estimate
             </h3>
             <div className="mt-4 space-y-2.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-400">
+                <span className="text-slate-500 dark:text-slate-400">
                   {TIER_RATES[tier]} × {duration} {duration === 1 ? "day" : "days"}
                 </span>
                 <span className="font-medium tabular-nums">{formatPrice(baseTotal)}</span>
               </div>
               {ADD_ONS.filter((addOn) => addOns[addOn.key]).map((addOn) => (
                 <div key={addOn.key} className="flex justify-between">
-                  <span className="text-slate-400">{addOn.label}</span>
+                  <span className="text-slate-500 dark:text-slate-400">{addOn.label}</span>
                   <span className="font-medium tabular-nums">
                     +{formatPrice(addOn.rate * duration)}
                   </span>
                 </div>
               ))}
-              <div className="my-2 border-t border-slate-700" />
+              <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
               <div className="flex items-end justify-between">
-                <span className="text-slate-400">Estimated Total</span>
+                <span className="text-slate-500 dark:text-slate-400">Estimated Total</span>
                 <span
-                  className="text-3xl font-bold tabular-nums text-white"
+                  className="text-3xl font-bold tabular-nums text-slate-900 dark:text-white"
                   aria-live="polite"
                 >
                   <AnimatedNumber value={total} format={formatPrice} />
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Inclusive of taxes and fees. Final price may vary at checkout.
               </p>
             </div>
           </div>
 
           {vehicle && VEHICLE_NAMES[vehicle] && (
-            <div className="mb-5 rounded-xl border border-white/10 bg-white/10 p-3.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <div className="mb-5 rounded-xl border border-slate-200 bg-slate-100 p-3.5 dark:border-white/10 dark:bg-white/10">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Synced to your 3D model
               </p>
-              <p className="mt-1 text-sm font-semibold text-white">
+              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
                 {VEHICLE_NAMES[vehicle]}
               </p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {VEHICLE_TIER[vehicle]} tier auto-selected
               </p>
               <motion.button
@@ -297,7 +297,7 @@ const PriceEstimator = ({ vehicle = null }) => {
 
           <Link
             to="/cars"
-            className="mt-6 block cursor-pointer rounded-xl bg-white px-6 py-3 text-center text-sm font-semibold text-slate-900 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-slate-100 hover:shadow-lg"
+            className="mt-6 block cursor-pointer rounded-xl bg-slate-900 px-6 py-3 text-center text-sm font-semibold text-white transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-lg dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
           >
             Proceed with Reservation
           </Link>
