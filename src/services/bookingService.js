@@ -488,12 +488,30 @@ export const getBookingById = async (id) => {
   }
 };
 
-// No cancel endpoint exists on the backend yet (PUT /api/bookings/{id} has no
-// status field), so cancellation is applied locally for now.
+// Cancel a booking via DELETE /api/bookings/{id}.
+// Falls back to local mock when the backend is unreachable.
 export const cancelBooking = async (id) => {
+  const numericId = Number(id);
+  const endpoint = API_ENDPOINTS.bookingById(numericId);
+
+  try {
+    const data = await request(endpoint, {
+      method: "DELETE",
+      headers: buildAuthHeaders(),
+    });
+
+    if (data != null) {
+      const updated = data?.data ?? data;
+      const context = await loadCatalog([updated]);
+      return mapBooking(updated, context);
+    }
+  } catch (error) {
+    if (error?.status && error.status !== 0) throw error;
+  }
+
   await delay(300);
-  const index = mockBookings.findIndex((b) => b.id === Number(id));
-  if (index === -1) return { id: Number(id), status: "cancelled" };
+  const index = mockBookings.findIndex((b) => b.id === numericId);
+  if (index === -1) return { id: numericId, status: "cancelled" };
   const updated = { ...mockBookings[index], status: "cancelled" };
   mockBookings = mockBookings.map((b, i) => (i === index ? updated : b));
   persistBookings(mockBookings);
