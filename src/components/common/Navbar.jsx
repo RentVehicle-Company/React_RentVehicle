@@ -37,7 +37,7 @@ const Navbar = () => {
   };
 
   return (
-    <div className="print:hidden">
+    <div className="sticky top-0 z-50 print:hidden">
       <header className="w-full px-8 py-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           {/* Left: Logo */}
