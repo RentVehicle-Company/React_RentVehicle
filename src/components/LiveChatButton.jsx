@@ -8,6 +8,7 @@ import {
   LuX,
   LuZap,
 } from "react-icons/lu";
+import { sendChatMessage } from "../services/chatService";
 
 const QUICK_REPLIES = [
   "Pickup locations",
@@ -20,58 +21,8 @@ const WELCOME_MESSAGE = {
   text: "Hi there! 👋 I'm the Rental Company assistant. Ask me about pickup locations, insurance, or payment methods — or tap a quick question below.",
 };
 
-// Keyword -> automated answer matching. First rule wins.
-const RESPONSE_RULES = [
-  {
-    keywords: ["pickup location", "pickup", "pick up", "location", "where", "delivery", "dropoff", "drop-off", "city"],
-    reply:
-      "Self pick-up is free at all our locations: Phnom Penh, Siem Reap, Sihanoukville and Kampot. 🚗 We also offer same-day delivery within Phnom Penh and Siem Reap for a small fee per day. Just pick a district when you book!",
-  },
-  {
-    keywords: ["insurance", "cover", "cdw", "collision", "damage", "comprehensive", "deductible"],
-    reply:
-      "Every rental includes Basic Collision Damage Waiver (CDW) at no extra cost. 🛡️ For full peace of mind, add Comprehensive Insurance (+$15/day) which covers theft, windshield and reduces your excess to $0. A $200 hold is required at pickup.",
-  },
-  {
-    keywords: ["payment", "pay", "visa", "khqr", "bakong", "credit", "card", "deposit", "refund"],
-    reply:
-      "We accept Visa credit/debit cards and Bakong KHQR. 💳 Pay securely at checkout — after that the reservation is confirmed instantly. There's a refundable security deposit of $200.00, returned within 24h after return.",
-  },
-  {
-    keywords: ["available", "availability", "stock", "left", "book", "reserve", "confirm"],
-    reply:
-      "Availability varies per vehicle — each listing card shows live stock from its detail page. 🚙 Pick any date that suits you, reserve instantly, and get confirmation within seconds.",
-  },
-  {
-    keywords: ["cancel", "cancellation", "refund policy", "change", "reschedule"],
-    reply:
-      "Good news: cancellation is free up to 24h before pickup! ⏰ After that, the first day's rental fee applies. You can reschedule any confirmed booking right from your dashboard.",
-  },
-  {
-    keywords: ["id", "license", "document", "requirement", "require", "age", "passport"],
-    reply:
-      "You'll need a valid government-issued ID or passport, plus a valid driver's license for cars & motorbikes. 🪪 Minimum renter age is 21. You can upload your document during checkout!",
-  },
-  {
-    keywords: ["hello", "hi", "hey", "help", "support", "agent", "human"],
-    reply:
-      "Hello! Great to see you. 😊 I can answer quick questions here, and our team is available at +855 12 345 678 or live chat for anything that needs a human touch.",
-  },
-];
-
-const FALLBACK_REPLY =
-  "Hmm, I'm not 100% sure about that one! 🤔 For detailed answers our support team is one tap away at +855 12 345 678. Meanwhile — try asking about pickup locations, insurance, or payment methods.";
-
 let messageId = 0;
 const nextMessageId = () => `msg_${Date.now()}_${messageId++}`;
-
-const getReplyFor = (text) => {
-  const lower = text.toLowerCase();
-  const rule = RESPONSE_RULES.find(({ keywords }) =>
-    keywords.some((keyword) => lower.includes(keyword))
-  );
-  return rule ? rule.reply : FALLBACK_REPLY;
-};
 
 const LiveChatButton = () => {
   const [open, setOpen] = useState(false);
@@ -79,6 +30,7 @@ const LiveChatButton = () => {
     { id: "welcome", role: "bot", text: WELCOME_MESSAGE.text },
   ]);
   const [draft, setDraft] = useState("");
+  const [conversationId, setConversationId] = useState(1);
   const [typing, setTyping] = useState(false);
   const endRef = useRef(null);
   const typingTimer = useRef(null);
@@ -115,12 +67,31 @@ const LiveChatButton = () => {
     setMessages((prev) => [...prev, { id: nextMessageId(), role, text }]);
   };
 
-  const send = (rawText) => {
+  const send = async (rawText) => {
     const text = String(rawText || "").trim();
     if (!text || typing) return;
+
     push("user", text);
     setDraft("");
-    push("bot", getReplyFor(text), true);
+    setTyping(true);
+
+    try {
+      const reply = await sendChatMessage(conversationId, text);
+      setMessages((prev) => [
+        ...prev,
+        { id: nextMessageId(), role: "bot", text: reply },
+      ]);
+      setConversationId((current) => current || 1);
+    } catch (error) {
+      const errorMessage =
+        error?.message || "I couldn’t reach the support assistant right now.";
+      setMessages((prev) => [
+        ...prev,
+        { id: nextMessageId(), role: "bot", text: errorMessage },
+      ]);
+    } finally {
+      setTyping(false);
+    }
   };
 
   return (
