@@ -31,6 +31,7 @@ export const adaptApiVehicle = (
   fuel_type: vehicle.fuelType,
   transmission: vehicle.transmission,
   price_per_day: vehicle.pricePerDay,
+  quantity: vehicle.quantity ?? 1,
   location: locationMap[vehicle.locationId] ?? "Unknown",
   description: vehicle.description,
   is_available: vehicle.isAvailable,
