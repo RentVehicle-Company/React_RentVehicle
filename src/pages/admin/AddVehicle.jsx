@@ -66,6 +66,8 @@ const deriveType = (vehicle) => {
 };
 
 const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
+  console.log("EDIT VEHICLE:", vehicle);
+  console.log("EDIT QUANTITY:", vehicle?.quantity);
   const [type, setType] = useState(() => deriveType(vehicle));
   const [category, setCategory] = useState(vehicle?.category || "");
   const [brand, setBrand] = useState(vehicle?.brand || "");
@@ -73,6 +75,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
   const [price, setPrice] = useState(vehicle?.price_per_day ?? "");
   const [year, setYear] = useState(vehicle?.modelYear ?? vehicle?.year ?? 2025);
   const [seats, setSeats] = useState(vehicle?.seating_capacity ?? 4);
+  const [quantity, setQuantity] = useState(vehicle?.quantity ?? 1);
   const [transmission, setTransmission] = useState(
     vehicle?.transmission || "Automatic",
   );
@@ -193,6 +196,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
       fuel_type: v.fuelType,
       transmission: v.transmission,
       price_per_day: v.pricePerDay,
+      quantity: v.quantity ?? 0,
       location: locationMap[v.locationId] ?? "Unknown",
       description: v.description,
       is_available: v.isAvailable,
@@ -265,6 +269,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
       isAvailable: available,
       categoryId: selectedCategory.id,
       locationId: selectedLocation.id,
+      quantity: Math.max(1, Number(quantity) || 1),
     };
 
     try {
@@ -504,7 +509,7 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
             </div>
 
             {/* Rate + details */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
               <div>
                 <label htmlFor="addv-price" className={labelClass}>
                   Rate / day
@@ -556,6 +561,27 @@ const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
                   className={inputClass}
                   disabled={submitting}
                 />
+              </div>
+              <div>
+                <label htmlFor="addv-quantity" className={labelClass}>
+                  Quantity
+                </label>
+
+                <input
+                  id="addv-quantity"
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="1"
+                  className={inputClass}
+                  required
+                  disabled={submitting}
+                />
+
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Number of vehicles available.
+                </p>
               </div>
               <div>
                 <label htmlFor="addv-location" className={labelClass}>
