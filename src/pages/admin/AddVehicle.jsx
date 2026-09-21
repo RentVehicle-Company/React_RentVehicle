@@ -66,8 +66,6 @@ const deriveType = (vehicle) => {
 };
 
 const AddVehicle = ({ mode = "add", vehicle, onClose, onSave }) => {
-  console.log("EDIT VEHICLE:", vehicle);
-  console.log("EDIT QUANTITY:", vehicle?.quantity);
   const [type, setType] = useState(() => deriveType(vehicle));
   const [category, setCategory] = useState(vehicle?.category || "");
   const [brand, setBrand] = useState(vehicle?.brand || "");
