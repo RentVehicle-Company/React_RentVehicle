@@ -324,7 +324,7 @@ const Hero = ({ selectedVehicle = "bmw", onSelectVehicle }) => {
           initial={{ opacity: 0, y: 30, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-          className="relative z-20 mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 rounded-full border border-white/20 bg-white/95 p-2.5 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.4)] backdrop-blur-md md:flex-row dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40"
+          className="relative z-20 mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 rounded-2xl md:rounded-full border border-white/20 bg-white/95 p-2.5 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.4)] backdrop-blur-md md:flex-row dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40"
         >
           <div className="flex w-full flex-1 flex-col md:flex-row md:items-center">
             <div className="flex-1 px-4 py-2 hover:bg-slate-100/80 rounded-2xl transition-all cursor-pointer dark:hover:bg-slate-800/60">
