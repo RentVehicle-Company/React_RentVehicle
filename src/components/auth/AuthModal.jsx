@@ -10,7 +10,14 @@ import {
 } from "react-icons/lu";
 import Logo from "../common/Logo";
 import { useAuth } from "../../context/AuthContext";
-import { resendOtp, verifyEmail } from "../../services/authServices";
+import {
+  forgotPassword,
+  resendOtp,
+  resetPassword,
+  verifyEmail,
+} from "../../services/authServices";
+import ForgotPassword from "./ForgotPassword";
+import ResetPassword from "./ResetPassword";
 
 const inputClass =
   "w-full rounded-xl border border-white/60 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-sm outline-none backdrop-blur-sm transition focus:border-primary focus:ring-2 focus:ring-primary/30";
@@ -28,6 +35,7 @@ const getErrorMessage = (err) =>
 const AuthModal = ({ mode = "login", onClose }) => {
   const { login, register } = useAuth();
   const [formMode, setFormMode] = useState(mode);
+  const [view, setView] = useState(mode);
   const [registerStep, setRegisterStep] = useState("details");
   const [values, setValues] = useState({ name: "", email: "", password: "" });
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -39,6 +47,7 @@ const AuthModal = ({ mode = "login", onClose }) => {
 
   useEffect(() => {
     setFormMode(mode);
+    setView(mode);
     setRegisterStep("details");
     setOtp(["", "", "", "", "", ""]);
     setError(null);
@@ -158,7 +167,36 @@ const AuthModal = ({ mode = "login", onClose }) => {
 
   const switchMode = (nextMode) => {
     setFormMode(nextMode);
+    setView(nextMode);
     setError(null);
+    setMessage("");
+  };
+
+  const handleForgotPasswordRequest = async (email) => {
+    setError(null);
+    setMessage("");
+    try {
+      await forgotPassword(email);
+      setValues((prev) => ({ ...prev, email }));
+      setView("reset-password");
+      setMessage(`A 6-digit reset code was sent to ${email}.`);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const handleResetPassword = async (email, code, newPassword) => {
+    setError(null);
+    setMessage("");
+    try {
+      await resetPassword(email, code, newPassword);
+      setValues({ name: "", email: "", password: "" });
+      setView("login");
+      setFormMode("login");
+      setMessage("Your password was reset successfully. You can sign in now.");
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   return (
@@ -168,7 +206,15 @@ const AuthModal = ({ mode = "login", onClose }) => {
       className="fixed inset-0 z-[90] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={formMode === "login" ? "Log in" : "Create an account"}
+      aria-label={
+        view === "forgot-password"
+          ? "Forgot password"
+          : view === "reset-password"
+            ? "Reset password"
+            : formMode === "login"
+              ? "Log in"
+              : "Create an account"
+      }
     >
       <div
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
@@ -200,30 +246,63 @@ const AuthModal = ({ mode = "login", onClose }) => {
               wordClassName="text-lg font-bold tracking-tight text-slate-950"
             />
             <span className="rounded-full bg-white/70 dark:bg-slate-700/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary ring-1 ring-primary/20 backdrop-blur">
-              {registerStep === "otp"
-                ? "Verify"
-                : formMode === "login"
-                  ? "Sign In"
-                  : "Register"}
+              {view === "forgot-password"
+                ? "Reset"
+                : view === "reset-password"
+                  ? "Password"
+                  : registerStep === "otp"
+                    ? "Verify"
+                    : formMode === "login"
+                      ? "Sign In"
+                      : "Register"}
             </span>
           </div>
 
           <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
-            {registerStep === "otp"
-              ? "Verify your email"
-              : formMode === "login"
-                ? "Welcome back"
-                : "Create your account"}
+            {view === "forgot-password"
+              ? "Forgot Password"
+              : view === "reset-password"
+                ? "Reset Password"
+                : registerStep === "otp"
+                  ? "Verify your email"
+                  : formMode === "login"
+                    ? "Welcome back"
+                    : "Create your account"}
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {registerStep === "otp"
-              ? `Enter the 6-digit code sent to ${values.email}.`
-              : formMode === "login"
-                ? "Log in to manage your bookings and favorites."
-                : "Sign up to start renting in minutes."}
+            {view === "forgot-password"
+              ? "Enter your email to receive a 6-digit code."
+              : view === "reset-password"
+                ? "Enter the code and choose a new password."
+                : registerStep === "otp"
+                  ? `Enter the 6-digit code sent to ${values.email}.`
+                  : formMode === "login"
+                    ? "Log in to manage your bookings and favorites."
+                    : "Sign up to start renting in minutes."}
           </p>
 
-          {registerStep === "otp" ? (
+          {view === "forgot-password" ? (
+            <ForgotPassword
+              initialEmail={values.email}
+              onBack={() => switchMode("login")}
+              onContinue={(email) => {
+                setValues((prev) => ({ ...prev, email }));
+                setView("reset-password");
+                setMessage(`A 6-digit reset code was sent to ${email}.`);
+              }}
+            />
+          ) : view === "reset-password" ? (
+            <ResetPassword
+              email={values.email}
+              onBack={() => setView("forgot-password")}
+              onSuccess={() => {
+                setValues({ name: "", email: "", password: "" });
+                setView("login");
+                setFormMode("login");
+                setMessage("Your password was reset successfully. You can sign in now.");
+              }}
+            />
+          ) : registerStep === "otp" ? (
             <form onSubmit={handleVerify} className="mt-5 space-y-4">
               <button
                 type="button"
@@ -320,9 +399,24 @@ const AuthModal = ({ mode = "login", onClose }) => {
             </div>
 
             <div>
-              <label htmlFor="auth-password" className={labelClass}>
-                Password
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label htmlFor="auth-password" className={labelClass}>
+                  Password
+                </label>
+                {formMode === "login" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView("forgot-password");
+                      setError(null);
+                      setMessage("");
+                    }}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <LuLock
                   size={16}

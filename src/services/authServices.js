@@ -119,6 +119,31 @@ export const registerUser = async ({ name, email, password }) => {
   return user && (user.id !== undefined || user.name) ? user : null;
 };
 
+// POST /api/auth/forgot-password { email }
+export const forgotPassword = async (email) => {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const response = await post(API_ENDPOINTS.authForgotPassword, {
+    email: normalizedEmail,
+  });
+  if (!response) throw networkError();
+  return response;
+};
+
+// POST /api/auth/reset-password { email, code, newPassword }
+export const resetPassword = async (email, code, newPassword) => {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedCode = String(code || "").trim();
+  const normalizedPassword = String(newPassword || "");
+
+  const response = await post(API_ENDPOINTS.authResetPassword, {
+    email: normalizedEmail,
+    code: normalizedCode,
+    newPassword: normalizedPassword,
+  });
+  if (!response) throw networkError();
+  return response;
+};
+
 export const verifyEmail = (email, code) =>
   post(API_ENDPOINTS.authVerifyEmail, { email, code });
 

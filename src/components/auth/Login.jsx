@@ -3,10 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { LuArrowLeft, LuEye, LuEyeOff, LuLock, LuMail } from "react-icons/lu";
 import Navbar from "../common/Navbar";
 import {
+  forgotPassword,
   login,
   loginWithGoogle,
   register,
   resendOtp,
+  resetPassword,
   storeAuthSession,
   verifyEmail,
 } from "../../services/authServices";
@@ -14,8 +16,6 @@ import {
 const fieldClass =
   "w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-slate-400 dark:focus:ring-slate-600";
 
-// Feature flag: Google login shows only when BOTH the flag and the client ID
-// are present, so missing `.env` config never throws or shows a broken button.
 const googleLoginEnabled =
   import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === "true" &&
   Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -54,8 +54,6 @@ const loadGsiScript = () =>
     document.head.appendChild(script);
   });
 
-// Opens the Google Identity Services popup and resolves with the ID token
-// (the JWT credential) that POST /api/auth/google expects as { idToken }.
 const getGoogleCredential = async (clientId) => {
   const accounts = await loadGsiScript();
 
@@ -92,7 +90,8 @@ const Login = ({ initialMode = "login" }) => {
   const location = useLocation();
   const redirectTo = location.state?.from || "/profile";
   const otpRefs = useRef([]);
-  const [mode, setMode] = useState(initialMode);
+
+  const [view, setView] = useState(initialMode === "register" ? "register" : "login");
   const [registerStep, setRegisterStep] = useState("details");
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -104,15 +103,23 @@ const Login = ({ initialMode = "login" }) => {
     email: "",
     password: "",
   });
+  const [forgotPasswordValues, setForgotPasswordValues] = useState({
+    email: "",
+    code: "",
+    newPassword: "",
+  });
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setMode(initialMode);
+    setView(initialMode === "register" ? "register" : "login");
+    setRegisterStep("details");
+    setError("");
+    setMessage("");
   }, [initialMode]);
 
-  const changeMode = (nextMode) => {
-    setMode(nextMode);
+  const changeView = (nextView) => {
+    setView(nextView);
     setRegisterStep("details");
     setMessage("");
     setError("");
@@ -148,6 +155,46 @@ const Login = ({ initialMode = "login" }) => {
     }
   };
 
+  const handleForgotPasswordRequest = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      await forgotPassword(forgotPasswordValues.email);
+      setView("reset-password");
+      setMessage(`A 6-digit reset code was sent to ${forgotPasswordValues.email}.`);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      const code = forgotPasswordValues.code.trim();
+      if (code.length !== 6) {
+        setError("Enter a valid 6-digit reset code.");
+        return;
+      }
+      await resetPassword(
+        forgotPasswordValues.email,
+        code,
+        forgotPasswordValues.newPassword
+      );
+      setMessage("Your password was reset successfully. You can sign in now.");
+      setForgotPasswordValues({ email: "", code: "", newPassword: "" });
+      setView("login");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleOtpChange = (index, value) => {
     const digit = value.replace(/\D/g, "").slice(-1);
     const nextOtp = [...otp];
@@ -173,8 +220,6 @@ const Login = ({ initialMode = "login" }) => {
     }
     setSubmitting(true);
     try {
-      // verify-email only confirms the account; log the new user in to
-      // provision a session/token and land on the authenticated dashboard.
       await verifyEmail(registerValues.email, otp.join(""));
       const response = await login({
         email: registerValues.email,
@@ -183,7 +228,7 @@ const Login = ({ initialMode = "login" }) => {
       storeAuthSession(response, registerValues.name || "New User");
       setMessage("Email verified successfully. Your account is ready.");
       setRegisterStep("details");
-      setMode("login");
+      setView("login");
       navigate("/");
     } catch (requestError) {
       setError(requestError.message);
@@ -210,8 +255,6 @@ const Login = ({ initialMode = "login" }) => {
     setError("");
     setSubmitting(true);
     try {
-      // Acquire a valid ID token from the Google popup first, then hand it
-      // to the backend (POST /api/auth/google -> { idToken }).
       const idToken = await getGoogleCredential(
         import.meta.env.VITE_GOOGLE_CLIENT_ID
       );
@@ -234,304 +277,460 @@ const Login = ({ initialMode = "login" }) => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
+    <div className="flex min-h-screen flex-col bg-slate-50 transition-colors duration-200 dark:bg-slate-900">
       <Navbar />
       <div className="relative flex flex-1 items-center justify-center px-4 py-10">
-      <button
-        type="button"
-        onClick={handleBack}
-        className="absolute left-4 top-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-900 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
-      >
-        <LuArrowLeft size={15} />
-        Back to browsing
-      </button>
-      <section className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl dark:bg-slate-800 dark:shadow-2xl">
-        <div className="grid grid-cols-2 border-b border-slate-200 dark:border-slate-700">
-          <button
-            type="button"
-            onClick={() => changeMode("login")}
-            className={`border-b-2 px-4 py-3 text-sm font-semibold cursor-pointer transition-colors ${
-              mode === "login"
-                ? "border-slate-700 text-slate-800 dark:border-slate-200 dark:text-slate-100"
-                : "border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            }`}
-          >
-            Log In
-          </button>
-          <button
-            type="button"
-            onClick={() => changeMode("register")}
-            className={`border-b-2 px-4 py-3 text-sm font-semibold cursor-pointer transition-colors ${
-              mode === "register"
-                ? "border-slate-700 text-slate-800 dark:border-slate-200 dark:text-slate-100"
-                : "border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            }`}
-          >
-            Create Account
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleBack}
+          className="absolute left-4 top-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-900 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+        >
+          <LuArrowLeft size={15} />
+          Back to browsing
+        </button>
 
-        <div className="p-5 sm:p-6">
-          {mode === "login" ? (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="login-email"
-                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                >
-                  Email Address
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  required
-                  value={loginValues.email}
-                  onChange={(event) =>
-                    setLoginValues({
-                      ...loginValues,
-                      email: event.target.value,
-                    })
-                  }
-                  placeholder="alex@example.com"
-                  className={fieldClass}
-                />
-              </div>
+        <section className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl dark:bg-slate-800 dark:shadow-2xl">
+          <div className="grid grid-cols-2 border-b border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => changeView("login")}
+              className={`cursor-pointer border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                view === "login"
+                  ? "border-slate-700 text-slate-800 dark:border-slate-200 dark:text-slate-100"
+                  : "border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              onClick={() => changeView("register")}
+              className={`cursor-pointer border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                view === "register"
+                  ? "border-slate-700 text-slate-800 dark:border-slate-200 dark:text-slate-100"
+                  : "border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
 
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
+          <div className="p-5 sm:p-6">
+            {view === "login" && (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
                   <label
-                    htmlFor="login-password"
-                    className="text-xs font-medium text-slate-600 dark:text-slate-300"
+                    htmlFor="login-email"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    id="login-email"
+                    type="email"
+                    required
+                    value={loginValues.email}
+                    onChange={(event) =>
+                      setLoginValues({ ...loginValues, email: event.target.value })
+                    }
+                    placeholder="alex@example.com"
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label
+                      htmlFor="login-password"
+                      className="text-xs font-medium text-slate-600 dark:text-slate-300"
+                    >
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotPasswordValues({
+                          email: loginValues.email,
+                          code: "",
+                          newPassword: "",
+                        });
+                        setView("forgot-password");
+                        setError("");
+                        setMessage("");
+                      }}
+                      className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={loginValues.password}
+                      onChange={(event) =>
+                        setLoginValues({ ...loginValues, password: event.target.value })
+                      }
+                      placeholder="••••••••"
+                      className={`${fieldClass} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      {showPassword ? <LuEyeOff size={17} /> : <LuEye size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                >
+                  {submitting ? "Signing In..." : "Sign In"}
+                </button>
+
+                <AuthDivider />
+                {googleLoginEnabled ? (
+                  <GoogleButton onClick={handleGoogleLogin} disabled={submitting} />
+                ) : (
+                  <GoogleButton comingSoon />
+                )}
+              </form>
+            )}
+
+            {view === "forgot-password" && (
+              <form onSubmit={handleForgotPasswordRequest} className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => changeView("login")}
+                  className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
+                >
+                  <LuArrowLeft size={14} /> Back to sign in
+                </button>
+
+                <div className="text-center">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                    <LuLock size={20} />
+                  </div>
+                  <h2 className="mt-3 text-base font-semibold text-slate-800 dark:text-slate-100">
+                    Forgot Password
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Enter your email to receive a 6-digit verification code.
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="forgot-email"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    id="forgot-email"
+                    type="email"
+                    required
+                    value={forgotPasswordValues.email}
+                    onChange={(event) =>
+                      setForgotPasswordValues({
+                        ...forgotPasswordValues,
+                        email: event.target.value,
+                      })
+                    }
+                    placeholder="alex@example.com"
+                    className={fieldClass}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                >
+                  {submitting ? "Sending code..." : "Send Reset Code"}
+                </button>
+              </form>
+            )}
+
+            {view === "reset-password" && (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setView("forgot-password")}
+                  className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
+                >
+                  <LuArrowLeft size={14} /> Back
+                </button>
+
+                <div className="text-center">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                    <LuLock size={20} />
+                  </div>
+                  <h2 className="mt-3 text-base font-semibold text-slate-800 dark:text-slate-100">
+                    Reset Password
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Enter the 6-digit code and choose a new password.
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="reset-email"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    id="reset-email"
+                    type="email"
+                    required
+                    value={forgotPasswordValues.email}
+                    onChange={(event) =>
+                      setForgotPasswordValues({
+                        ...forgotPasswordValues,
+                        email: event.target.value,
+                      })
+                    }
+                    placeholder="alex@example.com"
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="reset-code"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    6-digit Code
+                  </label>
+                  <input
+                    id="reset-code"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    required
+                    value={forgotPasswordValues.code}
+                    onChange={(event) =>
+                      setForgotPasswordValues({
+                        ...forgotPasswordValues,
+                        code: event.target.value.replace(/\D/g, "").slice(0, 6),
+                      })
+                    }
+                    placeholder="123456"
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="reset-password"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="reset-password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={forgotPasswordValues.newPassword}
+                      onChange={(event) =>
+                        setForgotPasswordValues({
+                          ...forgotPasswordValues,
+                          newPassword: event.target.value,
+                        })
+                      }
+                      placeholder="••••••••"
+                      className={`${fieldClass} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      {showPassword ? <LuEyeOff size={17} /> : <LuEye size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                >
+                  {submitting ? "Resetting..." : "Reset Password"}
+                </button>
+              </form>
+            )}
+
+            {view === "register" && registerStep === "details" && (
+              <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="register-name"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    Full Name
+                  </label>
+                  <input
+                    id="register-name"
+                    required
+                    value={registerValues.name}
+                    onChange={(event) =>
+                      setRegisterValues({ ...registerValues, name: event.target.value })
+                    }
+                    placeholder="Alex Morgan"
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="register-email"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    id="register-email"
+                    type="email"
+                    required
+                    value={registerValues.email}
+                    onChange={(event) =>
+                      setRegisterValues({ ...registerValues, email: event.target.value })
+                    }
+                    placeholder="alex@example.com"
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="register-password"
+                    className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
                   >
                     Password
                   </label>
-                  <button
-                    type="button"
-                    className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
-                  >
-                    Forgot Password?
-                  </button>
+                  <div className="relative">
+                    <input
+                      id="register-password"
+                      type={showRegisterPassword ? "text" : "password"}
+                      required
+                      minLength="8"
+                      value={registerValues.password}
+                      onChange={(event) =>
+                        setRegisterValues({
+                          ...registerValues,
+                          password: event.target.value,
+                        })
+                      }
+                      placeholder="At least 8 characters"
+                      className={`${fieldClass} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowRegisterPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      {showRegisterPassword ? <LuEyeOff size={17} /> : <LuEye size={17} />}
+                    </button>
+                  </div>
                 </div>
-                <div className="relative">
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={loginValues.password}
-                    onChange={(event) =>
-                      setLoginValues({
-                        ...loginValues,
-                        password: event.target.value,
-                      })
-                    }
-                    placeholder="••••••••"
-                    className={`${fieldClass} pr-10`}
-                  />
-                  <button
-                    type="button"
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
-                    onClick={() => setShowPassword((visible) => !visible)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  >
-                    {showPassword ? (
-                      <LuEyeOff size={17} />
-                    ) : (
-                      <LuEye size={17} />
-                    )}
-                  </button>
-                </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-lg cursor-pointer bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-              >
-                {submitting ? "Signing In..." : "Sign In"}
-              </button>
-
-              <AuthDivider />
-              {googleLoginEnabled ? (
-                <GoogleButton
-                  onClick={handleGoogleLogin}
+                <button
+                  type="submit"
                   disabled={submitting}
-                />
-              ) : (
-                <GoogleButton comingSoon />
-              )}
-            </form>
-          ) : registerStep === "details" ? (
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="register-name"
-                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                 >
-                  Full Name
-                </label>
-                <input
-                  id="register-name"
-                  required
-                  value={registerValues.name}
-                  onChange={(event) =>
-                    setRegisterValues({
-                      ...registerValues,
-                      name: event.target.value,
-                    })
-                  }
-                  placeholder="Alex Morgan"
-                  className={fieldClass}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="register-email"
-                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                >
-                  Email Address
-                </label>
-                <input
-                  id="register-email"
-                  type="email"
-                  required
-                  value={registerValues.email}
-                  onChange={(event) =>
-                    setRegisterValues({
-                      ...registerValues,
-                      email: event.target.value,
-                    })
-                  }
-                  placeholder="alex@example.com"
-                  className={fieldClass}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="register-password"
-                  className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="register-password"
-                    type={showRegisterPassword ? "text" : "password"}
-                    required
-                    minLength="8"
-                    value={registerValues.password}
-                    onChange={(event) =>
-                      setRegisterValues({
-                        ...registerValues,
-                        password: event.target.value,
-                      })
-                    }
-                    placeholder="At least 8 characters"
-                    className={`${fieldClass} pr-10`}
-                  />
-                  <button
-                    type="button"
-                    aria-label={
-                      showRegisterPassword ? "Hide password" : "Show password"
-                    }
-                    onClick={() =>
-                      setShowRegisterPassword((visible) => !visible)
-                    }
-                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  >
-                    {showRegisterPassword ? (
-                      <LuEyeOff size={17} />
-                    ) : (
-                      <LuEye size={17} />
-                    )}
-                  </button>
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-              >
-                {submitting ? "Creating Account..." : "Create Account"}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={verifyOtp} className="space-y-5">
-              <button
-                type="button"
-                onClick={() => setRegisterStep("details")}
-                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
-              >
-                <LuArrowLeft size={14} /> Back
-              </button>
-              <div className="text-center">
-                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
-                  <LuMail size={20} />
-                </div>
-                <h2 className="mt-3 text-base font-semibold text-slate-800 dark:text-slate-100">
-                  Verify your email
-                </h2>
-                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  Enter the 6-digit code sent to
-                  <br />
-                  <span className="font-medium text-slate-700 dark:text-slate-200">
-                    {registerValues.email}
-                  </span>
-                </p>
-              </div>
-              <div className="flex justify-center gap-2">
-                {otp.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(element) => {
-                      otpRefs.current[index] = element;
-                    }}
-                    value={digit}
-                    onChange={(event) =>
-                      handleOtpChange(index, event.target.value)
-                    }
-                    onKeyDown={(event) => handleOtpKeyDown(index, event)}
-                    inputMode="numeric"
-                    maxLength="1"
-                    aria-label={`Verification digit ${index + 1}`}
-                    className="h-11 w-10 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-semibold text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-slate-400 dark:focus:ring-slate-500/30"
-                  />
-                ))}
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-              >
-                {submitting ? "Verifying..." : "Verify Email"}
-              </button>
-              <button
-                type="button"
-                onClick={handleResendOtp}
-                disabled={submitting}
-                className="block w-full text-center text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
-              >
-                Resend code
-              </button>
-            </form>
-          )}
+                  {submitting ? "Creating Account..." : "Create Account"}
+                </button>
+              </form>
+            )}
 
-          {error && (
-            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-center text-xs text-red-600">
-              {error}
-            </p>
-          )}
-          {message && (
-            <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-center text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
-              {message}
-            </p>
-          )}
-        </div>
-        <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-center text-[11px] text-slate-400 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-500">
-          Secured by DriveLink Shield™
-        </div>
-      </section>
+            {view === "register" && registerStep === "otp" && (
+              <form onSubmit={verifyOtp} className="space-y-5">
+                <button
+                  type="button"
+                  onClick={() => setRegisterStep("details")}
+                  className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
+                >
+                  <LuArrowLeft size={14} /> Back
+                </button>
+                <div className="text-center">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                    <LuMail size={20} />
+                  </div>
+                  <h2 className="mt-3 text-base font-semibold text-slate-800 dark:text-slate-100">
+                    Verify your email
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Enter the 6-digit code sent to
+                    <br />
+                    <span className="font-medium text-slate-700 dark:text-slate-200">
+                      {registerValues.email}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex justify-center gap-2">
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(element) => {
+                        otpRefs.current[index] = element;
+                      }}
+                      value={digit}
+                      onChange={(event) => handleOtpChange(index, event.target.value)}
+                      onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                      inputMode="numeric"
+                      maxLength="1"
+                      aria-label={`Verification digit ${index + 1}`}
+                      className="h-11 w-10 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-semibold text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-slate-400 dark:focus:ring-slate-500/30"
+                    />
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                >
+                  {submitting ? "Verifying..." : "Verify Email"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={submitting}
+                  className="block w-full text-center text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
+                >
+                  Resend code
+                </button>
+              </form>
+            )}
+
+            {error && (
+              <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-center text-xs text-red-600">
+                {error}
+              </p>
+            )}
+            {message && (
+              <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-center text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                {message}
+              </p>
+            )}
+          </div>
+
+          <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-center text-[11px] text-slate-400 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-500">
+            Secured by DriveLink Shield™
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -556,11 +755,7 @@ const GoogleButton = ({ onClick, disabled, comingSoon }) => (
         : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
     }`}
   >
-    {comingSoon ? (
-      <LuLock size={15} />
-    ) : (
-      <span className="font-bold text-blue-500">G</span>
-    )}{" "}
+    {comingSoon ? <LuLock size={15} /> : <span className="font-bold text-blue-500">G</span>} {" "}
     {comingSoon
       ? "Google sign-in coming soon"
       : disabled

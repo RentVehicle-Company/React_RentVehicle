@@ -77,6 +77,8 @@ export const API_ENDPOINTS = {
   authGoogle: `${API_BASE_URL}/auth/google`,
   authVerifyEmail: `${API_BASE_URL}/auth/verify-email`,
   authResendOtp: `${API_BASE_URL}/auth/resend-otp`,
+  authForgotPassword: `${API_BASE_URL}/auth/forgot-password`,
+  authResetPassword: `${API_BASE_URL}/auth/reset-password`,
   authRefresh: `${API_BASE_URL}/auth/refresh`,
   authLogout: `${API_BASE_URL}/auth/logout`,
   products: `${API_BASE_URL}/products`,
