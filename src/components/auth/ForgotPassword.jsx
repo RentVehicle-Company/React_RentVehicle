@@ -57,7 +57,10 @@ const ForgotPassword = ({ initialEmail = "", onBack, onContinue }) => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="forgot-email" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label
+            htmlFor="forgot-email"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+          >
             Email
           </label>
           <div className="relative">

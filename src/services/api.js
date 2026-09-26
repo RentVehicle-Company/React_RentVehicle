@@ -95,6 +95,8 @@ export const API_ENDPOINTS = {
   paymentVerify: (id) => `${API_BASE_URL}/payments/${id}/verify`,
   paymentsByBooking: (bookingId) =>
     `${API_BASE_URL}/bookings/${bookingId}/payments`,
+  adminDashboardStats: `${API_BASE_URL}/admin/dashboard-stats`,
+  adminAnalyticsStats: `${API_BASE_URL}/admin/analytics-stats`,
 };
 
 export const request = async (path, options = {}) => {

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   LuPencil,
   LuPlus,
@@ -9,13 +9,15 @@ import {
   LuTruck,
   LuBike,
   LuCar,
+  LuX,
 } from "react-icons/lu";
+import { useToast } from "../../context/ToastContext";
 import {
   getCategories,
   createCategory,
   updateCategory,
   deleteCategory,
-} from "../../services/vehicleServices";
+} from "../../services/categoryService";
 import { LuLoader } from "react-icons/lu";
 import AddCategory from "./AddCategory";
 import { fromBackendVehicleType } from "../../utils/vehicleTypeMap";
@@ -58,60 +60,62 @@ const ManageCategories = () => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [modal, setModal] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const toast = useToast();
 
-  const fetchCategoriesData = async () => {
+  const fetchCategoriesData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getCategories();
       setCategories(data.map(normalizeCategory));
     } catch (err) {
-      console.error("Failed to fetch categories:", err);
+      toast.error("Could not load categories", err.message);
       setCategories([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchCategoriesData();
-  }, []);
+  }, [fetchCategoriesData]);
 
   const handleSave = async (payload) => {
     try {
+      const isEditing = modal?.mode === "edit" && modal?.category;
       if (modal?.mode === "edit" && modal?.category) {
-        const updated = await updateCategory(modal.category.id, payload);
-        const normalized = normalizeCategory(updated);
-        setCategories(
-          categories.map((cat) =>
-            String(cat.id) === String(modal.category.id) ? normalized : cat,
-          ),
-        );
+        await updateCategory(modal.category.id, payload);
       } else {
-        const created = await createCategory(payload);
-        setCategories([normalizeCategory(created), ...categories]);
+        await createCategory(payload);
       }
       setModal(null);
+      await fetchCategoriesData();
+      toast.success(
+        isEditing ? "Category updated" : "Category created",
+        isEditing
+          ? "The category changes are now live."
+          : "The new category is now available in the fleet forms.",
+      );
     } catch (err) {
-      console.error("Failed to save category:", err);
+      toast.error("Category could not be saved", err.message);
+      throw err;
     }
   };
 
-  const handleDelete = async (category) => {
-    const confirmed = window.confirm(
-      `Delete "${category.name}" category? This action cannot be undone.`,
-    );
-    if (!confirmed) return;
+  const handleDelete = (category) => setDeleteTarget(category);
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const category = deleteTarget;
     setDeletingId(category.id);
     try {
       await deleteCategory(category.id);
-      setCategories(
-        categories.filter((cat) => String(cat.id) !== String(category.id)),
-      );
+      setDeleteTarget(null);
+      await fetchCategoriesData();
+      toast.success("Category deleted", `${category.name} was removed.`);
     } catch (err) {
-      console.error("Failed to delete category:", err);
-      alert("Failed to delete category. Please try again.");
+      toast.error("Category could not be deleted", err.message);
     } finally {
       setDeletingId(null);
     }
@@ -226,7 +230,7 @@ const ManageCategories = () => {
 
       {/* Table */}
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[700px] text-left text-sm">
+        <table className="w-full min-w-175 text-left text-sm">
           <thead>
             <tr className="border-y border-slate-100 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-700/40 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               <th className="px-5 py-3">Category</th>
@@ -357,6 +361,76 @@ const ManageCategories = () => {
             onClose={() => setModal(null)}
             onSave={handleSave}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-100 flex items-center justify-center bg-[#0b1329]/75 p-4 backdrop-blur-sm"
+            onClick={() =>
+              deletingId !== deleteTarget.id && setDeleteTarget(null)
+            }
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.97 }}
+              className="w-full max-w-md overflow-hidden rounded-2xl border border-blue-900/40 bg-[#0b1329] text-white shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-category-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start gap-3 px-6 pb-2 pt-6">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-400">
+                  <LuTrash2 size={20} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 id="delete-category-title" className="text-lg font-bold">
+                    Delete category?
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-blue-100/70">
+                    Delete &quot;{deleteTarget.name}&quot;? This action cannot
+                    be undone.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close delete confirmation"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deletingId === deleteTarget.id}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-blue-100/60 hover:bg-white/10 hover:text-white disabled:opacity-50"
+                >
+                  <LuX size={17} />
+                </button>
+              </div>
+              <div className="flex justify-end gap-2 border-t border-white/10 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deletingId === deleteTarget.id}
+                  className="rounded-xl border border-blue-100/20 px-4 py-2.5 text-sm font-semibold text-blue-100 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={deletingId === deleteTarget.id}
+                  className="inline-flex min-w-24 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+                >
+                  {deletingId === deleteTarget.id && (
+                    <LuLoader className="animate-spin" size={15} />
+                  )}
+                  {deletingId === deleteTarget.id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

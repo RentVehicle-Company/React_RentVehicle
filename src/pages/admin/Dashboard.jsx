@@ -1,14 +1,14 @@
-import React, { useMemo } from "react";
-import {
-  LuBoxes,
-  LuCircleCheck,
-  LuGauge,
-  LuWrench,
-} from "react-icons/lu";
+import React, { useEffect, useState } from "react";
+import { LuBoxes, LuCircleCheck, LuGauge, LuWrench } from "react-icons/lu";
 import { usePreferences } from "../../context/PreferencesContext";
+import { getDashboardStats } from "../../services/adminService";
 
 const STATUS_META = {
-  car: { label: "Cars", classes: "bg-blue-50 text-blue-600", bar: "bg-blue-500" },
+  car: {
+    label: "Cars",
+    classes: "bg-blue-50 text-blue-600",
+    bar: "bg-blue-500",
+  },
   motorbike: {
     label: "Motorbikes",
     classes: "bg-orange-50 text-orange-600",
@@ -21,72 +21,71 @@ const STATUS_META = {
   },
 };
 
-const Dashboard = ({ vehicles = [] }) => {
+const Dashboard = () => {
   const { formatPrice } = usePreferences();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const classify = (vehicle) => {
-    if (vehicle.type === "bicycle") return "bicycle";
-    if (vehicle.type === "motorbike") return "motorbike";
-    const cat = String(vehicle.category || "").toLowerCase();
-    if (cat.includes("bike") || cat.includes("e-bike")) return "bicycle";
-    if (
-      ["scooter", "underbone", "touring", "sportbike", "cruiser"].some((c) =>
-        cat.includes(c)
-      )
-    ) {
-      return "motorbike";
-    }
-    return "car";
-  };
+  useEffect(() => {
+    let cancelled = false;
+    getDashboardStats()
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err.message || "Unable to load dashboard statistics.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const stats = useMemo(() => {
-    const available = vehicles.filter((vehicle) => vehicle.is_available).length;
-    const maintenance = vehicles.length - available;
-    const avgRate = vehicles.length
-      ? vehicles.reduce((sum, vehicle) => sum + Number(vehicle.price_per_day || 0), 0) /
-        vehicles.length
-      : 0;
-    const byType = vehicles.reduce((acc, vehicle) => {
-      const type = vehicle.type || "car";
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {});
-    const byCategory = vehicles.reduce((acc, vehicle) => {
-      const key = classify(vehicle);
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
-    return { available, maintenance, avgRate, byType, byCategory };
-  }, [vehicles]);
+  const fleetBreakdown = stats?.fleetBreakdown || {};
+  const getBreakdownCount = (key, label) =>
+    Number(fleetBreakdown[key] ?? fleetBreakdown[label] ?? 0);
 
   const cards = [
     {
       label: "Total Vehicles",
-      value: vehicles.length,
+      value: stats?.totalVehicles ?? 0,
       icon: LuBoxes,
       accent: "bg-blue-500",
     },
     {
       label: "Available",
-      value: stats.available,
+      value: stats?.availableVehicles ?? 0,
       icon: LuCircleCheck,
       accent: "bg-emerald-500",
     },
     {
       label: "In Maintenance",
-      value: stats.maintenance,
+      value: stats?.maintenanceVehicles ?? 0,
       icon: LuWrench,
       accent: "bg-amber-500",
     },
     {
       label: "Average Rate / day",
-      value: formatPrice(Math.round(stats.avgRate)),
+      value: formatPrice(Math.round(Number(stats?.averageRatePerDay ?? 0))),
       icon: LuGauge,
       accent: "bg-indigo-500",
     },
   ];
 
-  const total = Math.max(1, vehicles.length);
+  const total = Math.max(1, Number(stats?.totalVehicles ?? 0));
+
+  if (loading)
+    return (
+      <p className="text-sm text-slate-500">Loading dashboard statistics...</p>
+    );
+  if (error)
+    return (
+      <p className="rounded-xl bg-red-50 p-4 text-sm text-red-600">{error}</p>
+    );
 
   return (
     <div className="space-y-5">
@@ -128,7 +127,7 @@ const Dashboard = ({ vehicles = [] }) => {
           </p>
           <div className="mt-5 space-y-4">
             {Object.entries(STATUS_META).map(([key, meta]) => {
-              const count = stats.byCategory[key] || 0;
+              const count = getBreakdownCount(key, meta.label);
               const pct = Math.round((count / total) * 100);
               return (
                 <div key={key}>
@@ -154,7 +153,9 @@ const Dashboard = ({ vehicles = [] }) => {
         </div>
 
         <div className="rounded-2xl border border-borderColor bg-white dark:border-slate-700 dark:bg-slate-800 p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Quick Actions</h3>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            Quick Actions
+          </h3>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Common fleet management tasks
           </p>
@@ -175,13 +176,18 @@ const Dashboard = ({ vehicles = [] }) => {
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                     {item.label}
                   </p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">{item.hint}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                    {item.hint}
+                  </p>
                 </div>
               </li>
             ))}
           </ul>
           <p className="mt-4 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
-            Use the <span className="font-semibold text-slate-600 dark:text-slate-300">Manage Vehicles</span>{" "}
+            Use the{" "}
+            <span className="font-semibold text-slate-600 dark:text-slate-300">
+              Manage Vehicles
+            </span>{" "}
             tab to perform these actions.
           </p>
         </div>

@@ -299,7 +299,9 @@ const AuthModal = ({ mode = "login", onClose }) => {
                 setValues({ name: "", email: "", password: "" });
                 setView("login");
                 setFormMode("login");
-                setMessage("Your password was reset successfully. You can sign in now.");
+                setMessage(
+                  "Your password was reset successfully. You can sign in now.",
+                );
               }}
             />
           ) : registerStep === "otp" ? (
@@ -351,120 +353,126 @@ const AuthModal = ({ mode = "login", onClose }) => {
               </button>
             </form>
           ) : (
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-            {formMode === "register" && (
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              {formMode === "register" && (
+                <div>
+                  <label htmlFor="auth-name" className={labelClass}>
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <LuUser
+                      size={16}
+                      className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <input
+                      id="auth-name"
+                      name="name"
+                      type="text"
+                      value={values.name}
+                      onChange={handleChange}
+                      placeholder="Jane Smith"
+                      autoComplete="name"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
-                <label htmlFor="auth-name" className={labelClass}>
-                  Full Name
+                <label htmlFor="auth-email" className={labelClass}>
+                  Email
                 </label>
                 <div className="relative">
-                  <LuUser
+                  <LuMail
                     size={16}
                     className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                   />
                   <input
-                    id="auth-name"
-                    name="name"
-                    type="text"
-                    value={values.name}
+                    id="auth-email"
+                    name="email"
+                    type="email"
+                    value={values.email}
                     onChange={handleChange}
-                    placeholder="Jane Smith"
-                    autoComplete="name"
+                    placeholder="you@example.com"
+                    autoComplete="email"
                     className={inputClass}
                   />
                 </div>
               </div>
-            )}
 
-            <div>
-              <label htmlFor="auth-email" className={labelClass}>
-                Email
-              </label>
-              <div className="relative">
-                <LuMail
-                  size={16}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  id="auth-email"
-                  name="email"
-                  type="email"
-                  value={values.email}
-                  onChange={handleChange}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label htmlFor="auth-password" className={labelClass}>
-                  Password
-                </label>
-                {formMode === "login" && (
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label htmlFor="auth-password" className={labelClass}>
+                    Password
+                  </label>
+                  {formMode === "login" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setView("forgot-password");
+                        setError(null);
+                        setMessage("");
+                      }}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <LuLock
+                    size={16}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    id="auth-password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={values.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    autoComplete={
+                      formMode === "login" ? "current-password" : "new-password"
+                    }
+                    className={inputClass}
+                  />
                   <button
                     type="button"
-                    onClick={() => {
-                      setView("forgot-password");
-                      setError(null);
-                      setMessage("");
-                    }}
-                    className="text-xs font-medium text-primary hover:underline"
+                    onClick={() => setShowPassword((show) => !show)}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 transition-colors hover:text-slate-700 dark:hover:text-white"
                   >
-                    Forgot Password?
+                    {showPassword ? (
+                      <LuEyeOff size={16} />
+                    ) : (
+                      <LuEye size={16} />
+                    )}
                   </button>
-                )}
+                </div>
               </div>
-              <div className="relative">
-                <LuLock
-                  size={16}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  id="auth-password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={values.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  autoComplete={
-                    formMode === "login" ? "current-password" : "new-password"
-                  }
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((show) => !show)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 transition-colors hover:text-slate-700 dark:hover:text-white"
-                >
-                  {showPassword ? <LuEyeOff size={16} /> : <LuEye size={16} />}
-                </button>
-              </div>
-            </div>
 
-            {error && (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
-                {error}
-              </p>
-            )}
+              {error && (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                  {error}
+                </p>
+              )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 cursor-pointer"
-            >
-              {submitting
-                ? formMode === "login"
-                  ? "Logging in..."
-                  : "Creating account..."
-                : formMode === "login"
-                  ? "Log In"
-                  : "Create Account"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 cursor-pointer"
+              >
+                {submitting
+                  ? formMode === "login"
+                    ? "Logging in..."
+                    : "Creating account..."
+                  : formMode === "login"
+                    ? "Log In"
+                    : "Create Account"}
+              </button>
+            </form>
           )}
 
           {message && (
@@ -473,31 +481,33 @@ const AuthModal = ({ mode = "login", onClose }) => {
             </p>
           )}
 
-          {registerStep === "details" && <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-300">
-            {formMode === "login" ? (
-              <>
-                Don't have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => switchMode("register")}
-                  className="cursor-pointer font-semibold text-primary hover:underline"
-                >
-                  Register
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => switchMode("login")}
-                  className="cursor-pointer font-semibold text-primary hover:underline"
-                >
-                  Log In
-                </button>
-              </>
-            )}
-          </div>}
+          {registerStep === "details" && (
+            <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-300">
+              {formMode === "login" ? (
+                <>
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => switchMode("register")}
+                    className="cursor-pointer font-semibold text-primary hover:underline"
+                  >
+                    Register
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => switchMode("login")}
+                    className="cursor-pointer font-semibold text-primary hover:underline"
+                  >
+                    Log In
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>

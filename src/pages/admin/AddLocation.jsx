@@ -10,7 +10,8 @@ import {
 
 const inputClass =
   "w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-borderColor dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClass = "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
+const labelClass =
+  "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
 
 const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
   const [name, setName] = useState(location?.name || "");
@@ -36,11 +37,17 @@ const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
       setError("City is required");
       return;
     }
-    if (latitude !== "" && (isNaN(latitude) || latitude < -90 || latitude > 90)) {
+    if (
+      latitude !== "" &&
+      (isNaN(latitude) || latitude < -90 || latitude > 90)
+    ) {
       setError("Latitude must be between -90 and 90");
       return;
     }
-    if (longitude !== "" && (isNaN(longitude) || longitude < -180 || longitude > 180)) {
+    if (
+      longitude !== "" &&
+      (isNaN(longitude) || longitude < -180 || longitude > 180)
+    ) {
       setError("Longitude must be between -180 and 180");
       return;
     }
@@ -56,15 +63,8 @@ const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
     };
 
     try {
-      if (mode === "edit" && location) {
-        await updateLocation(location.id, payload);
-      } else {
-        await createLocation(payload);
-      }
+      await onSave(payload);
       setSuccess(true);
-      setTimeout(() => {
-        onSave(payload);
-      }, 500);
     } catch (err) {
       console.error(`Failed to ${mode} location:`, err);
       if (err.status === 401 || err.status === 403) {
@@ -76,7 +76,9 @@ const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
       } else if (err.status === 422) {
         setError(err.message || "Validation failed. Please check your input.");
       } else {
-        setError(err.message || `Failed to ${mode} location. Please try again.`);
+        setError(
+          err.message || `Failed to ${mode} location. Please try again.`,
+        );
       }
     } finally {
       setSubmitting(false);
@@ -88,7 +90,7 @@ const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-90 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
@@ -133,7 +135,8 @@ const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
               {success ? (
                 <>
                   <LuCircleCheck size={18} />
-                  Location {mode === "edit" ? "updated" : "created"} successfully!
+                  Location {mode === "edit" ? "updated" : "created"}{" "}
+                  successfully!
                 </>
               ) : (
                 <>

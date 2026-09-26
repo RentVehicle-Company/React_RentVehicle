@@ -29,14 +29,12 @@ const loadGsiScript = () =>
       return;
     }
     const existing = document.querySelector(
-      'script[src="https://accounts.google.com/gsi/client"]'
+      'script[src="https://accounts.google.com/gsi/client"]',
     );
     if (existing) {
-      existing.addEventListener(
-        "load",
-        () => resolve(window.google.accounts),
-        { once: true }
-      );
+      existing.addEventListener("load", () => resolve(window.google.accounts), {
+        once: true,
+      });
       return;
     }
     const script = document.createElement("script");
@@ -91,7 +89,9 @@ const Login = ({ initialMode = "login" }) => {
   const redirectTo = location.state?.from || "/profile";
   const otpRefs = useRef([]);
 
-  const [view, setView] = useState(initialMode === "register" ? "register" : "login");
+  const [view, setView] = useState(
+    initialMode === "register" ? "register" : "login",
+  );
   const [registerStep, setRegisterStep] = useState("details");
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -162,7 +162,9 @@ const Login = ({ initialMode = "login" }) => {
     try {
       await forgotPassword(forgotPasswordValues.email);
       setView("reset-password");
-      setMessage(`A 6-digit reset code was sent to ${forgotPasswordValues.email}.`);
+      setMessage(
+        `A 6-digit reset code was sent to ${forgotPasswordValues.email}.`,
+      );
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -183,7 +185,7 @@ const Login = ({ initialMode = "login" }) => {
       await resetPassword(
         forgotPasswordValues.email,
         code,
-        forgotPasswordValues.newPassword
+        forgotPasswordValues.newPassword,
       );
       setMessage("Your password was reset successfully. You can sign in now.");
       setForgotPasswordValues({ email: "", code: "", newPassword: "" });
@@ -256,7 +258,7 @@ const Login = ({ initialMode = "login" }) => {
     setSubmitting(true);
     try {
       const idToken = await getGoogleCredential(
-        import.meta.env.VITE_GOOGLE_CLIENT_ID
+        import.meta.env.VITE_GOOGLE_CLIENT_ID,
       );
       const response = await loginWithGoogle(idToken);
       storeAuthSession(response);
@@ -331,7 +333,10 @@ const Login = ({ initialMode = "login" }) => {
                     required
                     value={loginValues.email}
                     onChange={(event) =>
-                      setLoginValues({ ...loginValues, email: event.target.value })
+                      setLoginValues({
+                        ...loginValues,
+                        email: event.target.value,
+                      })
                     }
                     placeholder="alex@example.com"
                     className={fieldClass}
@@ -370,18 +375,27 @@ const Login = ({ initialMode = "login" }) => {
                       required
                       value={loginValues.password}
                       onChange={(event) =>
-                        setLoginValues({ ...loginValues, password: event.target.value })
+                        setLoginValues({
+                          ...loginValues,
+                          password: event.target.value,
+                        })
                       }
                       placeholder="••••••••"
                       className={`${fieldClass} pr-10`}
                     />
                     <button
                       type="button"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                       onClick={() => setShowPassword((visible) => !visible)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                     >
-                      {showPassword ? <LuEyeOff size={17} /> : <LuEye size={17} />}
+                      {showPassword ? (
+                        <LuEyeOff size={17} />
+                      ) : (
+                        <LuEye size={17} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -396,7 +410,10 @@ const Login = ({ initialMode = "login" }) => {
 
                 <AuthDivider />
                 {googleLoginEnabled ? (
-                  <GoogleButton onClick={handleGoogleLogin} disabled={submitting} />
+                  <GoogleButton
+                    onClick={handleGoogleLogin}
+                    disabled={submitting}
+                  />
                 ) : (
                   <GoogleButton comingSoon />
                 )}
@@ -404,7 +421,10 @@ const Login = ({ initialMode = "login" }) => {
             )}
 
             {view === "forgot-password" && (
-              <form onSubmit={handleForgotPasswordRequest} className="space-y-4">
+              <form
+                onSubmit={handleForgotPasswordRequest}
+                className="space-y-4"
+              >
                 <button
                   type="button"
                   onClick={() => changeView("login")}
@@ -552,11 +572,17 @@ const Login = ({ initialMode = "login" }) => {
                     />
                     <button
                       type="button"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                       onClick={() => setShowPassword((visible) => !visible)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                     >
-                      {showPassword ? <LuEyeOff size={17} /> : <LuEye size={17} />}
+                      {showPassword ? (
+                        <LuEyeOff size={17} />
+                      ) : (
+                        <LuEye size={17} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -585,7 +611,10 @@ const Login = ({ initialMode = "login" }) => {
                     required
                     value={registerValues.name}
                     onChange={(event) =>
-                      setRegisterValues({ ...registerValues, name: event.target.value })
+                      setRegisterValues({
+                        ...registerValues,
+                        name: event.target.value,
+                      })
                     }
                     placeholder="Alex Morgan"
                     className={fieldClass}
@@ -605,7 +634,10 @@ const Login = ({ initialMode = "login" }) => {
                     required
                     value={registerValues.email}
                     onChange={(event) =>
-                      setRegisterValues({ ...registerValues, email: event.target.value })
+                      setRegisterValues({
+                        ...registerValues,
+                        email: event.target.value,
+                      })
                     }
                     placeholder="alex@example.com"
                     className={fieldClass}
@@ -637,11 +669,19 @@ const Login = ({ initialMode = "login" }) => {
                     />
                     <button
                       type="button"
-                      aria-label={showRegisterPassword ? "Hide password" : "Show password"}
-                      onClick={() => setShowRegisterPassword((visible) => !visible)}
+                      aria-label={
+                        showRegisterPassword ? "Hide password" : "Show password"
+                      }
+                      onClick={() =>
+                        setShowRegisterPassword((visible) => !visible)
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                     >
-                      {showRegisterPassword ? <LuEyeOff size={17} /> : <LuEye size={17} />}
+                      {showRegisterPassword ? (
+                        <LuEyeOff size={17} />
+                      ) : (
+                        <LuEye size={17} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -688,7 +728,9 @@ const Login = ({ initialMode = "login" }) => {
                         otpRefs.current[index] = element;
                       }}
                       value={digit}
-                      onChange={(event) => handleOtpChange(index, event.target.value)}
+                      onChange={(event) =>
+                        handleOtpChange(index, event.target.value)
+                      }
                       onKeyDown={(event) => handleOtpKeyDown(index, event)}
                       inputMode="numeric"
                       maxLength="1"
@@ -755,7 +797,11 @@ const GoogleButton = ({ onClick, disabled, comingSoon }) => (
         : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
     }`}
   >
-    {comingSoon ? <LuLock size={15} /> : <span className="font-bold text-blue-500">G</span>} {" "}
+    {comingSoon ? (
+      <LuLock size={15} />
+    ) : (
+      <span className="font-bold text-blue-500">G</span>
+    )}{" "}
     {comingSoon
       ? "Google sign-in coming soon"
       : disabled

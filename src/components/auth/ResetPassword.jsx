@@ -81,7 +81,10 @@ const ResetPassword = ({ email = "", onBack, onSuccess }) => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="reset-email" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label
+            htmlFor="reset-email"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+          >
             Email
           </label>
           <div className="relative">
@@ -103,7 +106,10 @@ const ResetPassword = ({ email = "", onBack, onSuccess }) => {
         </div>
 
         <div>
-          <label htmlFor="reset-code" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label
+            htmlFor="reset-code"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+          >
             6-Digit Code
           </label>
           <input
@@ -125,7 +131,10 @@ const ResetPassword = ({ email = "", onBack, onSuccess }) => {
         </div>
 
         <div>
-          <label htmlFor="new-password" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label
+            htmlFor="new-password"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+          >
             New Password
           </label>
           <div className="relative">

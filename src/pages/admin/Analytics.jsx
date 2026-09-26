@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   LuDollarSign,
   LuCar,
@@ -8,33 +8,26 @@ import {
   LuChartColumn,
 } from "react-icons/lu";
 import { usePreferences } from "../../context/PreferencesContext";
-import {
-  mockVehicles,
-  mockMotorbikes,
-  mockBicycles,
-} from "../../services/vehicleServices";
+import { getAnalyticsStats } from "../../services/adminService";
 
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 const CHART_WIDTH = 560;
 const CHART_HEIGHT = 200;
 const CHART_PADDING = { top: 20, right: 20, bottom: 30, left: 50 };
-
-function buildMonthlyRevenue(vehicles) {
-  const totals = new Array(12).fill(0);
-  vehicles.forEach((v) => {
-    const d = new Date(v.created_at);
-    const month = d.getMonth();
-    totals[month] += v.price_per_day * 30;
-  });
-  for (let i = 1; i < totals.length; i++) {
-    totals[i] += totals[i - 1] * 0.3;
-  }
-  return totals.map((v) => Math.round(v));
-}
 
 function MonthlyRevenueChart({ data, isDark }) {
   const max = Math.max(...data, 1);
@@ -52,11 +45,16 @@ function MonthlyRevenueChart({ data, isDark }) {
   const areaPath = `${linePath} L${CHART_PADDING.left + plotW},${CHART_PADDING.top + plotH} L${CHART_PADDING.left},${CHART_PADDING.top + plotH} Z`;
 
   const gridLines = 4;
-  const gridColor = isDark ? "rgba(148,163,184,0.15)" : "rgba(148,163,184,0.25)";
+  const gridColor = isDark
+    ? "rgba(148,163,184,0.15)"
+    : "rgba(148,163,184,0.25)";
   const textColor = isDark ? "#94a3b8" : "#94a3b8";
 
   return (
-    <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} className="w-full h-auto">
+    <svg
+      viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+      className="w-full h-auto"
+    >
       <defs>
         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
@@ -136,8 +134,6 @@ function MonthlyRevenueChart({ data, isDark }) {
 
 const CATEGORY_COLORS = ["#2563eb", "#f59e0b", "#10b981"];
 
-const DEFAULT_FLEET = [...mockVehicles, ...mockMotorbikes, ...mockBicycles];
-
 function CategoryDonut({ segments, isDark }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
   const radius = 50;
@@ -156,11 +152,11 @@ function CategoryDonut({ segments, isDark }) {
       acc.offset += seg.value;
       return acc;
     },
-    { offset: 0, list: [] }
+    { offset: 0, list: [] },
   ).list;
 
   return (
-    <svg viewBox="0 0 130 130" className="w-full max-w-[140px] h-auto">
+    <svg viewBox="0 0 130 130" className="h-auto w-full max-w-35">
       {arcs.map((seg, i) => (
         <circle
           key={i}
@@ -177,10 +173,23 @@ function CategoryDonut({ segments, isDark }) {
         />
       ))}
       <circle cx={cx} cy={cy} r={38} fill={strokeColor} />
-      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="18" fontWeight="700" fill={isDark ? "#f1f5f9" : "#0f172a"}>
+      <text
+        x={cx}
+        y={cy - 4}
+        textAnchor="middle"
+        fontSize="18"
+        fontWeight="700"
+        fill={isDark ? "#f1f5f9" : "#0f172a"}
+      >
         {total}
       </text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize="8" fill={isDark ? "#94a3b8" : "#64748b"}>
+      <text
+        x={cx}
+        y={cy + 12}
+        textAnchor="middle"
+        fontSize="8"
+        fill={isDark ? "#94a3b8" : "#64748b"}
+      >
         vehicles
       </text>
     </svg>
@@ -213,51 +222,61 @@ function KpiCard({ label, value, icon: Icon, accent, trend }) {
   );
 }
 
-const Analytics = ({ vehicles: allVehicles = [] }) => {
+const Analytics = () => {
   const { formatPrice } = usePreferences();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const isDark =
     typeof document !== "undefined" &&
     document.documentElement.classList.contains("dark");
 
-  const vehicles = useMemo(
-    () => (allVehicles.length ? allVehicles : DEFAULT_FLEET),
-    [allVehicles]
-  );
-
-  const { totalRevenue, activeRentals, utilizationRate, avgRating, monthlyRevenue, categoryBreakdown } =
-    useMemo(() => {
-      const totalVehicles = vehicles.length;
-      const available = vehicles.filter((v) => v.is_available).length;
-      const utilization = totalVehicles
-        ? Math.round((available / totalVehicles) * 100)
-        : 0;
-
-      const revenue = vehicles.reduce(
-        (sum, v) => sum + v.price_per_day * 30,
-        0
-      );
-
-      const cats = { Cars: 0, Motorbikes: 0, Bicycles: 0 };
-      vehicles.forEach((v) => {
-        const cat = String(v.category || "").toLowerCase();
-        if (["scooter", "underbone", "touring", "sportbike", "cruiser"].some((c) => cat.includes(c))) {
-          cats.Motorbikes++;
-        } else if (cat.includes("bike") || cat.includes("e-bike")) {
-          cats.Bicycles++;
-        } else {
-          cats.Cars++;
-        }
+  useEffect(() => {
+    let cancelled = false;
+    getAnalyticsStats()
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err.message || "Unable to load analytics statistics.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-      return {
-        totalRevenue: revenue,
-        activeRentals: Math.round(available * 0.65),
-        utilizationRate: utilization,
-        avgRating: "4.6",
-        monthlyRevenue: buildMonthlyRevenue(vehicles),
-        categoryBreakdown: cats,
-      };
-    }, [vehicles]);
+  const totalRevenue = Number(stats?.totalRevenue ?? 0);
+  const activeRentals = Number(stats?.activeRentals ?? 0);
+  const utilizationRate = Number(stats?.fleetUtilization ?? 0);
+  const avgRating = stats?.averageRating ?? 0;
+  const monthlyRevenue = Array.isArray(stats?.monthlyRevenueTrend)
+    ? stats.monthlyRevenueTrend.map((item) =>
+        Number(item?.value ?? item?.revenue ?? item ?? 0),
+      )
+    : new Array(12).fill(0);
+  const fleetByCategoryCount = stats?.fleetByCategoryCount || {};
+  const categoryBreakdown = {
+    Cars: Number(fleetByCategoryCount.Cars ?? fleetByCategoryCount.cars ?? 0),
+    Motorbikes: Number(
+      fleetByCategoryCount.Motorbikes ?? fleetByCategoryCount.motorbikes ?? 0,
+    ),
+    Bicycles: Number(
+      fleetByCategoryCount.Bicycles ?? fleetByCategoryCount.bicycles ?? 0,
+    ),
+  };
+
+  if (loading)
+    return (
+      <p className="text-sm text-slate-500">Loading analytics statistics...</p>
+    );
+  if (error)
+    return (
+      <p className="rounded-xl bg-red-50 p-4 text-sm text-red-600">{error}</p>
+    );
 
   const kpis = [
     {
@@ -348,7 +367,10 @@ const Analytics = ({ vehicles: allVehicles = [] }) => {
 
           <div className="mt-5 space-y-3">
             {donutSegments.map((seg, i) => (
-              <div key={seg.label} className="flex items-center justify-between">
+              <div
+                key={seg.label}
+                className="flex items-center justify-between"
+              >
                 <span className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                   <span
                     className="h-3 w-3 rounded-full"
@@ -386,9 +408,7 @@ const Analytics = ({ vehicles: allVehicles = [] }) => {
                   className="w-full rounded-t-md bg-primary transition-all duration-500"
                   style={{ height: h }}
                 />
-                <span className="text-[10px] text-slate-400">
-                  {MONTHS[i]}
-                </span>
+                <span className="text-[10px] text-slate-400">{MONTHS[i]}</span>
               </div>
             );
           })}

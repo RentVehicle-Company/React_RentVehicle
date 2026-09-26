@@ -21,7 +21,7 @@ const Footer = () => {
             </p>
           </div>
           <a
-            href="mailto:support@rentalcompany.com"
+            href="https://t.me/houtdecember"
             className="inline-flex w-fit rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-200 transition-colors hover:border-slate-400 hover:bg-slate-50 dark:hover:border-slate-500 dark:hover:bg-slate-800"
           >
             Contact support
@@ -61,19 +61,19 @@ const Footer = () => {
             </h2>
             <nav className="mt-4 flex flex-col gap-3 text-sm">
               <a
-                href="mailto:support@rentalcompany.com"
+                href="https://t.me/houtdecember"
                 className="transition-colors hover:text-slate-950 dark:hover:text-white"
               >
                 Support
               </a>
               <a
-                href="mailto:contact@rentalcompany.com"
+                href="https://t.me/houtdecember"
                 className="transition-colors hover:text-slate-950 dark:hover:text-white"
               >
                 Contact Us
               </a>
               <a
-                href="mailto:support@rentalcompany.com"
+                href="https://t.me/houtdecember"
                 className="transition-colors hover:text-slate-950 dark:hover:text-white"
               >
                 FAQ

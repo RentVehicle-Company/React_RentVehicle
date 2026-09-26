@@ -7,7 +7,6 @@ import {
   LuTriangleAlert,
   LuCircleCheck,
 } from "react-icons/lu";
-import { createCategory, updateCategory } from "../../services/vehicleServices";
 import {
   toBackendVehicleType,
   fromBackendVehicleType,
@@ -61,15 +60,8 @@ const AddCategory = ({ mode = "add", category, onClose, onSave }) => {
     };
 
     try {
-      if (mode === "edit" && category) {
-        await updateCategory(category.id, payload);
-      } else {
-        await createCategory(payload);
-      }
+      await onSave(payload);
       setSuccess(true);
-      setTimeout(() => {
-        onSave(payload);
-      }, 500);
     } catch (err) {
       console.error(`Failed to ${mode} category:`, err);
       if (err.status === 401 || err.status === 403) {
@@ -95,7 +87,7 @@ const AddCategory = ({ mode = "add", category, onClose, onSave }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-90 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div

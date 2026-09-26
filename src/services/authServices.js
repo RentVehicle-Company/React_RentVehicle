@@ -9,7 +9,12 @@ import {
   readAuthToken,
 } from "./api";
 import { mapUser } from "./userService";
-import { decodeJwt, getJwtRole, getJwtUserId, isTokenExpired } from "./jwtUtils";
+import {
+  decodeJwt,
+  getJwtRole,
+  getJwtUserId,
+  isTokenExpired,
+} from "./jwtUtils";
 
 // ---------------------------------------------------------------------------
 // Local session storage — always written/read through STORAGE_KEYS so the
@@ -80,7 +85,9 @@ const networkError = () =>
 
 // POST /api/auth/login  { email, password }
 export const login = async (credentials) => {
-  const email = String(credentials.email || "").trim().toLowerCase();
+  const email = String(credentials.email || "")
+    .trim()
+    .toLowerCase();
   const response = await post(API_ENDPOINTS.authLogin, {
     email,
     password: credentials.password,
@@ -94,7 +101,9 @@ export const login = async (credentials) => {
 export const register = async ({ name, email, password }) => {
   const response = await post(API_ENDPOINTS.authRegister, {
     name: String(name || "").trim(),
-    email: String(email || "").trim().toLowerCase(),
+    email: String(email || "")
+      .trim()
+      .toLowerCase(),
     password: String(password || ""),
   });
   if (!response) throw networkError();
@@ -106,7 +115,10 @@ export const register = async ({ name, email, password }) => {
 // flow) and no session is created.
 export const registerUser = async ({ name, email, password }) => {
   const response = await register({ name, email, password });
-  const fallbackName = String(name || "").trim().split(" ")[0] || "New User";
+  const fallbackName =
+    String(name || "")
+      .trim()
+      .split(" ")[0] || "New User";
 
   const accessToken =
     response?.accessToken || response?.token || response?.data?.accessToken;
@@ -121,7 +133,9 @@ export const registerUser = async ({ name, email, password }) => {
 
 // POST /api/auth/forgot-password { email }
 export const forgotPassword = async (email) => {
-  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
   const response = await post(API_ENDPOINTS.authForgotPassword, {
     email: normalizedEmail,
   });
@@ -131,7 +145,9 @@ export const forgotPassword = async (email) => {
 
 // POST /api/auth/reset-password { email, code, newPassword }
 export const resetPassword = async (email, code, newPassword) => {
-  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
   const normalizedCode = String(code || "").trim();
   const normalizedPassword = String(newPassword || "");
 

@@ -30,10 +30,18 @@ const LiveChatButton = () => {
     { id: "welcome", role: "bot", text: WELCOME_MESSAGE.text },
   ]);
   const [draft, setDraft] = useState("");
-  const [conversationId, setConversationId] = useState(1);
+  // const [conversationId, setConversationId] = useState(1);
   const [typing, setTyping] = useState(false);
   const endRef = useRef(null);
   const typingTimer = useRef(null);
+
+  const [conversationId] = useState(() => {
+    const stored = sessionStorage.getItem("chat_conversation_id");
+    if (stored) return Number(stored);
+    const fresh = Date.now(); // simple unique-enough id for a demo
+    sessionStorage.setItem("chat_conversation_id", String(fresh));
+    return fresh;
+  });
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,9 +55,12 @@ const LiveChatButton = () => {
     }
   }, [open]);
 
-  useEffect(() => () => {
-    if (typingTimer.current) window.clearTimeout(typingTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    },
+    [],
+  );
 
   const push = (role, text, isTyping = false) => {
     const delayMs = isTyping ? 850 : 0;
@@ -57,10 +68,7 @@ const LiveChatButton = () => {
       setTyping(true);
       typingTimer.current = window.setTimeout(() => {
         setTyping(false);
-        setMessages((prev) => [
-          ...prev,
-          { id: nextMessageId(), role, text },
-        ]);
+        setMessages((prev) => [...prev, { id: nextMessageId(), role, text }]);
       }, delayMs);
       return;
     }
@@ -81,7 +89,6 @@ const LiveChatButton = () => {
         ...prev,
         { id: nextMessageId(), role: "bot", text: reply },
       ]);
-      setConversationId((current) => current || 1);
     } catch (error) {
       const errorMessage =
         error?.message || "I couldn’t reach the support assistant right now.";
@@ -141,8 +148,7 @@ const LiveChatButton = () => {
               {messages.map((message, index) => {
                 const isBot = message.role === "bot";
                 const showAvatar =
-                  index === 0 ||
-                  messages[index - 1].role !== message.role;
+                  index === 0 || messages[index - 1].role !== message.role;
                 return (
                   <div
                     key={message.id}
@@ -186,12 +192,20 @@ const LiveChatButton = () => {
                     />
                     <motion.span
                       animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ repeat: Infinity, duration: 1.1, delay: 0.18 }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 1.1,
+                        delay: 0.18,
+                      }}
                       className="h-1.5 w-1.5 rounded-full bg-slate-400"
                     />
                     <motion.span
                       animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ repeat: Infinity, duration: 1.1, delay: 0.36 }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 1.1,
+                        delay: 0.36,
+                      }}
                       className="h-1.5 w-1.5 rounded-full bg-slate-400"
                     />
                   </div>
@@ -258,7 +272,9 @@ const LiveChatButton = () => {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          aria-label={open ? "Close chat with support" : "Open chat with support"}
+          aria-label={
+            open ? "Close chat with support" : "Open chat with support"
+          }
           className={`relative grid h-13 w-13 cursor-pointer place-items-center rounded-full text-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl active:scale-95 ${
             open
               ? "bg-slate-900 shadow-slate-900/30"
@@ -268,7 +284,11 @@ const LiveChatButton = () => {
           {!open && (
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-30" />
           )}
-          {open ? <LuX size={24} /> : <LuMessageCircle size={24} className="relative" />}
+          {open ? (
+            <LuX size={24} />
+          ) : (
+            <LuMessageCircle size={24} className="relative" />
+          )}
         </button>
       </div>
     </>
