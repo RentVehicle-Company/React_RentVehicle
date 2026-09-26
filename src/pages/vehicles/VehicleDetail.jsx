@@ -547,10 +547,8 @@ const VehicleDetail = () => {
       openAuth("login");
       return;
     }
-    if (!idDocument || !licenseDocument) {
-      setBookingError(
-        "Please upload both your ID card and driving license to continue.",
-      );
+    if (!idDocument) {
+      setBookingError("Please upload your ID card to continue.");
       return;
     }
     if (!contactPhone.trim()) {
@@ -1305,7 +1303,7 @@ const VehicleDetail = () => {
                   <div>
                     <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
                       <LuShieldCheck size={13} className="text-primary" />
-                      Driver's License
+                      Driver's License <span className="font-normal text-slate-400">(Optional)</span>
                     </div>
                     <div
                       className={`${inputClass} mt-1.5 flex items-center gap-2 text-xs ${
