@@ -209,7 +209,7 @@ const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
                 <input
                   id="addl-latitude"
                   type="number"
-                  step="0.000001"
+                  step="any"
                   min="-90"
                   max="90"
                   value={latitude}
@@ -226,7 +226,7 @@ const AddLocation = ({ mode = "add", location, onClose, onSave }) => {
                 <input
                   id="addl-longitude"
                   type="number"
-                  step="0.000001"
+                  step="any"
                   min="-180"
                   max="180"
                   value={longitude}

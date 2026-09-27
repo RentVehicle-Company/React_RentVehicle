@@ -7,12 +7,29 @@ import {
   LuLoader,
   LuShield,
 } from "react-icons/lu";
-import { getAllUsersWithFallback, updateUserRole, deleteUser } from "../../services/userService";
-import { getCurrentUserRole, getCurrentUserId } from "../../services/authServices";
+import {
+  getAllUsersWithFallback,
+  updateUserRole,
+  deleteUser,
+} from "../../services/userService";
+import {
+  getCurrentUserRole,
+  getCurrentUserId,
+} from "../../services/authServices";
 
 const ROLE_OPTIONS = [
-  { value: "USER", label: "User", classes: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300" },
-  { value: "ADMIN", label: "Admin", classes: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  {
+    value: "USER",
+    label: "User",
+    classes:
+      "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+  },
+  {
+    value: "ADMIN",
+    label: "Admin",
+    classes:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  },
 ];
 
 const getInitials = (name) => {
@@ -40,6 +57,8 @@ const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState(null);
@@ -53,7 +72,8 @@ const ManageUsers = () => {
     setCurrentUserId(userId);
   }, []);
 
-  const isCurrentUserAdmin = currentUserRole === "ADMIN" || currentUserRole === "ROLE_ADMIN";
+  const isCurrentUserAdmin =
+    currentUserRole === "ADMIN" || currentUserRole === "ROLE_ADMIN";
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -90,7 +110,9 @@ const ManageUsers = () => {
     setUpdatingId(user.id);
     try {
       const updated = await updateUserRole(user.id, newRole);
-      setUsers(users.map((u) => (String(u.id) === String(user.id) ? updated : u)));
+      setUsers(
+        users.map((u) => (String(u.id) === String(user.id) ? updated : u)),
+      );
     } catch (err) {
       console.error("Failed to update role:", err);
       if (err.status === 403) {
@@ -105,7 +127,7 @@ const ManageUsers = () => {
 
   const handleDelete = async (user) => {
     const confirmed = window.confirm(
-      `Delete user "${user.name}" (${user.email})? This action cannot be undone.`
+      `Delete user "${user.name}" (${user.email})? This action cannot be undone.`,
     );
     if (!confirmed) return;
 
@@ -133,6 +155,13 @@ const ManageUsers = () => {
     });
   }, [users, search]);
 
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const currentPage = Math.min(page, Math.max(0, totalPages - 1));
+  const paginatedUsers = filtered.slice(
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize,
+  );
+
   return (
     <div className="overflow-hidden rounded-2xl border border-borderColor bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm">
       {/* Toolbar */}
@@ -158,11 +187,27 @@ const ManageUsers = () => {
             <input
               type="search"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Search by name, email, phone…"
               className="w-full rounded-xl border border-borderColor dark:border-slate-600 bg-white dark:bg-slate-700 py-2.5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:w-64"
             />
           </div>
+          <select
+            aria-label="Users per page"
+            value={pageSize}
+            onChange={(event) => {
+              setPage(0);
+              setPageSize(Number(event.target.value));
+            }}
+            className="rounded-xl border border-borderColor bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-primary dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+          >
+            <option value={10}>10 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
         </div>
       </div>
 
@@ -188,101 +233,115 @@ const ManageUsers = () => {
                   </div>
                 </td>
               </tr>
-            ) : filtered.map((user) => {
-              const roleMeta = getRoleMeta(user.role);
-              const isOwnProfile = currentUserId && String(user.id) === String(currentUserId);
-              return (
-                <tr
-                  key={String(user.id)}
-                  className="group border-b border-slate-100 dark:border-slate-700 transition-colors last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-700/40"
-                >
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary font-semibold">
-                        {user.image ? (
-                          <img
-                            src={user.image}
-                            alt=""
-                            className="h-10 w-10 rounded-xl object-cover"
-                          />
-                        ) : (
-                          getInitials(user.name || "U")
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-900 dark:text-white">
-                          {user.name || "—"}
-                        </p>
-                        <p className="truncate text-xs text-slate-400 dark:text-slate-500">
-                          ID: {String(user.id)}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
-                      <LuMail size={14} className="text-slate-400" />
-                      {user.email || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                    {user.phone || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${roleMeta.classes}`}
-                    >
-                      {roleMeta.label}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {/* Role dropdown - only visible to admins */}
-                      {isCurrentUserAdmin && (
-                        <div className="relative">
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleRoleChange(user, e.target.value)}
-                            disabled={
-                              updatingId === user.id ||
-                              deletingId === user.id ||
-                              isOwnProfile
-                            }
-                            className={getRoleSelectClassName(isOwnProfile)}
-                          >
-                            {ROLE_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                          {updatingId === user.id && (
-                            <LuLoader className="animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
-                          )}
-                          {isOwnProfile && (
-                            <LuShield className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400" size={12} title="Cannot change your own role" />
+            ) : (
+              paginatedUsers.map((user) => {
+                const roleMeta = getRoleMeta(user.role);
+                const isOwnProfile =
+                  currentUserId && String(user.id) === String(currentUserId);
+                return (
+                  <tr
+                    key={String(user.id)}
+                    className="group border-b border-slate-100 dark:border-slate-700 transition-colors last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-700/40"
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary font-semibold">
+                          {user.image ? (
+                            <img
+                              src={user.image}
+                              alt=""
+                              className="h-10 w-10 rounded-xl object-cover"
+                            />
+                          ) : (
+                            getInitials(user.name || "U")
                           )}
                         </div>
-                      )}
-                      {/* Delete button */}
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(user)}
-                        aria-label="Delete user"
-                        disabled={updatingId === user.id || deletingId === user.id}
-                        className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-slate-900 dark:text-white">
+                            {user.name || "—"}
+                          </p>
+                          <p className="truncate text-xs text-slate-400 dark:text-slate-500">
+                            ID: {String(user.id)}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
+                        <LuMail size={14} className="text-slate-400" />
+                        {user.email || "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                      {user.phone || "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${roleMeta.classes}`}
                       >
-                        {deletingId === user.id ? (
-                          <LuLoader className="animate-spin" size={15} />
-                        ) : (
-                          <LuTrash2 size={15} />
+                        {roleMeta.label}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Role dropdown - only visible to admins */}
+                        {isCurrentUserAdmin && (
+                          <div className="relative">
+                            <select
+                              value={user.role}
+                              onChange={(e) =>
+                                handleRoleChange(user, e.target.value)
+                              }
+                              disabled={
+                                updatingId === user.id ||
+                                deletingId === user.id ||
+                                isOwnProfile
+                              }
+                              className={getRoleSelectClassName(isOwnProfile)}
+                            >
+                              {ROLE_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                            {updatingId === user.id && (
+                              <LuLoader
+                                className="animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
+                                size={12}
+                              />
+                            )}
+                            {isOwnProfile && (
+                              <LuShield
+                                className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400"
+                                size={12}
+                                title="Cannot change your own role"
+                              />
+                            )}
+                          </div>
                         )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                        {/* Delete button */}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(user)}
+                          aria-label="Delete user"
+                          disabled={
+                            updatingId === user.id || deletingId === user.id
+                          }
+                          className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        >
+                          {deletingId === user.id ? (
+                            <LuLoader className="animate-spin" size={15} />
+                          ) : (
+                            <LuTrash2 size={15} />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
 
             {!loading && filtered.length === 0 && (
               <tr>
@@ -308,8 +367,34 @@ const ManageUsers = () => {
       {/* Footer */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700 px-5 py-3.5">
         <p className="text-xs text-slate-400 dark:text-slate-500">
-          Showing {filtered.length} of {users.length} users
+          Showing {filtered.length ? currentPage * pageSize + 1 : 0}
+          {filtered.length > 0 &&
+            `-${Math.min((currentPage + 1) * pageSize, filtered.length)}`}{" "}
+          of {filtered.length} matching users ({users.length} total)
         </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setPage((currentPage) => Math.max(0, currentPage - 1))
+            }
+            disabled={currentPage === 0 || loading}
+            className="rounded-lg border border-borderColor px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-300"
+          >
+            Previous
+          </button>
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            Page {totalPages ? currentPage + 1 : 0} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((currentPage) => currentPage + 1)}
+            disabled={currentPage >= totalPages - 1 || loading}
+            className="rounded-lg border border-borderColor px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-300"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
