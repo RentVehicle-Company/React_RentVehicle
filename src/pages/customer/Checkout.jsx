@@ -662,40 +662,40 @@ const Checkout = () => {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 px-4 sm:px-5 py-3 shadow-sm">
+    <div className="mx-auto w-full max-w-[1200px] px-3 py-4 sm:px-6 sm:py-8">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderColor dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-3 shadow-sm sm:px-5">
         <Link
           to={backTo}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
         >
           <LuArrowLeft size={18} />
           Back to Selection
         </Link>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-borderColor dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-borderColor bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-700/60 dark:text-slate-200">
           <LuLock size={13} className="text-green-600" />
           Secure Checkout
         </span>
       </header>
 
-      <div className="mt-5 flex items-end justify-between gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">
             Checkout
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Complete your payment to confirm your booking.
           </p>
         </div>
-        <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 sm:inline-flex">
           <LuShieldCheck size={14} className="text-primary" />
           Payments secured by 256-bit encryption
         </span>
       </div>
 
-      <div className="mt-5 grid lg:grid-cols-[minmax(0,1.4fr)_minmax(330px,0.9fr)] gap-5 items-start">
+      <div className="mt-4 grid items-start gap-5 lg:mt-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(330px,0.9fr)]">
         <section className="space-y-5">
           {success ? (
-            <div className="bg-white dark:bg-slate-800 border border-borderColor dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-sm">
+            <div className="rounded-2xl border border-borderColor bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-8">
               <div className="flex flex-col items-center text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
                   <LuCircleCheck size={28} className="text-green-600" />
@@ -707,8 +707,8 @@ const Checkout = () => {
                   Your reservation is confirmed.
                 </p>
 
-                <div className="mt-6 w-full space-y-2 rounded-xl bg-slate-50 dark:bg-slate-700/60 p-4 text-sm">
-                  <div className="flex justify-between gap-3">
+                <div className="mt-6 w-full space-y-2 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-700/60">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-slate-500 dark:text-slate-400">
                       Transaction ID
                     </span>
@@ -716,7 +716,7 @@ const Checkout = () => {
                       {success.transaction.transactionId}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-3">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-slate-500 dark:text-slate-400">
                       Method
                     </span>
@@ -724,7 +724,7 @@ const Checkout = () => {
                       {success.transaction.card || success.transaction.method}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-3">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-slate-500 dark:text-slate-400">
                       Amount
                     </span>
@@ -738,14 +738,14 @@ const Checkout = () => {
                   <button
                     type="button"
                     onClick={() => navigate(`/bookings/${success.booking.id}`)}
-                    className="w-full px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-dull transition-colors cursor-pointer"
+                    className="w-full rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dull"
                   >
                     View Booking
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate("/")}
-                    className="w-full px-5 py-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-borderColor dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="w-full rounded-xl border border-borderColor bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
                     Back Home
                   </button>

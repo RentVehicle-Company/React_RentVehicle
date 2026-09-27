@@ -38,7 +38,10 @@ const Payment = () => {
         setLoading(false);
       })
       .catch(() => {
-        setBooking({ ...FALLBACK_BOOKING, id: Number(bookingId) || FALLBACK_BOOKING.id });
+        setBooking({
+          ...FALLBACK_BOOKING,
+          id: Number(bookingId) || FALLBACK_BOOKING.id,
+        });
         setLoading(false);
       });
   }, [bookingId]);
@@ -93,34 +96,36 @@ const Payment = () => {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="mx-auto w-full max-w-[1200px] px-3 py-4 sm:px-6 sm:py-8">
       <Link
         to="/bookings"
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
       >
         <LuArrowLeft size={18} />
         Back to Bookings
       </Link>
 
-      <div className="mt-6 max-w-lg mx-auto">
-        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-borderColor bg-slate-50 px-4 py-3">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+      <div className="mx-auto mt-4 w-full max-w-lg sm:mt-6">
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-borderColor bg-slate-50 px-3 py-3 sm:mb-6 sm:px-4">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500 sm:text-xs">
             Test controls
           </span>
-          {DASHBOARD_STEPS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStep(s)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                step === s
-                  ? "bg-black text-white"
-                  : "bg-white border border-borderColor text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {DASHBOARD_STEPS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStep(s)}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer sm:px-3 sm:text-xs ${
+                  step === s
+                    ? "bg-black text-white"
+                    : "border border-borderColor bg-white text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {step === "select" && (
